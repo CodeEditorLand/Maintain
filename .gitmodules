@@ -1,4 +1,3 @@
 [submodule "Dependency/CodeEditorLand/Dependency/Queue"]
 path = Dependency/CodeEditorLand/Dependency/Queue
 url = ssh://git@github.com/CodeEditorLand/Queue.git
-
