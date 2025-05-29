@@ -2,6 +2,6 @@
 #![allow(non_snake_case)]
 
 #[allow(dead_code)]
-fn main() { Binary::Fn::Fn(); }
+fn main() { Build::Fn(); }
 
-pub mod Binary;
+pub mod Build;
