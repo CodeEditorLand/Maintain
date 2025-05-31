@@ -37,11 +37,14 @@ pub const NameEnv:&str = "MOUNTAIN_ORIGINAL_BASE_NAME";
 /// Environment variable for bundle ID prefix.
 pub const PrefixEnv:&str = "MOUNTAIN_BUNDLE_ID_PREFIX";
 
+/// Environment variable for bundle flag.
+pub const BundleEnv:&str = "Bundle";
+
 /// Environment variable for browser flag.
 pub const BrowserEnv:&str = "Browser";
 
 /// Environment variable for bundle flag.
-pub const BundleEnv:&str = "Bundle";
+pub const CompileEnv:&str = "Compile";
 
 /// Environment variable for clean flag.
 pub const CleanEnv:&str = "Clean";
@@ -130,6 +133,10 @@ pub struct Args {
 	/// Flag or value indicating bundling-specific aspects.
 	#[clap(long, env = BundleEnv)]
 	Bundle:Option<String>,
+
+	/// Flag or value indicating bundling-specific aspects.
+	#[clap(long, env = CompileEnv)]
+	Compile:Option<String>,
 
 	/// Flag or value indicating cleaning-specific aspects.
 	#[clap(long, env = CleanEnv)]
@@ -756,14 +763,6 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 		}
 	}
 
-	if Args.Clean.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
-		NamePartsForProductName.push("Clean".to_string());
-
-		NamePartsForId.push("clean".to_string());
-
-		debug!(target: "Build::Name", "Added Clean parts");
-	}
-
 	if Args.Bundle.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
 		NamePartsForProductName.push("Bundle".to_string());
 
@@ -772,12 +771,28 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 		debug!(target: "Build::Name", "Added Bundle parts");
 	}
 
+	if Args.Clean.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
+		NamePartsForProductName.push("Clean".to_string());
+
+		NamePartsForId.push("clean".to_string());
+
+		debug!(target: "Build::Name", "Added Clean parts");
+	}
+
 	if Args.Browser.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
 		NamePartsForProductName.push("Browser".to_string());
 
 		NamePartsForId.push("browser".to_string());
 
 		debug!(target: "Build::Name", "Added Browser parts");
+	}
+
+	if Args.Compile.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
+		NamePartsForProductName.push("Compile".to_string());
+
+		NamePartsForId.push("compile".to_string());
+
+		debug!(target: "Build::Name", "Added Compile parts");
 	}
 
 	// --- Construct FinalName for Product/Package ---
