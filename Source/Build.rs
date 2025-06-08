@@ -113,7 +113,7 @@ pub enum Error {
 /// Represents parsed command-line arguments and environment variables.
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about = "Prepares, builds, and restores project.")]
-pub struct Args {
+pub struct Argument {
 	/// The main directory of the project.
 	#[clap(long, env = DirEnv, default_value = DirectoryDefault)]
 	Directory:String,
@@ -663,16 +663,16 @@ fn WordsFromPascal(Text:&str) -> Vec<String> {
 /// specified build command.
 ///
 /// # Parameters
-/// - `Args`: Parsed command-line arguments and environment variables.
+/// - `Argument`: Parsed command-line arguments and environment variables.
 ///
 /// # Errors
 /// Returns various `Error` variants if any step in the process fails.
-pub fn Process(Args:&Args) -> Result<(), Error> {
+pub fn Process(Argument:&Argument) -> Result<(), Error> {
 	info!(target: "Build", "Starting build orchestration...");
 
-	debug!(target: "Build", "Arguments: {:?}", Args);
+	debug!(target: "Build", "Argument: {:?}", Argument);
 
-	let ProjectDir = PathBuf::from(&Args.Directory);
+	let ProjectDir = PathBuf::from(&Argument.Directory);
 
 	if !ProjectDir.is_dir() {
 		error!(target: "Build", "Project directory not found: {}", ProjectDir.display());
@@ -709,7 +709,7 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 
 	let mut NamePartsForId = Vec::new();
 
-	if let Some(NodeValue) = &Args.Environment {
+	if let Some(NodeValue) = &Argument.Environment {
 		if !NodeValue.is_empty() {
 			let PascalEnv = Pascalize(NodeValue);
 
@@ -727,7 +727,7 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 		}
 	}
 
-	if let Some(DependencyValue) = &Args.Dependency {
+	if let Some(DependencyValue) = &Argument.Dependency {
 		if !DependencyValue.is_empty() {
 			let (PascalDepBase, IdDepWords) = if DependencyValue.eq_ignore_ascii_case("true") {
 				("Generic".to_string(), vec!["generic".to_string()])
@@ -763,7 +763,7 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 		}
 	}
 
-	if Args.Bundle.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
+	if Argument.Bundle.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
 		NamePartsForProductName.push("Bundle".to_string());
 
 		NamePartsForId.push("bundle".to_string());
@@ -771,7 +771,7 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 		debug!(target: "Build::Name", "Added Bundle parts");
 	}
 
-	if Args.Clean.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
+	if Argument.Clean.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
 		NamePartsForProductName.push("Clean".to_string());
 
 		NamePartsForId.push("clean".to_string());
@@ -779,7 +779,7 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 		debug!(target: "Build::Name", "Added Clean parts");
 	}
 
-	if Args.Browser.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
+	if Argument.Browser.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
 		NamePartsForProductName.push("Browser".to_string());
 
 		NamePartsForId.push("browser".to_string());
@@ -787,7 +787,7 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 		debug!(target: "Build::Name", "Added Browser parts");
 	}
 
-	if Args.Compile.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
+	if Argument.Compile.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
 		NamePartsForProductName.push("Compile".to_string());
 
 		NamePartsForId.push("compile".to_string());
@@ -801,16 +801,16 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 	debug!(target: "Build", "Full prefix string for product name: '{}'", ProductNamePrefix);
 
 	let FinalName = if !ProductNamePrefix.is_empty() {
-		format!("{}{}{}", ProductNamePrefix, NameDelimiter, Args.Name)
+		format!("{}{}{}", ProductNamePrefix, NameDelimiter, Argument.Name)
 	} else {
-		Args.Name.clone()
+		Argument.Name.clone()
 	};
 
 	info!(target: "Build", "Final generated package/product name: '{}'", FinalName);
 
 	// --- Construct FinalId for Bundle Identifier ---
 	// Add the base name ("Mountain") to the Id parts
-	NamePartsForId.extend(WordsFromPascal(&Args.Name));
+	NamePartsForId.extend(WordsFromPascal(&Argument.Name));
 
 	let IdSuffix = NamePartsForId
 		.into_iter()
@@ -820,15 +820,15 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 
 	debug!(target: "Build", "Generated dot.separated suffix for identifier: '{}'", IdSuffix);
 
-	let FinalId = format!("{}{}{}", Args.Prefix, IdDelimiter, IdSuffix);
+	let FinalId = format!("{}{}{}", Argument.Prefix, IdDelimiter, IdSuffix);
 
 	info!(target: "Build", "Generated bundle identifier: '{}'", FinalId);
 
 	// --- TOML and JSON Modification ---
-	if FinalName != Args.Name {
-		TomlEdit(CargoGuard.Path(), &Args.Name, &FinalName)?;
+	if FinalName != Argument.Name {
+		TomlEdit(CargoGuard.Path(), &Argument.Name, &FinalName)?;
 	} else {
-		info!(target: "Build", "Cargo.toml name remains '{}'.", Args.Name);
+		info!(target: "Build", "Cargo.toml name remains '{}'.", Argument.Name);
 	}
 
 	let AppVersion = {
@@ -854,7 +854,7 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 	JsonEdit(ConfigGuard.Path(), JsonProduct, &FinalId, &AppVersion)?;
 
 	// --- Command Execution ---
-	if Args.Command.is_empty() {
+	if Argument.Command.is_empty() {
 		error!(target: "Build", "No build command provided.");
 
 		return Err(Error::Nocommand);
@@ -862,18 +862,18 @@ pub fn Process(Args:&Args) -> Result<(), Error> {
 
 	let mut ShellCommand:ProcessCommand;
 
-	let Program = &Args.Command[0];
+	let Program = &Argument.Command[0];
 
-	let ProgramArgs = &Args.Command[1..];
+	let ProgramArgument = &Argument.Command[1..];
 
 	if cfg!(target_os = "windows") {
 		ShellCommand = ProcessCommand::new("cmd");
 
-		ShellCommand.arg("/C").arg(Program).args(ProgramArgs);
+		ShellCommand.arg("/C").arg(Program).args(ProgramArgument);
 	} else {
 		let mut FullCommand = Program.clone();
 
-		for Arg in ProgramArgs {
+		for Arg in ProgramArgument {
 			FullCommand.push(' ');
 
 			FullCommand.push_str(&format!("'{}'", Arg.replace('\'', "'\\''")));
@@ -969,11 +969,11 @@ pub fn Fn() {
 		std::process::exit(1);
 	}
 
-	let Arguments = Args::parse();
+	let Argument = Argument::parse();
 
-	debug!("Parsed arguments: {:?}", Arguments);
+	debug!("Parsed arguments: {:?}", Argument);
 
-	match Process(&Arguments) {
+	match Process(&Argument) {
 		Ok(_) => {
 			info!("Build process completed successfully.");
 		},
