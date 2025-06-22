@@ -245,9 +245,12 @@ impl Drop for Guard {
 			info!(
 				target: "Build::Guard",
 
+
 				"Restoring {} from {}... ",
 
+
 				self.Path.display(),
+
 
 				self.Store.display()
 			);
@@ -267,11 +270,15 @@ impl Drop for Guard {
 					error!(
 						target: "Build::Guard",
 
+
 						"Restore FAILED: {}. {} is now inconsistent. Backup remains at {}.",
+
 
 						Error,
 
+
 						self.Path.display(),
+
 
 						self.Store.display()
 					)
@@ -282,7 +289,9 @@ impl Drop for Guard {
 			warn!(
 				target: "Build::Guard",
 
+
 				"Found unexpected backup {} (original might not have existed or backup flag was false). Deleting... ",
+
 
 				self.Store.display()
 			);
@@ -418,9 +427,12 @@ pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, Error> {
 		warn!(
 			target: "Build::Toml",
 
+
 			"Name '{}' not found in relevant sections of {}. No changes made to file.",
 
+
 			Old,
+
 
 			File.display()
 		);
@@ -543,7 +555,9 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str) -> Result<bool,
 		info!(
 			target: "Build::Json",
 
+
 			"Changed {} in {} (Product: '{}', ID: '{}', Ver: '{}')",
+
 
 			ModifiedItems.join(", "), File.display(), Product, Id, Version
 		);
