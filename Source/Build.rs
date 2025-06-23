@@ -1,9 +1,29 @@
+//! # Dynamic Build Orchestrator
+//!
+//! This binary serves as a powerful, configurable pre-build step for a Tauri
+//! application. It is designed to be called from a shell script and dynamically
+//! modifies project configuration files (`Cargo.toml`, `tauri.conf.json`) based
+//! on environment variables and command-line arguments.
+//!
+//! Its primary responsibilities include:
+//! - Generating a unique `productName` and `identifier` for different build
+//!   "flavours" (e.g., for different dependencies, environments, or feature
+//!   sets).
+//! - Dynamically selecting a sidecar binary (like a specific Node.js version),
+//!
+//!   staging it in a temporary location, and configuring Tauri to bundle it.
+//! - Temporarily modifying configuration files, executing the final build
+//!   command (e.g., `pnpm tauri build`), and then restoring the original files
+//!   using a `Guard` pattern.
+
 #![allow(non_snake_case, non_upper_case_globals)]
 
-/// Default project directory.
+// --- Constants: File Paths and Delimiters ---
+
+/// Default project directory relative to the workspace root.
 pub const DirectoryDefault:&str = "Element/Mountain";
 
-/// Default project base name.
+/// Default project base name, used as a suffix for generated names.
 pub const NameDefault:&str = "Mountain";
 
 /// Default bundle identifier prefix.
@@ -18,101 +38,100 @@ pub const JsonfiveFile:&str = "tauri.conf.json5";
 /// Tauri JSON configuration filename.
 pub const JsonFile:&str = "tauri.conf.json";
 
-/// Backup file suffix.
+/// Suffix used for backup files created by the `Guard`.
 pub const BackupSuffix:&str = ".Backup";
 
-/// Delimiter for name parts in the final product/package name.
+/// Delimiter for parts of the generated `productName`.
 pub const NameDelimiter:&str = "_";
 
-/// Delimiter for bundle identifier parts.
+/// Delimiter for parts of the generated bundle `identifier`.
 pub const IdDelimiter:&str = ".";
 
-// Environment Variable Names (Constants)
-/// Environment variable for project directory.
+// --- Constants: Environment Variable Names ---
+
+/// Environment variable for the project directory.
 pub const DirEnv:&str = "MOUNTAIN_DIR";
 
-/// Environment variable for original base name.
+/// Environment variable for the original base name of the project.
 pub const NameEnv:&str = "MOUNTAIN_ORIGINAL_BASE_NAME";
 
-/// Environment variable for bundle ID prefix.
+/// Environment variable for the bundle identifier prefix.
 pub const PrefixEnv:&str = "MOUNTAIN_BUNDLE_ID_PREFIX";
 
-/// Environment variable for bundle flag.
+/// Environment variable for the "Bundle" build flag.
 pub const BundleEnv:&str = "Bundle";
 
-/// Environment variable for browser flag.
+/// Environment variable for the "Browser" build flag.
 pub const BrowserEnv:&str = "Browser";
 
-/// Environment variable for bundle flag.
+/// Environment variable for the "Compile" build flag.
 pub const CompileEnv:&str = "Compile";
 
-/// Environment variable for clean flag.
+/// Environment variable for the "Clean" build flag.
 pub const CleanEnv:&str = "Clean";
 
-/// Environment variable for dependency information.
+/// Environment variable for specifying a dependency flavour.
 pub const DependencyEnv:&str = "Dependency";
 
-/// Environment variable for Node.js environment.
+/// Environment variable for the Node.js environment (`development` or
+/// `production`).
 pub const NodeEnv:&str = "NODE_ENV";
 
-/// Environment variable for log level.
+/// Environment variable for selecting the Node.js sidecar version.
+pub const NodeVersionEnv:&str = "NODE_VERSION";
+
+/// Environment variable for setting the log level.
 pub const LogEnv:&str = "RUST_LOG";
 
-/// Represents errors that can occur during the build script execution.
+/// Represents all possible errors that can occur during the build script's
+/// execution.
 #[derive(Error, Debug)]
 pub enum Error {
-	/// An I/O error.
 	#[error("IO: {0}")]
 	Io(#[from] io::Error),
 
-	/// A TOML editing error.
 	#[error("Toml Editing: {0}")]
 	Edit(#[from] toml_edit::TomlError),
 
-	/// A TOML deserialization error.
 	#[error("Toml Parsing: {0}")]
 	Parse(#[from] toml::de::Error),
 
-	/// A JSON serialization/deserialization error.
 	#[error("Json: {0}")]
 	Json(#[from] serde_json::Error),
 
-	/// A JSON5 parsing error.
 	#[error("Json5: {0}")]
 	Jsonfive(#[from] json5::Error),
 
-	/// A required directory is missing.
 	#[error("Missing Directory: {0}")]
 	Missing(PathBuf),
 
-	/// An external command failed to execute.
 	#[error("Command Failed: {0}")]
 	Shell(std::process::ExitStatus),
 
-	/// No build command was provided.
 	#[error("No Command Provided")]
-	Nocommand,
+	NoCommand,
 
-	/// The Tauri configuration file (JSON or JSON5) was not found.
 	#[error("Tauri Configuration File Not Found")]
 	Config,
 
-	/// A backup file already exists, preventing a new backup.
 	#[error("Backup File Exists: {0}")]
 	Exists(PathBuf),
 
-	/// A UTF-8 conversion error.
 	#[error("UTF-8 Conversion: {0}")]
 	Utf(#[from] std::string::FromUtf8Error),
 
-	/// A required environment variable is missing.
 	#[error("Environment Variable Missing: {0}")]
 	Environment(String),
 }
 
-/// Represents parsed command-line arguments and environment variables.
+/// Represents parsed command-line arguments and environment variables that
+/// control the build.
 #[derive(Parser, Debug, Clone)]
-#[clap(author, version, about = "Prepares, builds, and restores project.")]
+#[clap(
+	author,
+	version,
+	about = "Prepares, builds, and restores project configurations."
+)]
 pub struct Argument {
 	/// The main directory of the project.
 	#[clap(long, env = DirEnv, default_value = DirectoryDefault)]
@@ -150,55 +169,42 @@ pub struct Argument {
 	#[clap(long, env = NodeEnv)]
 	Environment:Option<String>,
 
+	/// Specifies the Node.js sidecar version to bundle (e.g., "22").
+	#[clap(long, env = NodeVersionEnv)]
+	NodeVersion:Option<String>,
+
 	/// The build command and its arguments to execute.
 	#[clap(required = true, last = true)]
 	Command:Vec<String>,
 }
 
-/// Represents the `package` section of a Cargo.toml manifest.
+/// Represents the `package` section of a `Cargo.toml` manifest.
 #[derive(Deserialize, Debug)]
 pub struct Manifest {
-	/// Package metadata.
 	package:Meta,
 }
 
-/// Represents metadata within the `package` section of Cargo.toml, specifically
-/// for versioning.
+/// Represents metadata within the `package` section of `Cargo.toml`.
 #[derive(Deserialize, Debug)]
 pub struct Meta {
-	/// The version string of the package.
 	version:String,
 }
 
-/// Manages the backup and restoration of a single file.
+/// Manages the backup and restoration of a single file using the RAII pattern.
 /// Ensures that an original file is restored to its initial state when this
 /// struct goes out of scope.
 pub struct Guard {
-	/// Path to the original file being managed.
 	Path:PathBuf,
 
-	/// Path to the backup copy of the original file.
 	Store:PathBuf,
 
-	/// Indicates if a backup was successfully created and is active.
 	Active:bool,
 
-	/// A description of the file being guarded, for logging purposes.
+	#[allow(dead_code)]
 	Note:String,
 }
 
 impl Guard {
-	/// Creates a new `Guard` for a file.
-	///
-	/// If the original file exists, it's copied to a backup location.
-	///
-	/// # Parameters
-	/// - `OriginalPath`: The path to the file to guard.
-	/// - `Description`: A human-readable description for logging.
-	///
-	/// # Errors
-	/// Returns `Error::Exists` if a backup file already exists at the target
-	/// location. Returns `Error::Io` if file operations (copying) fail.
 	pub fn New(OriginalPath:PathBuf, Description:String) -> Result<Self, Error> {
 		let BackupPath = OriginalPath.with_extension(format!(
 			"{}{}",
@@ -207,10 +213,7 @@ impl Guard {
 		));
 
 		if BackupPath.exists() {
-			error!(
-				"Backup file {} already exists. Please remove it or use a different backup suffix.",
-				BackupPath.display()
-			);
+			error!("Backup file {} already exists.", BackupPath.display());
 
 			return Err(Error::Exists(BackupPath));
 		}
@@ -223,107 +226,36 @@ impl Guard {
 			info!(target: "Build::Guard", "Backed {} to {}", OriginalPath.display(), BackupPath.display());
 
 			BackupMade = true;
-		} else {
-			warn!(target: "Build::Guard", "Original {} not found, no backup will be created.", OriginalPath.display());
 		}
 
 		Ok(Self { Path:OriginalPath, Store:BackupPath, Active:BackupMade, Note:Description })
 	}
 
-	/// Returns a reference to the path of the original file.
 	pub fn Path(&self) -> &Path { &self.Path }
 
-	/// Returns a reference to the path of the backup file.
 	pub fn Store(&self) -> &Path { &self.Store }
 }
 
 impl Drop for Guard {
-	/// Restores the original file from its backup when the `Guard` is dropped.
-	/// Also cleans up the backup file.
 	fn drop(&mut self) {
 		if self.Active && self.Store.exists() {
-			info!(
-				target: "Build::Guard",
+			info!(target: "Build::Guard", "Restoring {} from {}...", self.Path.display(), self.Store.display());
 
+			if let Ok(_) = fs::copy(&self.Store, &self.Path) {
+				info!(target: "Build::Guard", "Restore successful.");
 
-				"Restoring {} from {}... ",
-
-
-				self.Path.display(),
-
-
-				self.Store.display()
-			);
-
-			match fs::copy(&self.Store, &self.Path) {
-				Ok(_) => {
-					info!(target: "Build::Guard", "Restore successful.");
-
-					if let Err(Error) = fs::remove_file(&self.Store) {
-						error!(target: "Build::Guard", "Failed delete backup {}: {}", self.Store.display(), Error);
-					} else {
-						info!(target: "Build::Guard", "Deleted backup {}.", self.Store.display());
-					}
-				},
-
-				Err(Error) => {
-					error!(
-						target: "Build::Guard",
-
-
-						"Restore FAILED: {}. {} is now inconsistent. Backup remains at {}.",
-
-
-						Error,
-
-
-						self.Path.display(),
-
-
-						self.Store.display()
-					)
-				},
-			}
-		} else if self.Store.exists() {
-			// Original might not have existed, or backup was not active
-			warn!(
-				target: "Build::Guard",
-
-
-				"Found unexpected backup {} (original might not have existed or backup flag was false). Deleting... ",
-
-
-				self.Store.display()
-			);
-
-			if let Err(Error) = fs::remove_file(&self.Store) {
-				error!(target: "Build::Guard", "FAILED to delete unexpected backup: {}.", Error);
-			} else {
-				info!(target: "Build::Guard", "Deleted unexpected backup successfully.");
+				if let Err(e) = fs::remove_file(&self.Store) {
+					error!(target: "Build::Guard", "Failed to delete backup {}: {}", self.Store.display(), e);
+				}
+			} else if let Err(e) = fs::copy(&self.Store, &self.Path) {
+				error!(target: "Build::Guard", "Restore FAILED: {}. {} is now inconsistent.", e, self.Path.display());
 			}
 		}
-
-		info!(target: "Build::Guard", "Cleanup for {} finished.", self.Note);
 	}
 }
 
-/// Modifies specific name fields within a TOML file.
-///
-/// Changes `package.name`, `package.default-run`, `lib.name`, and `bin.name`
-/// entries from an old name to a new name.
-///
-/// # Parameters
-/// - `File`: Path to the TOML file to modify.
-/// - `Old`: The original name string to find and replace.
-/// - `Current`: The new name string to replace with.
-///
-/// # Returns
-/// `Ok(true)` if changes were made and written, `Ok(false)` if no changes were
-/// needed or no matching names were found.
-///
-/// # Errors
-/// Returns `Error::Io` for file read/write issues or `Error::Edit` for TOML
-/// parsing/formatting issues.
+/// Dynamically modifies specific name fields within a `Cargo.toml` file. This
+/// includes `package.name`, `package.default-run`, and `bin.name`.
 pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, Error> {
 	debug!(target: "Build::Toml", "Attempting to modify TOML file: {}", File.display());
 
@@ -389,7 +321,7 @@ pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, Error> {
 
 					BinaryChange = true;
 
-					debug!(target: "Build::Toml", "Changed a bin.name entry");
+					debug!(target: "Build::Toml", "Changed a bin.name entry to '{}'", Current);
 
 					break;
 				}
@@ -424,186 +356,99 @@ pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, Error> {
 
 		Ok(true)
 	} else {
-		warn!(
-			target: "Build::Toml",
-
-
-			"Name '{}' not found in relevant sections of {}. No changes made to file.",
-
-
-			Old,
-
-
-			File.display()
-		);
+		warn!(target: "Build::Toml", "Name '{}' not found in relevant sections of {}. No changes made to file.", Old, File.display());
 
 		Ok(false)
 	}
 }
 
-/// Modifies root-level 'version', 'productName', and 'identifier' in a JSON or
-/// JSON5 file.
-///
-/// # Parameters
-/// - `File`: Path to the JSON/JSON5 file.
-/// - `Product`: The new product name.
-/// - `Id`: The new bundle identifier.
-/// - `Version`: The new version string.
-///
-/// # Returns
-/// `Ok(true)` if changes were made, `Ok(false)` otherwise.
-///
-/// # Errors
-/// Returns `Error::Io` for file issues, `Error::Json` or `Error::Jsonfive` for
-/// parsing/serialization issues, `Error::Utf` for string conversion issues, or
-/// if the JSON root is not an object.
-pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str) -> Result<bool, Error> {
+/// Dynamically modifies fields in a `tauri.conf.json` or `tauri.conf.json5`
+/// file, including the sidecar path.
+pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Option<&str>) -> Result<bool, Error> {
 	debug!(target: "Build::Json", "Attempting to modify JSON file: {}", File.display());
 
 	let Data = fs::read_to_string(File)?;
 
-	let mut Parsed:JsonValue = match File.extension().and_then(|Ext| Ext.to_str()) {
-		Some("json5") => json5::from_str(&Data)?,
-
-		_ => serde_json::from_str(&Data)?,
+	let mut Parsed:JsonValue = if File.extension().and_then(|s| s.to_str()) == Some("json5") {
+		json5::from_str(&Data)?
+	} else {
+		serde_json::from_str(&Data)?
 	};
 
-	debug!(target: "Build::Json", "Target Product: '{}', ID: '{}', Ver: '{}'", Product, Id, Version);
+	let mut Modified = false;
 
-	let mut ModifiedItems = Vec::new();
+	let Root = Parsed
+		.as_object_mut()
+		.ok_or_else(|| Error::Io(io::Error::new(io::ErrorKind::InvalidData, "JSON root is not an object")))?;
 
-	// Get root object, or fail if not an object
-	let RootObj = Parsed.as_object_mut().ok_or_else(|| {
-		error!(target: "Build::Json", "Root of JSON file {} is not an object.", File.display());
+	if Root.get("version").and_then(JsonValue::as_str) != Some(Version) {
+		Root.insert("version".to_string(), JsonValue::String(Version.to_string()));
 
-		Error::Io(io::Error::new(
-			io::ErrorKind::InvalidData,
-			format!("JSON root of {} is not an object", File.display()),
-		))
-	})?;
-
-	// Version: Expected at root
-	let VersionKey = "version";
-
-	if let Some(VerVal) = RootObj.get_mut(VersionKey) {
-		if VerVal.as_str() != Some(Version) {
-			*VerVal = JsonValue::String(Version.to_string());
-
-			ModifiedItems.push(VersionKey.to_string());
-
-			debug!(target: "Build::Json", "Updated root '{}'", VersionKey);
-		}
-	} else {
-		RootObj.insert(VersionKey.to_string(), JsonValue::String(Version.to_string()));
-
-		ModifiedItems.push(format!("{} (created at root)", VersionKey));
-
-		debug!(target: "Build::Json", "Created root '{}'", VersionKey);
+		Modified = true;
 	}
 
-	// ProductName: Expected at root
-	let ProductKey = "productName";
+	if Root.get("productName").and_then(JsonValue::as_str) != Some(Product) {
+		Root.insert("productName".to_string(), JsonValue::String(Product.to_string()));
 
-	if let Some(ProdVal) = RootObj.get_mut(ProductKey) {
-		if ProdVal.as_str() != Some(Product) {
-			*ProdVal = JsonValue::String(Product.to_string());
-
-			ModifiedItems.push(ProductKey.to_string());
-
-			debug!(target: "Build::Json", "Updated root '{}'", ProductKey);
-		}
-	} else {
-		RootObj.insert(ProductKey.to_string(), JsonValue::String(Product.to_string()));
-
-		ModifiedItems.push(format!("{} (created at root)", ProductKey));
-
-		debug!(target: "Build::Json", "Created root '{}'", ProductKey);
+		Modified = true;
 	}
 
-	// Identifier: Expected at root
-	let IdKey = "identifier";
+	if Root.get("identifier").and_then(JsonValue::as_str) != Some(Id) {
+		Root.insert("identifier".to_string(), JsonValue::String(Id.to_string()));
 
-	if let Some(IdVal) = RootObj.get_mut(IdKey) {
-		if IdVal.as_str() != Some(Id) {
-			*IdVal = JsonValue::String(Id.to_string());
-
-			ModifiedItems.push(IdKey.to_string());
-
-			debug!(target: "Build::Json", "Updated root '{}'", IdKey);
-		}
-	} else {
-		RootObj.insert(IdKey.to_string(), JsonValue::String(Id.to_string()));
-
-		ModifiedItems.push(format!("{} (created at root)", IdKey));
-
-		debug!(target: "Build::Json", "Created root '{}'", IdKey);
+		Modified = true;
 	}
 
-	if !ModifiedItems.is_empty() {
+	if let Some(Path) = SidecarPath {
+		let Bundle = Root
+			.entry("bundle")
+			.or_insert_with(|| JsonValue::Object(Default::default()))
+			.as_object_mut()
+			.unwrap();
+
+		let Bins = Bundle
+			.entry("externalBin")
+			.or_insert_with(|| JsonValue::Array(Default::default()))
+			.as_array_mut()
+			.unwrap();
+
+		Bins.push(JsonValue::String(Path.to_string()));
+
+		Modified = true;
+	}
+
+	if Modified {
 		let mut Buffer = Vec::new();
 
-		let Format = serde_json::ser::PrettyFormatter::with_indent(b"\t");
+		let Formatter = serde_json::ser::PrettyFormatter::with_indent(b"\t");
 
-		let mut Serial = serde_json::Serializer::with_formatter(&mut Buffer, Format);
+		let mut Serializer = serde_json::Serializer::with_formatter(&mut Buffer, Formatter);
 
-		Parsed.serialize(&mut Serial)?;
+		Parsed.serialize(&mut Serializer)?;
 
-		let Output = String::from_utf8(Buffer)?;
+		fs::write(File, String::from_utf8(Buffer)?)?;
 
-		fs::write(File, Output)?;
-
-		info!(
-			target: "Build::Json",
-
-
-			"Changed {} in {} (Product: '{}', ID: '{}', Ver: '{}')",
-
-
-			ModifiedItems.join(", "), File.display(), Product, Id, Version
-		);
-
-		Ok(true)
-	} else {
-		info!(target: "Build::Json", "No JSON modifications needed for {}.", File.display());
-
-		Ok(false)
+		info!(target: "Build::Json", "Dynamically configured {}", File.display());
 	}
+
+	Ok(Modified)
 }
 
-/// Converts a kebab-case or snake_case string to PascalCase.
-///
-/// # Parameters
-/// - `Text`: The input string to convert.
-///
-/// # Returns
-/// The PascalCase version of the input string.
+/// Converts a kebab-case or snake_case string to `PascalCase`.
 pub fn Pascalize(Text:&str) -> String {
-	Text.split(|Character:char| Character == '-' || Character == '_')
-		.filter(|Part| !Part.is_empty())
-		.map(|Part| {
-			let mut Characters = Part.chars();
+	Text.split(|c:char| c == '-' || c == '_')
+		.filter(|s| !s.is_empty())
+		.map(|s| {
+			let mut c = s.chars();
 
-			match Characters.next() {
-				None => String::new(),
-
-				Some(FirstChar) => FirstChar.to_uppercase().to_string() + Characters.as_str(),
-			}
+			c.next()
+				.map_or(String::new(), |f| f.to_uppercase().collect::<String>() + c.as_str())
 		})
 		.collect()
 }
 
-/// Converts a PascalCase string into a vector of its lowercase constituent
+/// Converts a `PascalCase` string into a vector of its lowercase constituent
 /// words.
-///
-/// Example: "MyExampleString" -> vec!["my", "example", "string"]
-/// Example: "VSCode" -> vec!["vscode"]
-/// Example: "NodeEnvironment" -> vec!["node", "environment"]
-///
-/// # Parameters
-/// - `Text`: The PascalCase input string.
-///
-/// # Returns
-/// A `Vec<String>` of lowercase words.
 fn WordsFromPascal(Text:&str) -> Vec<String> {
 	if Text.is_empty() {
 		return Vec::new();
@@ -618,9 +463,6 @@ fn WordsFromPascal(Text:&str) -> Vec<String> {
 	for Char in Text.chars() {
 		if Char.is_uppercase() {
 			if !CurrentWord.is_empty() && !LastCharWasUppercase {
-				// If current word is not empty and previous char was not uppercase,
-
-				// this uppercase char starts a new word.
 				Words.push(CurrentWord.to_ascii_lowercase());
 
 				CurrentWord.clear();
@@ -630,34 +472,6 @@ fn WordsFromPascal(Text:&str) -> Vec<String> {
 
 			LastCharWasUppercase = true;
 		} else {
-			// Lowercase or number
-			if LastCharWasUppercase && Char.is_alphabetic() && !CurrentWord.ends_with(char::is_uppercase) {
-				// If previous was uppercase and current is lowercase, and current word isn't
-				// just an acronym This implies transition from acronym (like VS) to a new
-				// word part (Code in VSCode) For simple PascalCase like "NodeEnvironment",
-
-				// the previous if condition handles it. This handles cases like "VSCode" ->
-				// "vscode", "MyID" -> "myid". If CurrentWord has multiple uppercase, it's
-				// an acronym. If CurrentWord has one uppercase, and now we see a lowercase,
-
-				// it's a new word. This part needs refinement if strict acronym handling is
-				// desired. For "PascalToDotCase" -> "pascal", "to", "dot", "case"
-				// A simpler approach: if current char is lowercase and previous was uppercase,
-
-				// and current word contains more than just that previous uppercase char,
-
-				// then the previous uppercase (and any before it if an acronym) was a word.
-				if CurrentWord.chars().filter(|c| c.is_uppercase()).count() > 1 && CurrentWord.len() > 1 {
-
-					// CurrentWord is an acronym like "VS", and now we have "C"
-					// (lowercase 'c') We need to push "vs" and start "c".
-					// This logic is getting complex. A regex might be better
-					// for robust Pascal/camel to words. For now, let's
-					// stick to a simpler split: any uppercase starts a new
-					// potential word boundary.
-				}
-			}
-
 			CurrentWord.push(Char);
 
 			LastCharWasUppercase = false;
@@ -671,16 +485,28 @@ fn WordsFromPascal(Text:&str) -> Vec<String> {
 	Words
 }
 
+/// Gets the Tauri-compatible target triple for the current build environment.
+fn GetTauriTargetTriple() -> String {
+	let Os = env::consts::OS;
+
+	let Arch = env::consts::ARCH;
+
+	match (Os, Arch) {
+		("windows", "x86_64") => "x86_64-pc-windows-msvc".to_string(),
+
+		("linux", "x86_64") => "x86_64-unknown-linux-gnu".to_string(),
+
+		("linux", "aarch64") => "aarch64-unknown-linux-gnu".to_string(),
+
+		("macos", "x86_64") => "x86_64-apple-darwin".to_string(),
+
+		("macos", "aarch64") => "aarch64-apple-darwin".to_string(),
+
+		_ => panic!("Unsupported OS-Arch for sidecar: {}-{}", Os, Arch),
+	}
+}
+
 /// Main orchestration logic for preparing and executing the build.
-///
-/// Modifies configuration files based on input arguments, then runs the
-/// specified build command.
-///
-/// # Parameters
-/// - `Argument`: Parsed command-line arguments and environment variables.
-///
-/// # Errors
-/// Returns various `Error` variants if any step in the process fails.
 pub fn Process(Argument:&Argument) -> Result<(), Error> {
 	info!(target: "Build", "Starting build orchestration...");
 
@@ -689,36 +515,25 @@ pub fn Process(Argument:&Argument) -> Result<(), Error> {
 	let ProjectDir = PathBuf::from(&Argument.Directory);
 
 	if !ProjectDir.is_dir() {
-		error!(target: "Build", "Project directory not found: {}", ProjectDir.display());
-
 		return Err(Error::Missing(ProjectDir));
 	}
 
-	info!(target: "Build", "Using project directory: {}", ProjectDir.display());
-
 	let CargoPath = ProjectDir.join(CargoFile);
 
-	let JsonfivePath = ProjectDir.join(JsonfiveFile);
+	let ConfigPath = {
+		let Jsonfive = ProjectDir.join(JsonfiveFile);
 
-	let JsonPath = ProjectDir.join(JsonFile);
-
-	let ConfigPath = if JsonfivePath.exists() {
-		JsonfivePath
-	} else if JsonPath.exists() {
-		JsonPath
-	} else {
-		error!(target: "Build", "Neither {} nor {} found in {}", JsonfiveFile, JsonFile, ProjectDir.display());
-
-		return Err(Error::Config);
+		if Jsonfive.exists() { Jsonfive } else { ProjectDir.join(JsonFile) }
 	};
 
-	info!(target: "Build", "Using Tauri config: {}", ConfigPath.display());
+	if !ConfigPath.exists() {
+		return Err(Error::Config);
+	}
 
-	let CargoGuard = Guard::New(CargoPath.clone(), "Cargo.toml".to_string())?;
+	let _CargoGuard = Guard::New(CargoPath.clone(), "Cargo.toml".to_string())?;
 
-	let ConfigGuard = Guard::New(ConfigPath.clone(), "Tauri config".to_string())?;
+	let _ConfigGuard = Guard::New(ConfigPath.clone(), "Tauri config".to_string())?;
 
-	// --- Name and Identifier Parts Construction ---
 	let mut NamePartsForProductName = Vec::new();
 
 	let mut NamePartsForId = Vec::new();
@@ -735,8 +550,6 @@ pub fn Process(Argument:&Argument) -> Result<(), Error> {
 				NamePartsForId.push("node".to_string());
 
 				NamePartsForId.push("environment".to_string());
-
-				debug!(target: "Build::Name", "Added NodeEnvironment parts");
 			}
 		}
 	}
@@ -746,23 +559,15 @@ pub fn Process(Argument:&Argument) -> Result<(), Error> {
 			let (PascalDepBase, IdDepWords) = if DependencyValue.eq_ignore_ascii_case("true") {
 				("Generic".to_string(), vec!["generic".to_string()])
 			} else if let Some((Org, Repo)) = DependencyValue.split_once('/') {
-				let PascalOrg = Pascalize(Org);
+				(format!("{}{}", Pascalize(Org), Pascalize(Repo)), {
+					let mut w = WordsFromPascal(&Pascalize(Org));
 
-				let PascalRepo = Pascalize(Repo);
+					w.extend(WordsFromPascal(&Pascalize(Repo)));
 
-				let Base = format!("{}{}", PascalOrg, PascalRepo);
-
-				let mut Words = Vec::new();
-
-				Words.extend(WordsFromPascal(&PascalOrg));
-
-				Words.extend(WordsFromPascal(&PascalRepo));
-
-				(Base, Words)
+					w
+				})
 			} else {
-				let PascalVal = Pascalize(DependencyValue);
-
-				(PascalVal.clone(), WordsFromPascal(&PascalVal))
+				(Pascalize(DependencyValue), WordsFromPascal(&Pascalize(DependencyValue)))
 			};
 
 			if !PascalDepBase.is_empty() {
@@ -771,48 +576,47 @@ pub fn Process(Argument:&Argument) -> Result<(), Error> {
 				NamePartsForId.extend(IdDepWords);
 
 				NamePartsForId.push("dependency".to_string());
-
-				debug!(target: "Build::Name", "Added Dependency parts");
 			}
 		}
 	}
 
-	if Argument.Bundle.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
+	if let Some(Version) = &Argument.NodeVersion {
+		if !Version.is_empty() {
+			let PascalVersion = format!("{}NodeVersion", Version);
+
+			NamePartsForProductName.push(PascalVersion.clone());
+
+			NamePartsForId.push("node".to_string());
+
+			NamePartsForId.push(Version.to_string());
+		}
+	}
+
+	if Argument.Bundle.as_ref().map_or(false, |v| v == "true") {
 		NamePartsForProductName.push("Bundle".to_string());
 
 		NamePartsForId.push("bundle".to_string());
-
-		debug!(target: "Build::Name", "Added Bundle parts");
 	}
 
-	if Argument.Clean.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
+	if Argument.Clean.as_ref().map_or(false, |v| v == "true") {
 		NamePartsForProductName.push("Clean".to_string());
 
 		NamePartsForId.push("clean".to_string());
-
-		debug!(target: "Build::Name", "Added Clean parts");
 	}
 
-	if Argument.Browser.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
+	if Argument.Browser.as_ref().map_or(false, |v| v == "true") {
 		NamePartsForProductName.push("Browser".to_string());
 
 		NamePartsForId.push("browser".to_string());
-
-		debug!(target: "Build::Name", "Added Browser parts");
 	}
 
-	if Argument.Compile.as_ref().map_or(false, |V| V.eq_ignore_ascii_case("true")) {
+	if Argument.Compile.as_ref().map_or(false, |v| v == "true") {
 		NamePartsForProductName.push("Compile".to_string());
 
 		NamePartsForId.push("compile".to_string());
-
-		debug!(target: "Build::Name", "Added Compile parts");
 	}
 
-	// --- Construct FinalName for Product/Package ---
 	let ProductNamePrefix = NamePartsForProductName.join(NameDelimiter);
-
-	debug!(target: "Build", "Full prefix string for product name: '{}'", ProductNamePrefix);
 
 	let FinalName = if !ProductNamePrefix.is_empty() {
 		format!("{}{}{}", ProductNamePrefix, NameDelimiter, Argument.Name)
@@ -820,10 +624,8 @@ pub fn Process(Argument:&Argument) -> Result<(), Error> {
 		Argument.Name.clone()
 	};
 
-	info!(target: "Build", "Final generated package/product name: '{}'", FinalName);
+	info!(target: "Build", "Final generated product name: '{}'", FinalName);
 
-	// --- Construct FinalId for Bundle Identifier ---
-	// Add the base name ("Mountain") to the Id parts
 	NamePartsForId.extend(WordsFromPascal(&Argument.Name));
 
 	let IdSuffix = NamePartsForId
@@ -832,93 +634,126 @@ pub fn Process(Argument:&Argument) -> Result<(), Error> {
 		.collect::<Vec<String>>()
 		.join(IdDelimiter);
 
-	debug!(target: "Build", "Generated dot.separated suffix for identifier: '{}'", IdSuffix);
-
 	let FinalId = format!("{}{}{}", Argument.Prefix, IdDelimiter, IdSuffix);
 
 	info!(target: "Build", "Generated bundle identifier: '{}'", FinalId);
 
-	// --- TOML and JSON Modification ---
 	if FinalName != Argument.Name {
-		TomlEdit(CargoGuard.Path(), &Argument.Name, &FinalName)?;
-	} else {
-		info!(target: "Build", "Cargo.toml name remains '{}'.", Argument.Name);
+		TomlEdit(&CargoPath, &Argument.Name, &FinalName)?;
 	}
 
-	let AppVersion = {
-		let VersionFile = if CargoGuard.Store().exists() { CargoGuard.Store() } else { CargoGuard.Path() };
+	let AppVersion = toml::from_str::<Manifest>(&fs::read_to_string(&CargoPath)?)?.package.version;
 
-		debug!(target: "Build", "Reading version from: {}", VersionFile.display());
+	// --- Sidecar Selection and Staging Logic ---
+	let sidecar_bundle_path_for_tauri = if let Some(version) = &Argument.NodeVersion {
+		info!(target: "Build", "Selected Node.js version: {}", version);
 
-		let VersionData = fs::read_to_string(VersionFile)?;
+		let target_triple = GetTauriTargetTriple();
 
-		let CargoManifest:Manifest = toml::from_str(&VersionData).map_err(|Error| {
-			error!(target: "Build", "Failed to parse TOML for version from {}: {}", VersionFile.display(), Error);
+		// Path to the pre-downloaded Node executable
+		let source_executable_path = if cfg!(target_os = "windows") {
+			PathBuf::from(format!("./Element/SideCar/{}/NODE/{}/node.exe", target_triple, version))
+		} else {
+			PathBuf::from(format!("./Element/SideCar/{}/NODE/{}/bin/node", target_triple, version))
+		};
 
-			Error::Parse(Error)
-		})?;
+		// Define a consistent, temporary directory inside `src-tauri` for the staged
+		// binary
+		let temp_sidecar_dir = ProjectDir.join("Binary");
 
-		debug!(target: "Build", "Read version: {}", CargoManifest.package.version);
+		fs::create_dir_all(&temp_sidecar_dir)?;
 
-		CargoManifest.package.version
-	};
+		// Define the consistent name for the binary that Tauri will bundle
+		let dest_executable_path = if cfg!(target_os = "windows") {
+			temp_sidecar_dir.join(format!("node-{}.exe", target_triple))
+		} else {
+			temp_sidecar_dir.join(format!("node-{}", target_triple))
+		};
 
-	let JsonProduct = &FinalName;
+		info!(
+			target: "Build",
 
-	JsonEdit(ConfigGuard.Path(), JsonProduct, &FinalId, &AppVersion)?;
+			"Staging sidecar from {} to {}",
 
-	// --- Command Execution ---
-	if Argument.Command.is_empty() {
-		error!(target: "Build", "No build command provided.");
+			source_executable_path.display(),
 
-		return Err(Error::Nocommand);
-	}
+			dest_executable_path.display()
+		);
 
-	let mut ShellCommand:ProcessCommand;
+		// Perform the copy
+		fs::copy(&source_executable_path, &dest_executable_path)?;
 
-	let Program = &Argument.Command[0];
+		// On non-windows, make sure the copied binary is executable
+		#[cfg(not(target_os = "windows"))]
+		{
+			use std::os::unix::fs::PermissionsExt;
 
-	let ProgramArgument = &Argument.Command[1..];
+			let mut perms = fs::metadata(&dest_executable_path)?.permissions();
 
-	if cfg!(target_os = "windows") {
-		ShellCommand = ProcessCommand::new("cmd");
-
-		ShellCommand.arg("/C").arg(Program).args(ProgramArgument);
-	} else {
-		let mut FullCommand = Program.clone();
-
-		for Arg in ProgramArgument {
-			FullCommand.push(' ');
-
-			FullCommand.push_str(&format!("'{}'", Arg.replace('\'', "'\\''")));
+			perms.set_mode(0o755); // rwxr-xr-x
+			fs::set_permissions(&dest_executable_path, perms)?;
 		}
 
-		ShellCommand = ProcessCommand::new("sh");
+		Some("Binary/node".to_string())
+	} else {
+		info!(target: "Build", "No Node.js flavour selected for bundling.");
 
-		ShellCommand.arg("-c").arg(FullCommand);
+		None
+	};
+
+	// --- End Sidecar Logic ---
+
+	JsonEdit(
+		&ConfigPath,
+		&FinalName,
+		&FinalId,
+		&AppVersion,
+		sidecar_bundle_path_for_tauri.as_deref(),
+	)?;
+
+	if Argument.Command.is_empty() {
+		return Err(Error::NoCommand);
 	}
 
-	info!(target: "Build::Exec", "Executing command (shell wrapper): {:?}", ShellCommand);
+	let mut ShellCommand = if cfg!(target_os = "windows") {
+		let mut cmd = ProcessCommand::new("cmd");
 
-	let mut ProcessHandle = ShellCommand
+		cmd.arg("/C").args(&Argument.Command);
+
+		cmd
+	} else {
+		let mut cmd = ProcessCommand::new(&Argument.Command[0]);
+
+		cmd.args(&Argument.Command[1..]);
+
+		cmd
+	};
+
+	info!(target: "Build::Exec", "Executing final build command: {:?}", ShellCommand);
+
+	let Status = ShellCommand
 		.current_dir(env::current_dir()?)
 		.stdout(Stdio::inherit())
 		.stderr(Stdio::inherit())
-		.spawn()
-		.map_err(|Error| {
-			error!(target: "Build::Exec", "Failed to spawn command '{:?}': {}", ShellCommand, Error);
+		.status()?;
 
-			Error::Io(Error)
-		})?;
+	if !Status.success() {
+		let temp_sidecar_dir = ProjectDir.join("bin");
 
-	let ExitStatus = ProcessHandle.wait()?;
+		if temp_sidecar_dir.exists() {
+			let _ = fs::remove_dir_all(&temp_sidecar_dir);
+		}
 
-	info!(target: "Build::Exec", "Command finished with status: {}", ExitStatus);
+		return Err(Error::Shell(Status));
+	}
 
-	if !ExitStatus.success() {
-		error!(target: "Build::Exec", "Command failed with status: {}", ExitStatus);
+	// Final cleanup of the temporary sidecar directory after a successful build
+	let temp_sidecar_dir = ProjectDir.join("bin");
 
-		return Err(Error::Shell(ExitStatus));
+	if temp_sidecar_dir.exists() {
+		fs::remove_dir_all(&temp_sidecar_dir)?;
+
+		info!(target: "Build", "Cleaned up temporary sidecar directory.");
 	}
 
 	info!(target: "Build", "Build orchestration completed successfully.");
@@ -927,9 +762,6 @@ pub fn Process(Argument:&Argument) -> Result<(), Error> {
 }
 
 /// Sets up the global logger for the application.
-///
-/// Configures `env_logger` with a custom format and uses the `RUST_LOG`
-/// environment variable (defaulting to "info") to control verbosity.
 pub fn Logger() {
 	let LevelText = env::var(LogEnv).unwrap_or_else(|_| "info".to_string());
 
@@ -954,26 +786,12 @@ pub fn Logger() {
 		})
 		.parse_default_env()
 		.init();
-
-	info!(
-		"Logger initialized with level: {} (from {} or default 'info')",
-		LevelText,
-		LogEnv.cyan()
-	);
 }
 
 /// Verifies if all required environment variables are set.
-///
-/// Currently, `clap` handles defaults and requirements, so this is a
-/// placeholder.
-///
-/// # Errors
-/// Could return `Error::Environment` if a critical variable were missing.
 pub fn VerifyEnv() -> Result<(), Error> { Ok(()) }
 
-/// Entry point for running the build script logic.
-///
-/// Initializes logging, parses arguments, and orchestrates the build process.
+/// The main entry point of the binary.
 pub fn Fn() {
 	Logger();
 
@@ -988,18 +806,17 @@ pub fn Fn() {
 	debug!("Parsed arguments: {:?}", Argument);
 
 	match Process(&Argument) {
-		Ok(_) => {
-			info!("Build process completed successfully.");
-		},
+		Ok(_) => info!("Build process completed successfully."),
 
-		Err(Failure) => {
-			error!("Build process failed: {}", Failure);
+		Err(e) => {
+			error!("Build process failed: {}", e);
 
 			std::process::exit(1);
 		},
 	}
 }
 
+/// Main executable function.
 #[allow(unused)]
 fn main() { Fn(); }
 
