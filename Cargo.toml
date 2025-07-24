@@ -1,5 +1,5 @@
 [[bin]]
-name = "Build"
+name = "BuildMaintain"
 path = "Source/Build.rs"
 
 [[bin]]
