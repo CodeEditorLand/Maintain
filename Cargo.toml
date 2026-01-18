@@ -1,8 +1,4 @@
 [[bin]]
-name = "BuildMaintain"
-path = "Source/Build.rs"
-
-[[bin]]
 name = "Maintain"
 path = "Source/Library.rs"
 
