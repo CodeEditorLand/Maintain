@@ -16,8 +16,6 @@
 //!   command (e.g., `pnpm tauri build`), and then restoring the original files
 //!   using a `Guard` pattern.
 
-#![allow(non_snake_case, non_upper_case_globals)]
-
 // --- Constants: File Paths and Delimiters ---
 
 /// Default project directory relative to the workspace root.
