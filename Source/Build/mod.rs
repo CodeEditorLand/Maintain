@@ -107,6 +107,8 @@ pub mod Error;
 
 pub mod Function;
 
+pub mod Rhai;
+
 // Re-export commonly used items for convenience
 pub use Constant::*;
 pub use Definition::{Argument, Guard, Manifest};
@@ -122,3 +124,6 @@ pub use Function::{
 	TomlEdit,
 	WordsFromPascal,
 };
+
+// Re-export Rhai module
+pub use Rhai::{create_engine, ScriptResult, ScriptContext};
