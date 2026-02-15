@@ -99,6 +99,8 @@
 //=============================================================================//
 
 // Public module exports
+pub mod CLI;
+
 pub mod Constant;
 
 pub mod Definition;
@@ -110,6 +112,7 @@ pub mod Function;
 pub mod Rhai;
 
 // Re-export commonly used items for convenience
+pub use CLI::Cli;
 pub use Constant::*;
 pub use Definition::{Argument, Guard, Manifest};
 pub use Error::Error as BuildError;
