@@ -35,7 +35,7 @@ Land
 
 ---
 
-# **Maintain** 💪🏻 The Build System & CI/CD Toolkit for Land 🏞️
+# **Maintain** 💪🏻 The Build System & CI/CD Toolkit for Land 🏞️
 
 [![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](https://github.com/CodeEditorLand/Maintain/tree/Current/LICENSE)
 [![Crates.io](https://img.shields.io/crates/v/Maintain.svg)](https://crates.io/crates/Maintain)
@@ -60,7 +60,7 @@ TOML and JSON5 files.
 
 ---
 
-## Key Features 🔐
+## Key Features 🔐
 
 - **Rhai Scripting Engine:** Embedded Rhai interpreter for flexible build
   configuration and custom automation logic.
@@ -75,7 +75,7 @@ TOML and JSON5 files.
 
 ---
 
-## Core Architecture Principles 🏗️
+## Core Architecture Principles 🏗️
 
 | Principle                 | Description                                                                               | Key Components Involved                  |
 | :------------------------ | :---------------------------------------------------------------------------------------- | :--------------------------------------- |
@@ -86,7 +86,7 @@ TOML and JSON5 files.
 
 ---
 
-## `Maintain` in the Land Ecosystem 💪🏻 + 🏞️
+## `Maintain` in the Land Ecosystem 💪🏻 + 🏞️
 
 | Component                 | Role & Key Responsibilities                                  |
 | :------------------------ | :----------------------------------------------------------- |
@@ -97,7 +97,7 @@ TOML and JSON5 files.
 
 ---
 
-## Getting Started 🚀
+## Getting Started 🚀
 
 ### Installation
 
@@ -160,7 +160,7 @@ cargo install Maintain
 
 ---
 
-## System Architecture Diagram 🏗️
+## System Architecture Diagram 🏗️
 
 This diagram illustrates `Maintain`'s build orchestration architecture.
 
@@ -170,7 +170,7 @@ classDef maintain fill:#f9f,stroke:#333,stroke-width:2px;
 classDef script fill:#9cf,stroke:#333,stroke-width:1px;
 classDef config fill:#ffc,stroke:#333,stroke-width:1px;
 
-subgraph "Maintain 💪🏻 (Build System)"
+subgraph "Maintain 💪🏻 (Build System)"
 CLI["CLI Interface"]:::maintain
 RhaiEngine["Rhai Script Engine"]:::maintain
 ConfigEditor["Config Editor (TOML/JSON5)"]:::maintain
@@ -245,7 +245,7 @@ Element/Maintain/
 
 ---
 
-## Deep Dive & Component Breakdown 🔬
+## Deep Dive & Component Breakdown 🔬
 
 To understand how `Maintain`'s internal components interact to provide the build
 orchestration functionality, see the following source files:
@@ -346,7 +346,7 @@ file.
 
 ---
 
-## Changelog 📜
+## Changelog 📜
 
 Stay updated with our progress! See
 [`CHANGELOG.md`](https://github.com/CodeEditorLand/Maintain/tree/Current/) for a
@@ -354,7 +354,7 @@ history of changes specific to **Maintain**.
 
 ---
 
-## Funding & Acknowledgements 🙏🏻
+## Funding & Acknowledgements 🙏🏻
 
 **Maintain** is a core element of the **Land** ecosystem. This project is funded
 through [NGI0 Commons Fund](https://NLnet.NL/commonsfund), a fund established by
@@ -363,38 +363,38 @@ through [NGI0 Commons Fund](https://NLnet.NL/commonsfund), a fund established by
 [NLnet project page](https://NLnet.NL/project/Land).
 
 <table>
-<thead>
-<tr>
-<th align="left"><strong>Land</strong></th>
-<th align="left"><strong>PlayForm</strong></th>
-<th align="left"><strong>NLnet</strong></th>
-<th align="left"><strong>NGI0 Commons Fund</strong></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="left" valign="middle">
-<a href="https://Editor.Land">
-<img width="60" src="https://raw.githubusercontent.com/CodeEditorLand/Asset/refs/heads/Current/Logo/Land.svg" alt="Land">
-</a>
-</td>
-<td align="left" valign="middle">
-<a href="https://PlayForm.Cloud">
-<img width="76" src="https://raw.githubusercontent.com/PlayForm/Asset/refs/heads/Current/Logo/PlayForm.svg" alt="PlayForm">
-</a>
-</td>
-<td align="left" valign="middle">
-<a href="https://NLnet.NL">
-<img width="240" src="https://NLnet.NL/logo/banner.svg" alt="NLnet">
-</a>
-</td>
-<td align="left" valign="middle">
-<a href="https://NLnet.NL/commonsfund">
-<img width="240" src="https://NLnet.NL/image/logos/NGI0CommonsFund_tag_black_mono.svg" alt="NGI0 Commons Fund">
-</a>
-</td>
-</tr>
-</tbody>
+	<thead>
+		<tr>
+			<th align="left"><strong>Land</strong></th>
+			<th align="left"><strong>PlayForm</strong></th>
+			<th align="left"><strong>NLnet</strong></th>
+			<th align="left"><strong>NGI0 Commons Fund</strong></th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td align="left" valign="middle">
+				<a href="https://Editor.Land">
+					<img width="60" src="https://raw.githubusercontent.com/CodeEditorLand/Asset/refs/heads/Current/Logo/Land.svg" alt="Land">
+				</a>
+			</td>
+			<td align="left" valign="middle">
+				<a href="https://PlayForm.Cloud">
+					<img width="76" src="https://raw.githubusercontent.com/PlayForm/Asset/refs/heads/Current/Logo/PlayForm.svg" alt="PlayForm">
+				</a>
+			</td>
+			<td align="left" valign="middle">
+				<a href="https://NLnet.NL">
+					<img width="240" src="https://NLnet.NL/logo/banner.svg" alt="NLnet">
+				</a>
+			</td>
+			<td align="left" valign="middle">
+				<a href="https://NLnet.NL/commonsfund">
+					<img width="240" src="https://NLnet.NL/image/logos/NGI0CommonsFund_tag_black_mono.svg" alt="NGI0 Commons Fund">
+				</a>
+			</td>
+		</tr>
+	</tbody>
 </table>
 
 ---
