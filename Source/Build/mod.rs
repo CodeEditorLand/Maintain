@@ -31,7 +31,7 @@
 //
 // Dependencies (What this module requires):
 // - External crates: clap, colored, env_logger, json5, log, serde, serde_json,
-//   thiserror, toml, toml_edit
+// thiserror, toml, toml_edit
 // - Internal modules: None
 // - Traits implemented: None
 //
@@ -61,7 +61,7 @@
 // - Interior mutability considerations: None
 //
 // Error Handling:
-// - Error types returned: BuildError (comprehensive error enum)
+// - Error types returned: Error (comprehensive error enum)
 // - Recovery strategies: Guard restores files on error
 //
 // EXAMPLES:
@@ -69,7 +69,7 @@
 //
 // Example 1: Basic build orchestration
 /// ```rust
-/// use crate::Maintain::Source::Build::Function::FnFunction;
+/// use crate::Maintain::Source::Build::Fn;
 /// Fn();
 /// ```
 //
@@ -81,7 +81,7 @@
 /// # Production build with dependency flavor
 /// export NODE_ENV=production
 /// ./build-orchestrator --dependency tauri-apps/tauri --bundle true pnpm tauri build
-// ```
+/// ```
 //
 // Example 3: Environment variable configuration
 /// ```sh
@@ -92,41 +92,23 @@
 /// export NODE_VERSION="22"
 /// export RUST_LOG="debug"
 /// ./build-orchestrator pnpm tauri build
-// ```
+/// ```
 //
 //=============================================================================//
 // IMPLEMENTATION
 //=============================================================================//
 
-// Public module exports
+// Module declarations - flattened structure
 pub mod CLI;
-
 pub mod Constant;
-
 pub mod Definition;
-
 pub mod Error;
-
-pub mod Function;
-
+pub mod Fn;
+pub mod GetTauriTargetTriple;
+pub mod JsonEdit;
+pub mod Logger;
+pub mod Pascalize;
+pub mod Process;
 pub mod Rhai;
-
-// Re-export commonly used items for convenience
-pub use CLI::Cli;
-pub use Constant::*;
-pub use Definition::{Argument, Guard, Manifest};
-pub use Error::Error as BuildError;
-
-// Re-export commonly used functions
-pub use Function::{
-	Fn,
-	JsonEdit as JavaScriptObjectNotationEdit,
-	Logger,
-	Pascalize,
-	Process,
-	TomlEdit,
-	WordsFromPascal,
-};
-
-// Re-export Rhai module
-pub use Rhai::{create_engine, ScriptResult, ScriptContext};
+pub mod TomlEdit;
+pub mod WordsFromPascal;
