@@ -55,7 +55,7 @@ use std::path::Path;
 /// A HashMap of profile names to Profile instances
 pub fn load_profiles(config_path: &Path) -> Result<HashMap<String, Profile>> {
     let content = std::fs::read_to_string(config_path)
-        .map_err(|e| Error::ConfigNotFound(config_path.to_path_buf()))?;
+        .map_err(|_e| Error::ConfigNotFound(config_path.to_path_buf()))?;
 
     let config: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| Error::ConfigParse(e.to_string()))?;

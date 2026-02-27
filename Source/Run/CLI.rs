@@ -746,7 +746,7 @@ fn apply_overrides(
 /// Result indicating success or failure
 fn execute_run_command(
     profile_name: &str,
-    config: &LandConfig,
+    _config: &LandConfig,
     env_vars: &HashMap<String, String>,
     run_args: &[String],
 ) -> Result<(), String> {

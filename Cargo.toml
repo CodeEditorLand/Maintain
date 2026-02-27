@@ -1,6 +1,6 @@
 [[bin]]
 name = "Maintain"
-path = "Source/Library.rs"
+path = "Source/main.rs"
 
 [build-dependencies]
 serde = { workspace = true, features = ["derive"] }
