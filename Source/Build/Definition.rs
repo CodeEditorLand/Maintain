@@ -284,6 +284,11 @@ pub struct Guard {
     /// (false if the original file didn't exist).
     Active: bool,
 
+    /// Whether the guard is armed to restore on drop.
+    /// When true, the file will be restored on drop.
+    /// When false (disarmed), the modified file is preserved.
+    Armed: bool,
+
     /// A descriptive note for logging and debugging purposes.
     #[allow(dead_code)]
     Note: String,
@@ -356,6 +361,7 @@ impl Guard {
             Path: OriginalPath,
             Store: BackupPath,
             Active: BackupMade,
+            Armed: true,
             Note: Description,
         })
     }
@@ -399,8 +405,17 @@ impl Guard {
     pub fn Store(&self) -> &Path {
         &self.Store
     }
-}
-
+    
+    /// Disarms the guard, preventing restoration of the original file.
+    ///
+    /// Call this after successful build to preserve modified config files.
+    /// When disarmed, the Drop implementation will not restore the backup,
+    /// leaving the modified file in place.
+    pub fn disarm(&mut self) {
+        self.Armed = false;
+    }
+    }
+    
 /// Drop implementation that automatically restores the original file.
 ///
 /// This is the core of the RAII pattern: when the Guard goes out of scope,
@@ -422,7 +437,8 @@ impl Guard {
 /// that cleanup failures don't cause secondary failures.
 impl Drop for Guard {
     fn drop(&mut self) {
-        if self.Active && self.Store.exists() {
+        // Only restore if armed (build failed) and backup is active
+        if self.Armed && self.Active && self.Store.exists() {
             info!(
                 target: "Build::Guard",
                 "Restoring {} from {}...",

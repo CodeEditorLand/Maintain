@@ -199,9 +199,9 @@ pub fn Process(Argument: &Argument) -> Result<(), BuildError> {
     }
 
     // Create guards for file backup and restoration
-    let _CargoGuard = Guard::New(CargoPath.clone(), "Cargo.toml".to_string())?;
+    let mut CargoGuard = Guard::New(CargoPath.clone(), "Cargo.toml".to_string())?;
 
-    let _ConfigGuard = Guard::New(ConfigPath.clone(), "Tauri config".to_string())?;
+    let mut ConfigGuard = Guard::New(ConfigPath.clone(), "Tauri config".to_string())?;
 
     let mut NamePartsForProductName = Vec::new();
 
@@ -439,9 +439,13 @@ pub fn Process(Argument: &Argument) -> Result<(), BuildError> {
         fs::remove_dir_all(&DirectorySideCarTemporary)?;
 
         info!(target: "Build", "Cleaned up temporary sidecar directory.");
-    }
-
-    info!(target: "Build", "Build orchestration completed successfully.");
+        }
+        
+        // Disarm guards to preserve the modified configuration files
+        CargoGuard.disarm();
+        ConfigGuard.disarm();
+        
+        info!(target: "Build", "Build orchestration completed successfully.");
 
     Ok(())
 }

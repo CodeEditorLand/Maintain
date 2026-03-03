@@ -70,9 +70,9 @@
 /// ```sh
 /// # Debug run with hot-reload
 /// cargo run --bin Run -- --profile debug-mountain
-/// 
+///
 /// # Run with specific workbench
-/// ./Maintain/Debug/Run.sh --profile debug-wind
+/// ./Maintain/Debug/Run.sh --profile debug-mountain
 /// ```
 //
 //=============================================================================//
