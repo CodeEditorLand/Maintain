@@ -82,7 +82,7 @@
 /// The function is marked as `#[allow(dead_code)]` because when this file
 /// is used as a library module, the main function may not be called directly.
 /// However, when compiled as a binary, this main function is the entry point.
-/// TODO: Move this function to main.rs in a future refactor
+/// DEPENDENCY: Move this function to main.rs in a future refactor
 #[allow(dead_code)]
 pub fn main() {
     use clap::Parser;
