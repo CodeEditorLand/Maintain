@@ -253,3 +253,4 @@ pub mod Build;
 /// See the Run module documentation for detailed information about the
 /// development run system's capabilities and usage.
 pub mod Run;
+pub mod Architecture;
