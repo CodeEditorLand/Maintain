@@ -250,18 +250,18 @@ Element/Maintain/
 To understand how `Maintain`'s internal components interact to provide the build
 orchestration functionality, see the following source files:
 
-- **[`Source/Library.rs`](Source/Library.rs)** - Main entry point and module
-  declarations
-- **[`Source/Build/CLI.rs`](Source/Build/CLI.rs)** - Command-line interface with
-  clap
-- **[`Source/Build/Rhai/`](Source/Build/Rhai/)** - Rhai scripting engine
-  integration
-    - [`ConfigLoader.rs`](Source/Build/Rhai/ConfigLoader.rs) - Configuration
-      file loading
-    - [`EnvironmentResolver.rs`](Source/Build/Rhai/EnvironmentResolver.rs) -
-      Environment variable resolution
-    - [`ScriptRunner.rs`](Source/Build/Rhai/ScriptRunner.rs) - Script execution
-      engine
+- **[`Source/Library.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Library.rs)** -
+  Main entry point and module declarations
+- **[`Source/Build/CLI.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/CLI.rs)** -
+  Command-line interface with clap
+- **[`Source/Build/Rhai/`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/)** -
+  Rhai scripting engine integration
+- [`ConfigLoader.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/ConfigLoader.rs) -
+  Configuration file loading
+- [`EnvironmentResolver.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/EnvironmentResolver.rs) -
+  Environment variable resolution
+- [`ScriptRunner.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/ScriptRunner.rs) -
+  Script execution engine
 
 The source files explain the Rhai scripting integration, TOML/JSON5 editing
 capabilities, and the build orchestration patterns.
