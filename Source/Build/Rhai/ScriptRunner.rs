@@ -59,59 +59,59 @@ pub struct ScriptContext {
 /// # Returns
 ///
 /// Result containing the script execution results
-pub fn execute_profile_script(
-	engine: &Engine,
-	script_path: &str,
-	context: &ScriptContext,
+pub fn ExecuteProfileScript(
+    engine: &Engine,
+    script_path: &str,
+    context: &ScriptContext,
 ) -> Result<ScriptResult, String> {
-	let ast = load_script(engine, script_path)?;
-	let mut scope = create_scope(context);
+    let Ast = LoadScript(engine, script_path)?;
+    let mut Scope = CreateScope(context);
 
 	// Execute the script
-	let execution_result = engine.run_ast_with_scope(&mut scope, &ast);
+	let ExecutionResult = engine.run_ast_with_scope(&mut Scope, &Ast);
 
-	let mut result = ScriptResult {
-		env_vars: HashMap::new(),
-		success: execution_result.is_ok(),
-		error: None,
+	let mut Result = ScriptResult {
+	    env_vars: HashMap::new(),
+	    success: ExecutionResult.is_ok(),
+	    error: None,
 		pre_build_continue: true,
 		post_build_output: None,
 		features: HashMap::new(),
 		workbench: None,
 	};
 
-	if let Err(e) = execution_result {
-		result.error = Some(e.to_string());
-		result.pre_build_continue = false;
-		return Ok(result);
+	if let Err(Error) = ExecutionResult {
+	    Result.error = Some(Error.to_string());
+	    Result.pre_build_continue = false;
+	    return Ok(Result);
 	}
 
 	// Extract environment variables from script result
-	if let Ok(env_map) = engine.call_fn(&mut scope, &ast, "get_env_vars", ()) {
-		result.env_vars = extract_env_map(env_map);
+	if let Ok(EnvMap) = engine.call_fn(&mut Scope, &Ast, "get_env_vars", ()) {
+	    Result.env_vars = ExtractEnvMap(EnvMap);
 	}
 
 	// Extract feature flags if the function exists
-	if let Ok(feature_map) = engine.call_fn(&mut scope, &ast, "get_features", ()) {
-		result.features = extract_feature_map(feature_map);
+	if let Ok(FeatureMap) = engine.call_fn(&mut Scope, &Ast, "get_features", ()) {
+	    Result.features = ExtractFeatureMap(FeatureMap);
 	}
 
 	// Extract workbench type if the function exists
-	if let Ok(workbench) = engine.call_fn::<String>(&mut scope, &ast, "get_workbench", ()) {
-		result.workbench = Some(workbench);
+	if let Ok(Workbench) = engine.call_fn::<String>(&mut Scope, &Ast, "get_workbench", ()) {
+	    Result.workbench = Some(Workbench);
 	}
 
 	// Check if pre-build should continue
-	if let Ok(continue_result) = engine.call_fn::<bool>(&mut scope, &ast, "pre_build_continue", ()) {
-		result.pre_build_continue = continue_result;
+	if let Ok(ContinueResult) = engine.call_fn::<bool>(&mut Scope, &Ast, "pre_build_continue", ()) {
+	    Result.pre_build_continue = ContinueResult;
 	}
 
 	// Get post-build output if available
-	if let Ok(output) = engine.call_fn::<String>(&mut scope, &ast, "post_build_output", ()) {
-		result.post_build_output = Some(output);
+	if let Ok(Output) = engine.call_fn::<String>(&mut Scope, &Ast, "post_build_output", ()) {
+	    Result.post_build_output = Some(Output);
 	}
 
-	Ok(result)
+	Ok(Result)
 }
 
 /// Loads and compiles a Rhai script.
@@ -124,18 +124,18 @@ pub fn execute_profile_script(
 /// # Returns
 ///
 /// Result containing the compiled AST
-pub fn load_script(engine: &Engine, script_path: &str) -> Result<AST, String> {
-	if !Path::new(script_path).exists() {
-		return Err(format!("Script file not found: {}", script_path));
-	}
+pub fn LoadScript(engine: &Engine, script_path: &str) -> Result<AST, String> {
+    if !Path::new(script_path).exists() {
+        return Err(format!("Script file not found: {}", script_path));
+    }
 
-	let content = std::fs::read_to_string(script_path)
-		.map_err(|e| format!("Failed to read script: {}", e))?;
+    let Content = std::fs::read_to_string(script_path)
+        .map_err(|Error| format!("Failed to read script: {}", Error))?;
 
-	let ast = engine.compile(&content)
-		.map_err(|e| format!("Failed to compile script: {}", e))?;
+    let Ast = engine.compile(&Content)
+        .map_err(|Error| format!("Failed to compile script: {}", Error))?;
 
-	Ok(ast)
+    Ok(Ast)
 }
 
 /// Creates a Rhai engine configured for build scripts.
@@ -143,57 +143,57 @@ pub fn load_script(engine: &Engine, script_path: &str) -> Result<AST, String> {
 /// # Returns
 ///
 /// Configured Rhai engine instance
-pub fn create_engine() -> Engine {
-	let mut engine = Engine::new();
+pub fn CreateEngine() -> Engine {
+    let mut Engine = Engine::new();
 
 	// Register custom functions for build scripts
-	engine.register_fn("env", |name: &str| -> String {
-		std::env::var(name).unwrap_or_default()
+	Engine.register_fn("env", |name: &str| -> String {
+	    std::env::var(name).unwrap_or_default()
 	});
 
-	engine.register_fn("env_or", |name: &str, default: &str| -> String {
-		std::env::var(name).unwrap_or_else(|_| default.to_string())
+	Engine.register_fn("env_or", |name: &str, default: &str| -> String {
+	    std::env::var(name).unwrap_or_else(|_| default.to_string())
 	});
 
-	engine.register_fn("set_env", |name: &str, value: &str| {
-		// Safety: set_var is now unsafe in recent Rust versions
-		// In a build context, setting environment variables during script execution
-		// is acceptable as it doesn't violate memory safety - it just modifies
-		// the process environment map.
-		unsafe { std::env::set_var(name, value); }
+	Engine.register_fn("set_env", |name: &str, value: &str| {
+	    // Safety: set_var is now unsafe in recent Rust versions
+	    // In a build context, setting environment variables during script execution
+	    // is acceptable as it doesn't violate memory safety - it just modifies
+	    // the process environment map.
+	    unsafe { std::env::set_var(name, value); }
 	});
 
-	engine.register_fn("log", |message: &str| {
-		println!("[Rhai] {}", message);
+	Engine.register_fn("log", |message: &str| {
+	    println!("[Rhai] {}", message);
 	});
 
-	engine.register_fn("log_error", |message: &str| {
-		eprintln!("[Rhai ERROR] {}", message);
+	Engine.register_fn("log_error", |message: &str| {
+	    eprintln!("[Rhai ERROR] {}", message);
 	});
 
-	engine.register_fn("log_warn", |message: &str| {
-		eprintln!("[Rhai WARN] {}", message);
+	Engine.register_fn("log_warn", |message: &str| {
+	    eprintln!("[Rhai WARN] {}", message);
 	});
 
 	// Path manipulation functions
-	engine.register_fn("path_join", |base: &str, suffix: &str| -> String {
-		Path::new(base).join(suffix).to_string_lossy().to_string()
+	Engine.register_fn("path_join", |base: &str, suffix: &str| -> String {
+	    Path::new(base).join(suffix).to_string_lossy().to_string()
 	});
 
-	engine.register_fn("path_exists", |path: &str| -> bool {
-		Path::new(path).exists()
+	Engine.register_fn("path_exists", |path: &str| -> bool {
+	    Path::new(path).exists()
 	});
 
 	// String utilities
-	engine.register_fn("to_uppercase", |s: &str| -> String {
-		s.to_uppercase()
+	Engine.register_fn("to_uppercase", |s: &str| -> String {
+	    s.to_uppercase()
 	});
 
-	engine.register_fn("to_lowercase", |s: &str| -> String {
-		s.to_lowercase()
+	Engine.register_fn("to_lowercase", |s: &str| -> String {
+	    s.to_lowercase()
 	});
 
-	engine
+	Engine
 }
 
 //=============================================================================
@@ -201,59 +201,59 @@ pub fn create_engine() -> Engine {
 //=============================================================================
 
 /// Creates a Rhai scope with the script context.
-fn create_scope(context: &ScriptContext) -> Scope<'_> {
-	let mut scope = Scope::new();
+fn CreateScope(context: &ScriptContext) -> Scope<'_> {
+    let mut Scope = Scope::new();
 
-	scope.push("profile_name", context.profile_name.clone());
-	scope.push("cwd", context.cwd.clone());
-	scope.push("manifest_dir", context.manifest_dir.clone());
-	scope.push("target_triple", context.target_triple.clone().unwrap_or_default());
-	scope.push("workbench_type", context.workbench_type.clone().unwrap_or_default());
+    Scope.push("profile_name", context.profile_name.clone());
+    Scope.push("cwd", context.cwd.clone());
+    Scope.push("manifest_dir", context.manifest_dir.clone());
+    Scope.push("target_triple", context.target_triple.clone().unwrap_or_default());
+    Scope.push("workbench_type", context.workbench_type.clone().unwrap_or_default());
 
-	// Add features as a map
-	let mut features_map = rhai::Map::new();
-	for (key, value) in &context.features {
-		features_map.insert(key.into(), (*value).into());
-	}
-	scope.push("features", features_map);
+    // Add features as a map
+    let mut FeaturesMap = rhai::Map::new();
+    for (Key, Value) in &context.features {
+        FeaturesMap.insert(Key.into(), (*Value).into());
+    }
+    Scope.push("features", FeaturesMap);
 
-	scope
+    Scope
 }
 
 /// Extracts environment variables from a Rhai dynamic value.
-fn extract_env_map(dynamic: Dynamic) -> HashMap<String, String> {
-	let mut env_map = HashMap::new();
+fn ExtractEnvMap(Dynamic: Dynamic) -> HashMap<String, String> {
+    let mut EnvMap = HashMap::new();
 
-	if let Some(map) = dynamic.try_cast::<rhai::Map>() {
-		for (key, value) in map {
-			if value.is_string() {
-				env_map.insert(key.to_string(), value.to_string());
-			} else if value.is_int() {
-				env_map.insert(key.to_string(), value.as_int().unwrap_or(0).to_string());
-			} else if value.is_bool() {
-				env_map.insert(key.to_string(), value.as_bool().unwrap_or(false).to_string());
-			} else {
-				env_map.insert(key.to_string(), value.to_string());
-			}
-		}
-	}
+    if let Some(Map) = Dynamic.try_cast::<rhai::Map>() {
+        for (Key, Value) in Map {
+            if Value.is_string() {
+                EnvMap.insert(Key.to_string(), Value.to_string());
+            } else if Value.is_int() {
+                EnvMap.insert(Key.to_string(), Value.as_int().unwrap_or(0).to_string());
+            } else if Value.is_bool() {
+                EnvMap.insert(Key.to_string(), Value.as_bool().unwrap_or(false).to_string());
+            } else {
+                EnvMap.insert(Key.to_string(), Value.to_string());
+            }
+        }
+    }
 
-	env_map
+    EnvMap
 }
 
 /// Extracts feature flags from a Rhai dynamic value.
-fn extract_feature_map(dynamic: Dynamic) -> HashMap<String, bool> {
-	let mut feature_map = HashMap::new();
+fn ExtractFeatureMap(Dynamic: Dynamic) -> HashMap<String, bool> {
+    let mut FeatureMap = HashMap::new();
 
-	if let Some(map) = dynamic.try_cast::<rhai::Map>() {
-		for (key, value) in map {
-			if value.is_bool() {
-				feature_map.insert(key.to_string(), value.as_bool().unwrap_or(false));
-			}
-		}
-	}
+    if let Some(Map) = Dynamic.try_cast::<rhai::Map>() {
+        for (Key, Value) in Map {
+            if Value.is_bool() {
+                FeatureMap.insert(Key.to_string(), Value.as_bool().unwrap_or(false));
+            }
+        }
+    }
 
-	feature_map
+    FeatureMap
 }
 
 //=============================================================================
@@ -266,9 +266,9 @@ mod tests {
 
 	#[test]
 	fn test_create_engine() {
-		let engine = create_engine();
-		// Verify engine is created successfully
-		assert!(engine.compile("let x = 1;").is_ok());
+	    let Engine = CreateEngine();
+	    // Verify engine is created successfully
+	    assert!(Engine.compile("let x = 1;").is_ok());
 	}
 
 	#[test]
@@ -278,12 +278,12 @@ mod tests {
 		map.insert("KEY2".into(), 42.into());
 		map.insert("KEY3".into(), true.into());
 
-		let dynamic = Dynamic::from(map);
-		let env = extract_env_map(dynamic);
+		let Dynamic = Dynamic::from(map);
+		let Env = ExtractEnvMap(Dynamic);
 
-		assert_eq!(env.get("KEY1"), Some(&"value1".to_string()));
-		assert_eq!(env.get("KEY2"), Some(&"42".to_string()));
-		assert_eq!(env.get("KEY3"), Some(&"true".to_string()));
+		assert_eq!(Env.get("KEY1"), Some(&"value1".to_string()));
+		assert_eq!(Env.get("KEY2"), Some(&"42".to_string()));
+		assert_eq!(Env.get("KEY3"), Some(&"true".to_string()));
 	}
 
 	#[test]
@@ -292,10 +292,10 @@ mod tests {
 		map.insert("feature1".into(), true.into());
 		map.insert("feature2".into(), false.into());
 
-		let dynamic = Dynamic::from(map);
-		let features = extract_feature_map(dynamic);
+		let Dynamic = Dynamic::from(map);
+		let Features = ExtractFeatureMap(Dynamic);
 
-		assert_eq!(features.get("feature1"), Some(&true));
-		assert_eq!(features.get("feature2"), Some(&false));
+		assert_eq!(Features.get("feature1"), Some(&true));
+		assert_eq!(Features.get("feature2"), Some(&false));
 	}
 }

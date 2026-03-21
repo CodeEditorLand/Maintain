@@ -57,66 +57,74 @@ use std::collections::HashMap;
 /// use crate::Maintain::Source::Build::Rhai::EnvironmentResolver;
 ///
 /// let templates = HashMap::from([("PATH", "/usr/bin".to_string())]);
+///
 /// let profile = HashMap::from([("NODE_ENV", "development".to_string())]);
+///
 /// let workbench = HashMap::from([("Mountain", "true".to_string())]);
+///
 /// let features = HashMap::from([("FEATURE_TAURI_IPC", "true".to_string())]);
+///
 /// let script = HashMap::from([("RUST_LOG", "debug".to_string())]);
 ///
-/// let final_env = EnvironmentResolver::resolve_full(
-///     templates, profile, workbench, features, script, true
-/// );
+/// let final_env =
+/// 	EnvironmentResolver::resolve_full(templates, profile, workbench, features, script, true);
 /// ```
-pub fn resolve_full(
-	template_env: HashMap<String, String>,
-	profile_env: HashMap<String, String>,
-	workbench_env: HashMap<String, String>,
-	feature_env: HashMap<String, String>,
-	script_env: HashMap<String, String>,
-	preserve_current: bool,
+pub fn ResolveFull(
+    template_env:HashMap<String, String>,
+
+    profile_env:HashMap<String, String>,
+
+    workbench_env:HashMap<String, String>,
+
+    feature_env:HashMap<String, String>,
+
+    script_env:HashMap<String, String>,
+
+    preserve_current:bool,
 ) -> HashMap<String, String> {
-	let mut resolved = HashMap::new();
+    let mut resolved = HashMap::new();
 
-	// Start with current environment if requested
-	if preserve_current {
-		for (key, value) in std::env::vars_os() {
-			if let (Ok(key_str), Ok(value_str)) = (key.into_string(), value.into_string()) {
-				resolved.insert(key_str, value_str);
-			}
-		}
-	}
+    // Start with current environment if requested
+    if preserve_current {
+        for (key, value) in std::env::vars_os() {
+            if let (Ok(key_str), Ok(value_str)) = (key.into_string(), value.into_string()) {
+                resolved.insert(key_str, value_str);
+            }
+        }
+    }
 
-	// Apply template values (lowest priority)
-	for (key, value) in template_env {
-		resolved.insert(key, value);
-	}
+    // Apply template values (lowest priority)
+    for (key, value) in template_env {
+        resolved.insert(key, value);
+    }
 
-	// Apply profile values (overriding templates)
-	for (key, value) in profile_env {
-		resolved.insert(key, value);
-	}
+    // Apply profile values (overriding templates)
+    for (key, value) in profile_env {
+        resolved.insert(key, value);
+    }
 
-	// Apply workbench values (overriding profile)
-	for (key, value) in workbench_env {
-		resolved.insert(key, value);
-	}
+    // Apply workbench values (overriding profile)
+    for (key, value) in workbench_env {
+        resolved.insert(key, value);
+    }
 
-	// Apply feature flag values
-	for (key, value) in feature_env {
-		resolved.insert(key, value);
-	}
+    // Apply feature flag values
+    for (key, value) in feature_env {
+        resolved.insert(key, value);
+    }
 
-	// Apply script values (highest priority)
-	for (key, value) in script_env {
-		resolved.insert(key, value);
-	}
+    // Apply script values (highest priority)
+    for (key, value) in script_env {
+        resolved.insert(key, value);
+    }
 
-	// Apply environment variable prefixes per crate
-	apply_prefixes(&mut resolved);
+    // Apply environment variable prefixes per crate
+    ApplyPrefixes(&mut resolved);
 
-	// Expand variable references
-	expand_variables(&mut resolved);
+    // Expand variable references
+    ExpandVariables(&mut resolved);
 
-	resolved
+    resolved
 }
 
 /// Resolves the final set of environment variables (simplified version).
@@ -137,20 +145,23 @@ pub fn resolve_full(
 /// # Returns
 ///
 /// Final resolved HashMap of environment variables
-pub fn resolve(
-	template_env: HashMap<String, String>,
-	profile_env: HashMap<String, String>,
-	script_env: HashMap<String, String>,
-	preserve_current: bool,
+pub fn Resolve(
+    template_env:HashMap<String, String>,
+
+    profile_env:HashMap<String, String>,
+
+    script_env:HashMap<String, String>,
+
+    preserve_current:bool,
 ) -> HashMap<String, String> {
-	resolve_full(
-		template_env,
-		profile_env,
-		HashMap::new(),
-		HashMap::new(),
-		script_env,
-		preserve_current,
-	)
+    ResolveFull(
+        template_env,
+        profile_env,
+        HashMap::new(),
+        HashMap::new(),
+        script_env,
+        preserve_current,
+    )
 }
 
 /// Applies environment variables to the current process.
@@ -165,19 +176,21 @@ pub fn resolve(
 /// use crate::Maintain::Source::Build::Rhai::EnvironmentResolver;
 ///
 /// let env = HashMap::from([
-///     ("NODE_ENV".to_string(), "production".to_string()),
-///     ("RUST_LOG".to_string(), "info".to_string()),
+/// 	("NODE_ENV".to_string(), "production".to_string()),
+/// 	("RUST_LOG".to_string(), "info".to_string()),
 /// ]);
 ///
 /// EnvironmentResolver::apply(&env);
 /// ```
-pub fn apply(env_vars: &HashMap<String, String>) {
-	for (key, value) in env_vars {
-		// Safety: set_var is now unsafe in recent Rust versions
-		// Setting environment variables during build orchestration is acceptable
-		// as it doesn't violate memory safety.
-		unsafe { std::env::set_var(key, value); }
-	}
+pub fn Apply(env_vars:&HashMap<String, String>) {
+    for (key, value) in env_vars {
+        // Safety: set_var is now unsafe in recent Rust versions
+        // Setting environment variables during build orchestration is acceptable
+        // as it doesn't violate memory safety.
+        unsafe {
+            std::env::set_var(key, value);
+        }
+    }
 }
 
 /// Converts environment variables to a formatted string for logging.
@@ -189,8 +202,9 @@ pub fn apply(env_vars: &HashMap<String, String>) {
 /// # Returns
 ///
 /// Formatted string representation
-pub fn format_env(env_vars: &HashMap<String, String>) -> String {
-	let mut entries: Vec<_> = env_vars.iter().collect();
+pub fn format_env(env_vars:&HashMap<String, String>) -> String {
+	let mut entries:Vec<_> = env_vars.iter().collect();
+
 	entries.sort_by_key(|(k, _)| *k);
 
 	entries
@@ -210,21 +224,14 @@ pub fn format_env(env_vars: &HashMap<String, String>) -> String {
 /// # Returns
 ///
 /// Result indicating success or list of missing variables
-pub fn validate_required(
-	env_vars: &HashMap<String, String>,
-	required: &[&str],
-) -> Result<(), Vec<String>> {
-	let missing: Vec<String> = required
+pub fn validate_required(env_vars:&HashMap<String, String>, required:&[&str]) -> Result<(), Vec<String>> {
+	let missing:Vec<String> = required
 		.iter()
 		.filter(|var| !env_vars.contains_key(&var.to_string()))
 		.map(|s| s.to_string())
 		.collect();
 
-	if missing.is_empty() {
-		Ok(())
-	} else {
-		Err(missing)
-	}
+	if missing.is_empty() { Ok(()) } else { Err(missing) }
 }
 
 /// Generates workbench-specific environment variables.
@@ -236,7 +243,7 @@ pub fn validate_required(
 /// # Returns
 ///
 /// HashMap of workbench environment variables
-pub fn generate_workbench_env(workbench_type: &str) -> HashMap<String, String> {
+pub fn generate_workbench_env(workbench_type:&str) -> HashMap<String, String> {
 	let mut env = HashMap::new();
 
 	// Set the workbench type as an environment variable
@@ -257,11 +264,12 @@ pub fn generate_workbench_env(workbench_type: &str) -> HashMap<String, String> {
 /// # Returns
 ///
 /// HashMap of FEATURE_* environment variables
-pub fn generate_feature_env(features: &HashMap<String, bool>) -> HashMap<String, String> {
+pub fn generate_feature_env(features:&HashMap<String, bool>) -> HashMap<String, String> {
 	features
 		.iter()
 		.map(|(name, value)| {
 			let env_key = format!("FEATURE_{}", name.to_uppercase().replace('-', "_"));
+
 			(env_key, value.to_string())
 		})
 		.collect()
@@ -272,52 +280,56 @@ pub fn generate_feature_env(features: &HashMap<String, bool>) -> HashMap<String,
 //=============================================================================
 
 /// Applies environment variable prefixes per crate.
-fn apply_prefixes(_env_vars: &mut HashMap<String, String>) {
-	// Define known crate prefixes
-	let prefixes = [
-		("air", "AIR_"),
-		("cocoon", "MOUNTAIN_"),
-		("grove", "VSCODE_"),
-		("maintain", "LAND_"),
-	];
+fn ApplyPrefixes(_env_vars:&mut HashMap<String, String>) {
+    // Define known crate prefixes
+    let Prefixes = [
+        ("air", "AIR_"),
+        ("cocoon", "MOUNTAIN_"),
+        ("grove", "VSCODE_"),
+        ("maintain", "LAND_"),
+    ];
 
-	// For now, this is a no-op as prefixes are handled in the config
-	// Future: could auto-prefix variables based on their names
-	let _ = prefixes;
+    // For now, this is a no-op as prefixes are handled in the config
+    // Future: could auto-prefix variables based on their names
+    let _ = Prefixes;
 }
 
 /// Expands variable references in environment variable values.
 ///
 /// Supports ${VAR} syntax for variable expansion.
-fn expand_variables(env_vars: &mut HashMap<String, String>) {
-	// Collect all current values for reference
-	let original: HashMap<String, String> = env_vars.clone();
+fn ExpandVariables(env_vars:&mut HashMap<String, String>) {
+    // Collect all current values for reference
+    let Original:HashMap<String, String> = env_vars.clone();
 
-	// Expand ${VAR} references in each value
-	for value in env_vars.values_mut() {
-		// Simple expansion - replace ${VAR} with the value from original
-		let mut expanded = value.clone();
-		let mut start = 0;
+    // Expand ${VAR} references in each value
+    for Value in env_vars.values_mut() {
+        // Simple expansion - replace ${VAR} with the value from Original
+        let mut Expanded = Value.clone();
 
-		while let Some(open) = expanded[start..].find("${") {
-			let abs_open = start + open;
-			if let Some(close) = expanded[abs_open..].find('}') {
-				let var_name = &expanded[abs_open + 2..abs_open + close];
-				if let Some(replacement) = original.get(var_name) {
-					expanded.replace_range(abs_open..abs_open + close + 1, replacement);
-					// Continue from after the replacement
-					start = abs_open + replacement.len();
-				} else {
-					// Variable not found, skip past this reference
-					start = abs_open + close + 1;
-				}
-			} else {
-				break;
-			}
-		}
+        let mut Start = 0;
 
-		*value = expanded;
-	}
+        while let Some(Open) = Expanded[Start..].find("${") {
+            let AbsOpen = Start + Open;
+
+            if let Some(Close) = Expanded[AbsOpen..].find('}') {
+                let VarName = &Expanded[AbsOpen + 2..AbsOpen + Close];
+
+                if let Some(Replacement) = Original.get(VarName) {
+                    Expanded.replace_range(AbsOpen..AbsOpen + Close + 1, Replacement);
+
+                    // Continue from after the replacement
+                    Start = AbsOpen + Replacement.len();
+                } else {
+                    // Variable not found, skip past this reference
+                    Start = AbsOpen + Close + 1;
+                }
+            } else {
+                break;
+            }
+        }
+
+        *Value = Expanded;
+    }
 }
 
 //=============================================================================
@@ -326,15 +338,18 @@ fn expand_variables(env_vars: &mut HashMap<String, String>) {
 
 #[cfg(test)]
 mod tests {
+
 	use super::*;
 
 	#[test]
 	fn test_resolve() {
 		let template = HashMap::from([("A", "1".to_string()), ("B", "2".to_string())]);
+
 		let profile = HashMap::from([("B", "3".to_string()), ("C", "4".to_string())]);
+
 		let script = HashMap::from([("C", "5".to_string())]);
 
-		let result = resolve(template, profile, script, false);
+		let Result = Resolve(template, profile, script, false);
 
 		assert_eq!(result.get("A"), Some(&"1".to_string())); // From template
 		assert_eq!(result.get("B"), Some(&"3".to_string())); // Profile overrides template
@@ -346,39 +361,43 @@ mod tests {
 		let env = generate_workbench_env("Mountain");
 
 		assert_eq!(env.get("Mountain"), Some(&"true".to_string()));
+
 		assert_eq!(env.get("WORKBENCH_TYPE"), Some(&"Mountain".to_string()));
 	}
 
 	#[test]
 	fn test_generate_feature_env() {
 		let mut features = HashMap::new();
+
 		features.insert("tauri-ipc".to_string(), true);
+
 		features.insert("wind-services".to_string(), false);
 
 		let env = generate_feature_env(&features);
 
 		assert_eq!(env.get("FEATURE_TAURI_IPC"), Some(&"true".to_string()));
+
 		assert_eq!(env.get("FEATURE_WIND_SERVICES"), Some(&"false".to_string()));
 	}
 
 	#[test]
 	fn test_validate_required() {
-		let env = HashMap::from([
-			("A".to_string(), "1".to_string()),
-			("B".to_string(), "2".to_string()),
-		]);
+		let env = HashMap::from([("A".to_string(), "1".to_string()), ("B".to_string(), "2".to_string())]);
 
 		assert!(validate_required(&env, &["A", "B"]).is_ok());
+
 		assert!(validate_required(&env, &["A", "C"]).is_err());
 	}
 
 	#[test]
 	fn test_expand_variables() {
 		let mut env = HashMap::new();
+
 		env.insert("BASE".to_string(), "/path/to/base".to_string());
+
 		env.insert("FULL".to_string(), "${BASE}/sub".to_string());
 
-		expand_variables(&mut env);
+		ExpandVariables(&mut env);
 
 		assert_eq!(env.get("FULL"), Some(&"/path/to/base/sub".to_string()));
 	}

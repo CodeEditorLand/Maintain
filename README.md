@@ -103,7 +103,7 @@ TOML and JSON5 files.
 
 ## Getting Started 🚀
 
-### Installation
+### Installation 📥
 
 To add `Maintain` to your project:
 
@@ -127,7 +127,7 @@ cargo install Maintain
 - `chrono`: Date/time handling
 - `colored`: Colored terminal output
 
-### Usage Pattern
+### Usage Pattern 🚀
 
 `Maintain` is typically invoked through shell scripts:
 
@@ -144,7 +144,7 @@ cargo install Maintain
 
 ---
 
-## Overview
+## Overview 📖
 
 Maintain serves as the central build orchestration tool, offering:
 
@@ -154,7 +154,7 @@ Maintain serves as the central build orchestration tool, offering:
 - **CLI Interface**: Command-line interface for build operations
 - **Environment Resolution**: Dynamic environment variable handling
 
-## Installation
+## Installation 📥
 
 ```sh
 cargo install Maintain
@@ -204,7 +204,7 @@ ConfigEditor --> JSON5Config
 
 ---
 
-## Usage
+## Usage 🚀
 
 ### As Binary
 
@@ -222,7 +222,7 @@ let build = Build::new();
 build.execute()?;
 ```
 
-## Project Structure
+## Project Structure 🗺️
 
 ```
 Element/Maintain/
@@ -270,7 +270,7 @@ capabilities, and the build orchestration patterns.
 
 ---
 
-## Shell Scripts
+## Shell Scripts 📝
 
 Maintain includes several helper scripts in the `Maintain/` directory:
 
@@ -329,11 +329,11 @@ cargo build --release
 cargo test
 ```
 
-### Examples
+### Examples 💡
 
 See [`examples/`](examples/) directory for usage examples.
 
-## Changelog
+## Changelog 📜
 
 See [`CHANGELOG.md`](https://github.com/CodeEditorLand/Maintain/tree/Current/)
 for a history of changes to this component.

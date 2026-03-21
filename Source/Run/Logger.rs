@@ -99,15 +99,15 @@ pub fn Logger() {
 ///
 /// * `profile` - The profile name
 /// * `workbench` - The workbench type
-pub fn log_run_header(profile: &str, workbench: Option<&str>) {
+pub fn LogRunHeader(Profile: &str, Workbench: Option<&str>) {
     use log::info;
 
     info!("========================================");
-    info!("Land Run: {}", profile);
+    info!("Land Run: {}", Profile);
     info!("========================================");
 
-    if let Some(wb) = workbench {
-        info!("Workbench: {}", wb);
+    if let Some(Wb) = Workbench {
+        info!("Workbench: {}", Wb);
     }
 }
 
@@ -116,17 +116,17 @@ pub fn log_run_header(profile: &str, workbench: Option<&str>) {
 /// # Arguments
 ///
 /// * `env` - The resolved environment variables
-pub fn log_environment(env: &std::collections::HashMap<String, String>) {
+pub fn LogEnvironment(Env: &std::collections::HashMap<String, String>) {
     use log::debug;
 
     debug!("Resolved environment variables:");
-    for (key, value) in env {
-        let display_value = if value.is_empty() {
+    for (Key, Value) in Env {
+        let DisplayValue = if Value.is_empty() {
             "(empty)"
         } else {
-            value.as_str()
+            Value.as_str()
         };
-        debug!("  {} = {}", key, display_value);
+        debug!(" {} = {}", Key, DisplayValue);
     }
 }
 
@@ -135,11 +135,11 @@ pub fn log_environment(env: &std::collections::HashMap<String, String>) {
 /// # Arguments
 ///
 /// * `message` - The success message
-pub fn log_success(message: &str) {
+pub fn LogSuccess(Message: &str) {
     use log::info;
     use colored::Colorize;
 
-    info!("{}", message.green());
+    info!("{}", Message.green());
 }
 
 /// Logs an error message.
@@ -147,11 +147,11 @@ pub fn log_success(message: &str) {
 /// # Arguments
 ///
 /// * `message` - The error message
-pub fn log_error(message: &str) {
+pub fn LogError(Message: &str) {
     use log::error;
     use colored::Colorize;
 
-    error!("{}", message.red());
+    error!("{}", Message.red());
 }
 
 /// Logs a warning message.
@@ -159,11 +159,11 @@ pub fn log_error(message: &str) {
 /// # Arguments
 ///
 /// * `message` - The warning message
-pub fn log_warning(message: &str) {
+pub fn LogWarning(Message: &str) {
     use log::warn;
     use colored::Colorize;
 
-    warn!("{}", message.yellow());
+    warn!("{}", Message.yellow());
 }
 
 /// Logs the start of a run process.
@@ -171,10 +171,10 @@ pub fn log_warning(message: &str) {
 /// # Arguments
 ///
 /// * `command` - The command being executed
-pub fn log_run_start(command: &str) {
+pub fn LogRunStart(Command: &str) {
     use log::info;
 
-    info!("Starting run: {}", command);
+    info!("Starting run: {}", Command);
 }
 
 /// Logs the completion of a run process.
@@ -182,11 +182,11 @@ pub fn log_run_start(command: &str) {
 /// # Arguments
 ///
 /// * `success` - Whether the run completed successfully
-pub fn log_run_complete(success: bool) {
+pub fn LogRunComplete(Success: bool) {
     use log::info;
     use colored::Colorize;
 
-    if success {
+    if Success {
         info!("{}", "Run completed successfully".green());
     } else {
         info!("{}", "Run completed with errors".red());
@@ -199,12 +199,12 @@ pub fn log_run_complete(success: bool) {
 ///
 /// * `enabled` - Whether hot-reload is enabled
 /// * `port` - The live-reload port
-pub fn log_hot_reload_status(enabled: bool, port: u16) {
+pub fn LogHotReloadStatus(Enabled: bool, Port: u16) {
     use log::info;
     use colored::Colorize;
 
-    if enabled {
-        info!("Hot-reload enabled on port {}", port.to_string().cyan());
+    if Enabled {
+        info!("Hot-reload enabled on port {}", Port.to_string().cyan());
     } else {
         info!("Hot-reload disabled");
     }
@@ -215,11 +215,11 @@ pub fn log_hot_reload_status(enabled: bool, port: u16) {
 /// # Arguments
 ///
 /// * `enabled` - Whether watch mode is enabled
-pub fn log_watch_status(enabled: bool) {
+pub fn LogWatchStatus(Enabled: bool) {
     use log::info;
     use colored::Colorize;
 
-    if enabled {
+    if Enabled {
         info!("Watch mode {}", "enabled".green());
     } else {
         info!("Watch mode disabled");

@@ -60,31 +60,31 @@ use std::collections::HashMap;
 /// # Returns
 ///
 /// A HashMap of resolved environment variables
-pub fn resolve(
-    profile: &Profile,
-    merge_shell: bool,
-    overrides: &[(String, String)],
+pub fn Resolve(
+    Profile: &Profile,
+    MergeShell: bool,
+    Overrides: &[(String, String)],
 ) -> Result<HashMap<String, String>> {
     let mut env = HashMap::new();
 
     // Layer 1: Template defaults
-    apply_template_defaults(&mut env);
+    ApplyTemplateDefaults(&mut env);
 
     // Layer 2: Shell environment (if enabled)
-    if merge_shell {
-        merge_shell_env(&mut env);
+    if MergeShell {
+        MergeShellEnv(&mut env);
     }
 
     // Layer 3: Profile environment
-    if let Some(profile_env) = &profile.env {
-        for (key, value) in profile_env {
-            env.insert(key.clone(), value.clone());
+    if let Some(ProfileEnvironment) = &Profile.env {
+        for (Key, Value) in ProfileEnvironment {
+            env.insert(Key.clone(), Value.clone());
         }
     }
 
     // Layer 4: CLI overrides (highest priority)
-    for (key, value) in overrides {
-        env.insert(key.clone(), value.clone());
+    for (Key, Value) in Overrides {
+        env.insert(Key.clone(), Value.clone());
     }
 
     Ok(env)
@@ -95,7 +95,7 @@ pub fn resolve(
 /// # Arguments
 ///
 /// * `env` - The environment HashMap to populate
-fn apply_template_defaults(env: &mut HashMap<String, String>) {
+fn ApplyTemplateDefaults(env: &mut HashMap<String, String>) {
     // Default Node.js configuration
     env.entry("NODE_VERSION".to_string()).or_insert("22".to_string());
     env.entry("NODE_OPTIONS".to_string())
@@ -119,8 +119,8 @@ fn apply_template_defaults(env: &mut HashMap<String, String>) {
 /// # Arguments
 ///
 /// * `env` - The environment HashMap to merge into
-fn merge_shell_env(env: &mut HashMap<String, String>) {
-    let relevant_vars = [
+fn MergeShellEnv(env: &mut HashMap<String, String>) {
+    let RelevantVars = [
         "Browser", "Bundle", "Clean", "Compile", "Debug", "Dependency",
         "Mountain", "Wind", "Electron", "BrowserProxy",
         "NODE_ENV", "NODE_VERSION", "NODE_OPTIONS",
@@ -128,9 +128,9 @@ fn merge_shell_env(env: &mut HashMap<String, String>) {
         "HOT_RELOAD", "WATCH", "LIVE_RELOAD_PORT",
     ];
 
-    for var in relevant_vars {
-        if let Ok(value) = std::env::var(var) {
-            env.insert(var.to_string(), value);
+    for Var in RelevantVars {
+        if let Ok(Value) = std::env::var(Var) {
+            env.insert(Var.to_string(), Value);
         }
     }
 }
@@ -144,41 +144,41 @@ fn merge_shell_env(env: &mut HashMap<String, String>) {
 /// # Returns
 ///
 /// A list of validation errors (empty if valid)
-pub fn validate(env: &HashMap<String, String>) -> Vec<String> {
-    let mut errors = Vec::new();
+pub fn Validate(Env: &HashMap<String, String>) -> Vec<String> {
+    let mut Errors = Vec::new();
 
     // Check NODE_VERSION is set
-    if !env.contains_key("NODE_VERSION") {
-        errors.push("NODE_VERSION environment variable is required".to_string());
+    if !Env.contains_key("NODE_VERSION") {
+        Errors.push("NODE_VERSION environment variable is required".to_string());
     }
 
     // Check NODE_ENV is set
-    if !env.contains_key("NODE_ENV") {
-        errors.push("NODE_ENV environment variable is required".to_string());
+    if !Env.contains_key("NODE_ENV") {
+        Errors.push("NODE_ENV environment variable is required".to_string());
     }
 
     // Check at least one workbench is enabled
-    let workbenches = ["Browser", "Wind", "Mountain", "Electron"];
-    let has_workbench = workbenches.iter().any(|w| {
-        env.get(*w).map(|v| v == "true").unwrap_or(false)
+    let Workbenches = ["Browser", "Wind", "Mountain", "Electron"];
+    let HasWorkbench = Workbenches.iter().any(|W| {
+        Env.get(*W).map(|V| V == "true").unwrap_or(false)
     });
 
-    if !has_workbench {
-        errors.push("At least one workbench must be enabled (Browser, Wind, Mountain, or Electron)".to_string());
+    if !HasWorkbench {
+        Errors.push("At least one workbench must be enabled (Browser, Wind, Mountain, or Electron)".to_string());
     }
 
     // Check LIVE_RELOAD_PORT is valid
-    if let Some(port_str) = env.get("LIVE_RELOAD_PORT") {
-        if let Ok(port) = port_str.parse::<u16>() {
-            if port == 0 {
-                errors.push("LIVE_RELOAD_PORT cannot be 0".to_string());
+    if let Some(PortStr) = Env.get("LIVE_RELOAD_PORT") {
+        if let Ok(Port) = PortStr.parse::<u16>() {
+            if Port == 0 {
+                Errors.push("LIVE_RELOAD_PORT cannot be 0".to_string());
             }
         } else {
-            errors.push("LIVE_RELOAD_PORT must be a valid port number".to_string());
+            Errors.push("LIVE_RELOAD_PORT must be a valid port number".to_string());
         }
     }
 
-    errors
+    Errors
 }
 
 /// Gets the workbench type from environment variables.
