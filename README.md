@@ -39,9 +39,9 @@ Land
 
 ---
 
-# **Maintain** 💪🏻
+# **Maintain** 💪🏻
 
-The Build System & CI/CD Toolkit for Land 🏞️
+The Build System & CI/CD Toolkit for Land 🏞️
 
 [![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](https://github.com/CodeEditorLand/Maintain/tree/Current/LICENSE)
 [![Crates.io](https://img.shields.io/crates/v/Maintain.svg)](https://crates.io/crates/Maintain)
@@ -65,7 +65,7 @@ configuration management for TOML and JSON5 files.
 
 ---
 
-## Key Features 🔐
+## Key Features 🔐
 
 - **Rhai Scripting Engine:** Embedded Rhai interpreter for flexible build
   configuration and custom automation logic.
@@ -91,7 +91,7 @@ configuration management for TOML and JSON5 files.
 
 ---
 
-## `Maintain` in the Land Ecosystem 💪🏻 + 🏞️
+## `Maintain` in the Land Ecosystem 💪🏻 + 🏞️
 
 | Component                 | Role & Key Responsibilities                                  |
 | :------------------------ | :----------------------------------------------------------- |
@@ -102,9 +102,9 @@ configuration management for TOML and JSON5 files.
 
 ---
 
-## Getting Started 🚀
+## Getting Started 🚀
 
-### Installation 📥
+### Installation 📥
 
 To add `Maintain` to your project:
 
@@ -128,7 +128,7 @@ cargo install Maintain
 - `chrono`: Date/time handling
 - `colored`: Colored terminal output
 
-### Usage Pattern 🚀
+### Usage Pattern 🚀
 
 `Maintain` is typically invoked through shell scripts:
 
@@ -145,7 +145,7 @@ cargo install Maintain
 
 ---
 
-## Overview 📖
+## Overview 📖
 
 Maintain serves as the central build orchestration tool, offering:
 
@@ -155,7 +155,7 @@ Maintain serves as the central build orchestration tool, offering:
 - **CLI Interface:** Command-line interface for build operations
 - **Environment Resolution:** Dynamic environment variable handling
 
-## Installation 📥
+## Installation 📥
 
 ```sh
 cargo install Maintain
@@ -207,7 +207,7 @@ ConfigEditor --> JSON5Config
 
 ---
 
-## Usage 🚀
+## Usage 🚀
 
 ### As Binary
 
@@ -225,7 +225,7 @@ let build = Build::new();
 build.execute()?;
 ```
 
-## Project Structure 🗺️
+## Project Structure 🗺️
 
 ```
 Element/Maintain/
@@ -250,7 +250,7 @@ Element/Maintain/
 
 ---
 
-## Deep Dive & Component Breakdown 🔬
+## Deep Dive & Component Breakdown 🔬
 
 To understand how `Maintain`'s internal components interact, see the following
 source files:
@@ -273,7 +273,7 @@ capabilities, and the build orchestration patterns.
 
 ---
 
-## Shell Scripts 📝
+## Shell Scripts 📝
 
 Maintain includes several helper scripts in the `Maintain/` directory:
 
@@ -332,7 +332,7 @@ cargo build --release
 cargo test
 ```
 
-### Examples 💡
+### Examples 💡
 
 See [`examples/`](examples/) directory for usage examples.
 
