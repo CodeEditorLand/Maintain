@@ -94,7 +94,7 @@ fn load_config(workspace_root: &str) -> Result<LandConfig, String> {
         .join(".vscode")
         .join("land-config.json");
 
-    println!("📄 Loading config from: {}", config_path.display());
+    println!("Loading config from: {}", config_path.display());
 
     if !config_path.exists() {
         return Err(format!(
@@ -113,7 +113,7 @@ fn load_config(workspace_root: &str) -> Result<LandConfig, String> {
 }
 
 fn load_and_compile_script(engine: &Engine, script_path: &str) -> Result<AST, String> {
-    println!("  📜 Loading script: {}", script_path);
+    println!("  Loading script: {}", script_path);
 
     if !Path::new(script_path).exists() {
         return Err(format!("Script file not found: {}", script_path));
@@ -125,7 +125,7 @@ fn load_and_compile_script(engine: &Engine, script_path: &str) -> Result<AST, St
     let ast = engine.compile(&content)
         .map_err(|e| format!("Failed to compile script: {}", e))?;
 
-    println!("  ✅ Script compiled successfully");
+    println!("  [OK] Script compiled successfully");
     Ok(ast)
 }
 
@@ -137,8 +137,8 @@ fn execute_get_env_vars(engine: &Engine, ast: &AST) -> Result<HashMap<String, St
     match result {
         Ok(dynamic) => {
             let env_map = extract_env_map(dynamic);
-            println!("  ✅ get_env_vars() executed successfully");
-            println!("  📦 Returned {} environment variable(s)", env_map.len());
+            println!("  get_env_vars() executed successfully");
+            println!("  Returned {} environment variable(s)", env_map.len());
             Ok(env_map)
         }
         Err(e) => {
@@ -169,21 +169,21 @@ fn validate_expected_vars(
     expected: &[(&'static str, &'static str)],
     profile_name: &str,
 ) -> Vec<String> {
-    println!("  🔍 Validating expected environment variables...");
+    println!("  Validating expected environment variables...");
     let mut issues = Vec::new();
 
     for (key, expected_val) in expected {
         match actual.get(*key) {
             Some(actual_val) if actual_val == *expected_val => {
-                println!("    ✅ {} = \"{}\"", key, actual_val);
+                println!("    [OK] {} = \"{}\"", key, actual_val);
             }
             Some(actual_val) => {
-                let msg = format!("  ⚠️  {} = \"{}\" (expected \"{}\")", key, actual_val, expected_val);
+                let msg = format!("  ⚠️  {} = \"{}\" (expected \"{}\")", key, actual_val, expected_val);
                 println!("{}", msg);
                 issues.push(msg);
             }
             None => {
-                let msg = format!("  ❌ {} is missing (expected \"{}\")", key, expected_val);
+                let msg = format!("  ❌ {} is missing (expected \"{}\")", key, expected_val);
                 println!("{}", msg);
                 issues.push(msg);
             }
@@ -194,7 +194,7 @@ fn validate_expected_vars(
     for key in actual.keys() {
         if !expected.iter().any(|(k, _)| *k == key.as_str()) {
             let val = actual.get(key).unwrap();
-            println!("  ➕ {} = \"{}\" (extra variable)", key, val);
+            println!("  [EXTRA] {} = \"{}\" (extra variable)", key, val);
         }
     }
 
@@ -212,20 +212,20 @@ fn run_tests() {
 
     // Step 1: Load configuration
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("📋 Step 1: Loading Configuration");
+    println!("Step 1: Loading Configuration");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
     let config = match load_config(workspace_root) {
         Ok(cfg) => {
-            println!("✅ Configuration loaded successfully");
+            println!("[OK] Configuration loaded successfully");
             println!("   Version: {}", cfg.version);
             println!("   Profiles found: {}", cfg.profiles.len());
             println!();
             cfg
         }
         Err(e) => {
-            println!("❌ Failed to load configuration: {}", e);
+            println!("[ERROR] Failed to load configuration: {}", e);
             println!();
             return;
         }
@@ -233,24 +233,24 @@ fn run_tests() {
 
     // Step 2: Validate profiles in config
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("📋 Step 2: Validating Profile Definitions");
+    println!("Step 2: Validating Profile Definitions");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
     let mut missing_scripts = Vec::new();
     for profile_name in &profiles_to_test {
-        println!("🔍 Profile: {}", profile_name);
+        println!("Profile: {}", profile_name);
 
         match config.profiles.get(*profile_name) {
             Some(profile) => {
-                println!("  ✅ Profile found");
+                println!("  [OK] Profile found");
 
                 if let Some(desc) = &profile.description {
-                    println!("  📝 Description: {}", desc);
+                    println!("   Description: {}", desc);
                 }
 
                 if let Some(env) = &profile.env {
-                    println!("  🔧 Static env vars: {}", env.len());
+                    println!("   Static env vars: {}", env.len());
                 }
 
                 if let Some(script_path) = &profile.rhai_script {
@@ -259,18 +259,18 @@ fn run_tests() {
                         .join(script_path);
 
                     if full_path.exists() {
-                        println!("  📜 Script path: {} ✅", script_path);
+                        println!("   Script path: {} [OK]", script_path);
                     } else {
-                        println!("  📜 Script path: {} ❌ (not found)", script_path);
+                        println!("   Script path: {} [ERROR] (not found)", script_path);
                         missing_scripts.push(profile_name.to_string());
                     }
                 } else {
-                    println!("  📜 No Rhai script defined");
+                    println!("   No Rhai script defined");
                     missing_scripts.push(profile_name.to_string());
                 }
             }
             None => {
-                println!("  ❌ Profile not found in configuration");
+                println!("  [ERROR] Profile not found in configuration");
                 missing_scripts.push(profile_name.to_string());
             }
         }
@@ -279,17 +279,17 @@ fn run_tests() {
 
     // Step 3: Test Rhai scripts
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("📋 Step 3: Testing Rhai Script Compilation and Execution");
+    println!("Step 3: Testing Rhai Script Compilation and Execution");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
     let engine = Engine::new();
 
     for profile_name in &profiles_to_test {
-        println!("🔍 Testing Profile: {}", profile_name);
+        println!("Testing Profile: {}", profile_name);
 
         if !config.profiles.contains_key(*profile_name) {
-            println!("  ⏭️  Skipping - profile not in config");
+            println!("  Skipping - profile not in config");
             println!();
             continue;
         }
@@ -302,7 +302,7 @@ fn run_tests() {
                 .join(script_path);
 
             if !full_path.exists() {
-                println!("  ⏭️  Skipping - script file not found at: {}", script_path);
+                println!("  Skipping - script file not found at: {}", script_path);
                 println!();
                 continue;
             }
@@ -320,25 +320,25 @@ fn run_tests() {
                                 let issues = validate_expected_vars(&env_vars, &expected, profile_name);
 
                                 if issues.is_empty() {
-                                    println!("  ✅ All expected variables match");
+                                    println!("  [OK] All expected variables match");
                                 } else {
-                                    println!("  ⚠️  {} issue(s) found", issues.len());
+                                    println!("  [WARN] {} issue(s) found", issues.len());
                                 }
                             } else {
-                                println!("  ℹ️  No validation rules defined for this profile");
+                                println!("  No validation rules defined for this profile");
                             }
                         }
                         Err(e) => {
-                            println!("  ❌ {}", e);
+                            println!("  [ERROR] {}", e);
                         }
                     }
                 }
                 Err(e) => {
-                    println!("  ❌ {}", e);
+                    println!("  [ERROR] {}", e);
                 }
             }
         } else {
-            println!("  ⏭️  Skipping - no Rhai script defined");
+            println!("  Skipping - no Rhai script defined");
         }
 
         println!();
@@ -346,12 +346,12 @@ fn run_tests() {
 
     // Test summary
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("📊 Test Summary");
+    println!("Test Summary");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
     let profiles_count = config.profiles.len();
-    println!("📁 Configuration loaded: ✅");
+    println!(" Configuration loaded: [OK]");
     println!("   Version: {}", config.version);
     println!("   Total profiles: {}", profiles_count);
     println!();
@@ -366,15 +366,15 @@ fn run_tests() {
         })
         .collect();
 
-    println!("📜 Scripts available: {}/{}", scripts_available.len(), profiles_count);
+    println!("Scripts available: {}/{}", scripts_available.len(), profiles_count);
     for (name, _) in &scripts_available {
-        println!("   ✅ {}", name);
+        println!("   [OK] {}", name);
     }
     if missing_scripts.len() > 0 {
         println!();
-        println!("⚠️  Profiles with missing scripts:");
+        println!("[WARN] Profiles with missing scripts:");
         for name in &missing_scripts {
-            println!("   ❌ {}", name);
+            println!("   [ERROR] {}", name);
         }
     }
 
