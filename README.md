@@ -39,17 +39,18 @@ Land
 
 ---
 
-# **Maintain** 💪🏻 The Build System & CI/CD Toolkit for Land 🏞️
+# **Maintain** 💪🏻
+
+The Build System & CI/CD Toolkit for Land 🏞️
 
 [![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](https://github.com/CodeEditorLand/Maintain/tree/Current/LICENSE)
 [![Crates.io](https://img.shields.io/crates/v/Maintain.svg)](https://crates.io/crates/Maintain)
 [![Rust Version](https://img.shields.io/badge/Rust-1.75+-orange.svg)](https://www.rust-lang.org/)
 [![Rhai Version](https://img.shields.io/badge/Rhai-latest-blue.svg)](https://rhai.rs/)
 
-Welcome to **Maintain**, the Rust-based build system and CI/CD toolkit for the
-**Land Code Editor** ecosystem. Maintain provides comprehensive build
-orchestration, Rhai scripting capabilities, and configuration management for
-TOML and JSON5 files.
+**Maintain** is the Rust-based build system and CI/CD toolkit for the **Land
+Code Editor** ecosystem. It provides build orchestration, Rhai scripting, and
+configuration management for TOML and JSON5 files.
 
 **Maintain** is engineered to:
 
@@ -57,14 +58,14 @@ TOML and JSON5 files.
    ecosystem with configurable build groups.
 2. **Enable Scripting:** Embed the Rhai scripting language for flexible build
    logic and custom automation.
-3. **Manage Configuration:** Offer type-safe TOML and JSON5 editing capabilities
-   for Cargo.toml and other configuration files.
+3. **Manage Configuration:** Offer type-safe TOML and JSON5 editing for
+   Cargo.toml and other configuration files.
 4. **Provide CLI Interface:** Deliver a command-line interface for build
    operations with environment variable resolution.
 
 ---
 
-## Key Features 🔐
+## Key Features 🔐
 
 - **Rhai Scripting Engine:** Embedded Rhai interpreter for flexible build
   configuration and custom automation logic.
@@ -90,7 +91,7 @@ TOML and JSON5 files.
 
 ---
 
-## `Maintain` in the Land Ecosystem 💪🏻 + 🏞️
+## `Maintain` in the Land Ecosystem 💪🏻 + 🏞️
 
 | Component                 | Role & Key Responsibilities                                  |
 | :------------------------ | :----------------------------------------------------------- |
@@ -101,9 +102,9 @@ TOML and JSON5 files.
 
 ---
 
-## Getting Started 🚀
+## Getting Started 🚀
 
-### Installation 📥
+### Installation 📥
 
 To add `Maintain` to your project:
 
@@ -127,7 +128,7 @@ cargo install Maintain
 - `chrono`: Date/time handling
 - `colored`: Colored terminal output
 
-### Usage Pattern 🚀
+### Usage Pattern 🚀
 
 `Maintain` is typically invoked through shell scripts:
 
@@ -144,17 +145,17 @@ cargo install Maintain
 
 ---
 
-## Overview 📖
+## Overview 📖
 
 Maintain serves as the central build orchestration tool, offering:
 
-- **Build System**: Comprehensive build configuration and execution
-- **Rhai Scripting**: Embedded scripting for custom build logic
-- **Configuration Management**: TOML and JSON5 editing capabilities
-- **CLI Interface**: Command-line interface for build operations
-- **Environment Resolution**: Dynamic environment variable handling
+- **Build System:** Comprehensive build configuration and execution
+- **Rhai Scripting:** Embedded scripting for custom build logic
+- **Configuration Management:** TOML and JSON5 editing capabilities
+- **CLI Interface:** Command-line interface for build operations
+- **Environment Resolution:** Dynamic environment variable handling
 
-## Installation 📥
+## Installation 📥
 
 ```sh
 cargo install Maintain
@@ -164,7 +165,9 @@ cargo install Maintain
 
 ## System Architecture Diagram 🏗️
 
-This diagram illustrates `Maintain`'s build orchestration architecture.
+This diagram illustrates `Maintain`'s build orchestration architecture. It shows
+how the CLI, Rhai engine, and configuration editor relate to external scripts
+and config files.
 
 ```mermaid
 graph LR
@@ -172,7 +175,7 @@ classDef maintain fill:#f9f,stroke:#333,stroke-width:2px;
 classDef script fill:#9cf,stroke:#333,stroke-width:1px;
 classDef config fill:#ffc,stroke:#333,stroke-width:1px;
 
-subgraph "Maintain 💪🏻 (Build System)"
+subgraph "Maintain 💪🏻 (Build System)"
 CLI["CLI Interface"]:::maintain
 RhaiEngine["Rhai Script Engine"]:::maintain
 ConfigEditor["Config Editor (TOML/JSON5)"]:::maintain
@@ -204,7 +207,7 @@ ConfigEditor --> JSON5Config
 
 ---
 
-## Usage 🚀
+## Usage 🚀
 
 ### As Binary
 
@@ -222,7 +225,7 @@ let build = Build::new();
 build.execute()?;
 ```
 
-## Project Structure 🗺️
+## Project Structure 🗺️
 
 ```
 Element/Maintain/
@@ -247,10 +250,10 @@ Element/Maintain/
 
 ---
 
-## Deep Dive & Component Breakdown 🔬
+## Deep Dive & Component Breakdown 🔬
 
-To understand how `Maintain`'s internal components interact to provide the build
-orchestration functionality, see the following source files:
+To understand how `Maintain`'s internal components interact, see the following
+source files:
 
 - **[`Source/Library.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Library.rs)** -
   Main entry point and module declarations
@@ -270,23 +273,23 @@ capabilities, and the build orchestration patterns.
 
 ---
 
-## Shell Scripts 📝
+## Shell Scripts 📝
 
 Maintain includes several helper scripts in the `Maintain/` directory:
 
-- [`Debug.sh`](Debug.sh) - Debug mode execution
-- [`Dev-Mountain.sh`](Dev-Mountain.sh) - Mountain development mode
-- [`Profile.sh`](Profile.sh) - Performance profiling
-- [`Release.sh`](Release.sh) - Release build
+- [`Debug.sh`](Debug.sh) — Debug mode execution
+- [`Dev-Mountain.sh`](Dev-Mountain.sh) — Mountain development mode
+- [`Profile.sh`](Profile.sh) — Performance profiling
+- [`Release.sh`](Release.sh) — Release build
 
 ### Debug Subdirectory
 
 The `Maintain/Debug/` directory contains additional debug scripts:
 
-- [`All.sh`](Debug/All.sh) - Debug all components
-- [`Build.sh`](Debug/Build.sh) - Debug build process
-- [`Run.sh`](Debug/Run.sh) - Debug runtime
-- [`Wind.sh`](Debug/Wind.sh) - Debug Wind component
+- [`All.sh`](Debug/All.sh) — Debug all components
+- [`Build.sh`](Debug/Build.sh) — Debug build process
+- [`Run.sh`](Debug/Run.sh) — Debug runtime
+- [`Wind.sh`](Debug/Wind.sh) — Debug Wind component
 
 ## Features
 
@@ -294,25 +297,25 @@ The `Maintain/Debug/` directory contains additional debug scripts:
 
 Maintain embeds the Rhai scripting language for flexible build configuration:
 
-- **ConfigLoader**: Load and parse Rhai configuration files
-- **EnvironmentResolver**: Resolve environment variables in scripts
-- **ScriptRunner**: Execute Rhai scripts in the build context
+- **ConfigLoader:** Load and parse Rhai configuration files
+- **EnvironmentResolver:** Resolve environment variables in scripts
+- **ScriptRunner:** Execute Rhai scripts in the build context
 
 ### Configuration Editing
 
-- **TOML Editing**: Modify Cargo.toml and other TOML files
-- **JSON5 Support**: Handle JSON5 configuration files
-- **Type-safe Operations**: Compile-time checked configuration access
+- **TOML Editing:** Modify Cargo.toml and other TOML files
+- **JSON5 Support:** Handle JSON5 configuration files
+- **Type-safe Operations:** Compile-time checked configuration access
 
 ## Dependencies
 
-- `clap` - CLI argument parsing
-- `rhai` - Embedded scripting engine
-- `toml` / `toml_edit` - TOML parsing and editing
-- `json5` - JSON5 configuration support
-- `chrono` - Date/time handling
-- `colored` - Colored terminal output
-- `log` / `env_logger` - Logging framework
+- `clap` — CLI argument parsing
+- `rhai` — Embedded scripting engine
+- `toml` / `toml_edit` — TOML parsing and editing
+- `json5` — JSON5 configuration support
+- `chrono` — Date/time handling
+- `colored` — Colored terminal output
+- `log` / `env_logger` — Logging framework
 
 ## Development
 
@@ -329,22 +332,15 @@ cargo build --release
 cargo test
 ```
 
-### Examples 💡
+### Examples 💡
 
 See [`examples/`](examples/) directory for usage examples.
 
-## Changelog 📜
-
-See [`CHANGELOG.md`](https://github.com/CodeEditorLand/Maintain/tree/Current/)
-for a history of changes to this component.
-
 ## License ⚖️
 
-This project is released into the public domain under the **Creative Commons CC0
-Universal** license. You are free to use, modify, distribute, and build upon
-this work for any purpose, without any restrictions. For the full legal text,
-see the [`LICENSE`](https://github.com/CodeEditorLand/Maintain/tree/Current/)
-file.
+This project is licensed under Creative Commons CC0.
+
+See the LICENSE file for details.
 
 ---
 
@@ -358,11 +354,14 @@ history of changes specific to **Maintain**.
 
 ## Funding & Acknowledgements 🙏🏻
 
-**Maintain** is a core element of the **Land** ecosystem. This project is funded
-through [NGI0 Commons Fund](https://NLnet.NL/commonsfund), a fund established by
-[NLnet](https://NLnet.NL) with financial support from the European Commission's
-[Next Generation Internet](https://ngi.eu) program. Learn more at the
-[NLnet project page](https://NLnet.NL/project/Land).
+Code Editor Land is funded through the NGI0 Commons Fund, established by NLnet
+with financial support from the European Commission's Next Generation Internet
+programme, under grant agreement No. 101135429.
+
+The project is operated by PlayForm, based in Sofia, Bulgaria.
+
+PlayForm acts as the open-source steward for Code Editor Land under the NGI0
+Commons Fund grant.
 
 <table>
 	<thead>

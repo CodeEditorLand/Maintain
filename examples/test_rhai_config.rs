@@ -113,7 +113,7 @@ fn load_config(workspace_root: &str) -> Result<LandConfig, String> {
 }
 
 fn load_and_compile_script(engine: &Engine, script_path: &str) -> Result<AST, String> {
-    println!("  📜 Loading script: {}", script_path);
+    println!("  📜 Loading script: {}", script_path);
 
     if !Path::new(script_path).exists() {
         return Err(format!("Script file not found: {}", script_path));
@@ -138,7 +138,7 @@ fn execute_get_env_vars(engine: &Engine, ast: &AST) -> Result<HashMap<String, St
         Ok(dynamic) => {
             let env_map = extract_env_map(dynamic);
             println!("  ✅ get_env_vars() executed successfully");
-            println!("  📦 Returned {} environment variable(s)", env_map.len());
+            println!("  📦 Returned {} environment variable(s)", env_map.len());
             Ok(env_map)
         }
         Err(e) => {
@@ -250,7 +250,7 @@ fn run_tests() {
                 }
 
                 if let Some(env) = &profile.env {
-                    println!("  🔧 Static env vars: {}", env.len());
+                    println!("  🔧 Static env vars: {}", env.len());
                 }
 
                 if let Some(script_path) = &profile.rhai_script {
@@ -259,13 +259,13 @@ fn run_tests() {
                         .join(script_path);
 
                     if full_path.exists() {
-                        println!("  📜 Script path: {} ✅", script_path);
+                        println!("  📜 Script path: {} ✅", script_path);
                     } else {
-                        println!("  📜 Script path: {} ❌ (not found)", script_path);
+                        println!("  📜 Script path: {} ❌ (not found)", script_path);
                         missing_scripts.push(profile_name.to_string());
                     }
                 } else {
-                    println!("  📜 No Rhai script defined");
+                    println!("  📜 No Rhai script defined");
                     missing_scripts.push(profile_name.to_string());
                 }
             }
