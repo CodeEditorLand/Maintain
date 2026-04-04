@@ -52,16 +52,18 @@ The Build System & CI/CD Toolkit for Land 🏞️
 Code Editor** ecosystem. It provides build orchestration, Rhai scripting, and
 configuration management for TOML and JSON5 files.
 
-**Maintain** is engineered to:
+**What Maintain gives you:**
 
-1. **Orchestrate Builds:** Provide a central build system for the entire Land
-   ecosystem with configurable build groups.
-2. **Enable Scripting:** Embed the Rhai scripting language for flexible build
-   logic and custom automation.
-3. **Manage Configuration:** Offer type-safe TOML and JSON5 editing for
-   Cargo.toml and other configuration files.
-4. **Provide CLI Interface:** Deliver a command-line interface for build
-   operations with environment variable resolution.
+1. **One command to build everything.** `cargo run --bin Maintain -- --profile
+   debug-mountain` builds the entire editor with the right flags.
+2. **Scriptable build logic.** Rhai scripts define custom build steps. Change
+   the build pipeline without recompiling the orchestrator.
+3. **Type-safe config editing.** Programmatic TOML and JSON5 editing for
+   Cargo.toml, tauri.conf.json, and package.json. No string manipulation.
+4. **Named build profiles.** `--list-profiles` shows all available
+   configurations. `--profile release-universal` builds a macOS universal binary.
+
+📖 **[Rust API Documentation](https://Rust.Documentation.Maintain.Editor.Land/)**
 
 ---
 
