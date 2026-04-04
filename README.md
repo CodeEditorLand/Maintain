@@ -352,6 +352,13 @@ history of changes specific to **Maintain**.
 
 ---
 
+
+## See Also
+
+- [Architecture Overview](https://editor.land/Doc/architecture)
+- [Mountain](https://github.com/CodeEditorLand/Mountain)
+- [Rest](https://github.com/CodeEditorLand/Rest)
+
 ## Funding & Acknowledgements 🙏🏻
 
 Code Editor Land is funded through the NGI0 Commons Fund, established by NLnet
