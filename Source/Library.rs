@@ -1,53 +1,34 @@
-/*=============================================================================*/
-/* File Path: Element/Maintain/Source/Library.rs */
-/*=============================================================================*/
-/* Module: Library */
-/* */
-/* Brief Description: Entry point for the Maintain binary supporting both */
-/*                    Build and Run workflows. */
-/* */
-/* RESPONSIBILITIES: */
-/* ================ */
-/* */
-/* Primary: */
-/* - Serve as the entry point for the Maintain orchestrator */
-/* - Initialize Build and Run modules based on CLI arguments */
-/* - Route commands to appropriate workflow handlers */
-/* */
-/* Secondary: */
-/* - Provide unified CLI interface for build and run operations */
-/* - Support legacy mode for backward compatibility */
-/* */
-/* ARCHITECTURAL ROLE: */
-/* =================== */
-/* */
-/* Position: */
-/* - Entry point layer */
-/* - Binary initialization and routing */
-/* */
-/* Dependencies (What this module requires): */
-/* - External crates: clap, std */
-/* - Internal modules: Build, Run */
-/* - Traits implemented: None */
-/* */
-/* Dependents (What depends on this module): */
-/* - Cargo.toml (binary definition) */
-/* - Build system entry point */
-/* - Development run entry point */
-/* */
-/*=============================================================================*/
-/* IMPLEMENTATION */
-/*=============================================================================*/
-
-// Disable Windows console for release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-// Allow PascalCase naming for function names
 #![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]
 
-/*=============================================================================*/
-/* MAIN ENTRY POINT */
-/*=============================================================================*/
+//! # Maintain: CI/CD and Build Orchestrator for Code Editor Land
+//!
+//! Maintain is the build system that compiles, bundles, and packages Land for
+//! all three platforms (macOS, Windows, Linux) from a single command. It
+//! replaces ad-hoc shell scripts with a structured Rust binary that handles
+//! profile management, Tauri builds, and development server orchestration.
+//!
+//! ## Two Modes
+//!
+//! **Build mode** (default): Compile Land for release or debug with named
+//! profiles that configure Cargo flags, Tauri targets, and environment vars.
+//!
+//! ```bash
+//! cargo run --bin Maintain -- --profile debug-mountain
+//! cargo run --bin Maintain -- --list-profiles
+//! ```
+//!
+//! **Run mode** (`--run`): Start the development server with hot reload.
+//!
+//! ```bash
+//! cargo run --bin Maintain -- --run --profile debug-mountain
+//! ```
+//!
+//! ## Modules
+//!
+//! - [`Build`]: Build orchestration, profile resolution, Tauri invocation
+//! - [`Run`]: Development server, watch mode, profile-aware dev builds
+//! - [`Architecture`]: Target triple detection and platform support
 
 /// The primary entry point for the Maintain Orchestrator binary.
 ///
