@@ -37,139 +37,36 @@ Land
 </tr>
 </table>
 
+
 ---
 
-# **Maintain** 💪🏻
+# **Maintain**&#x2001;💪🏻
 
-The Build System & CI/CD Toolkit for Land 🏞️
+> **Build pipelines that change behavior based on environment variables, implicit tool versions, or undeclared dependencies make debugging production issues impossible. The same commit produces different output on different machines.**
+
+_"Deterministic builds. Same commit, same output, guaranteed."_
 
 [![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](https://github.com/CodeEditorLand/Maintain/tree/Current/LICENSE)
 [![Crates.io](https://img.shields.io/crates/v/Maintain.svg)](https://crates.io/crates/Maintain)
 [![Rust Version](https://img.shields.io/badge/Rust-1.75+-orange.svg)](https://www.rust-lang.org/)
 [![Rhai Version](https://img.shields.io/badge/Rhai-latest-blue.svg)](https://rhai.rs/)
 
-**Maintain** is the Rust-based build system and CI/CD toolkit for the **Land
-Code Editor** ecosystem. It provides build orchestration, Rhai scripting, and
-configuration management for TOML and JSON5 files.
-
-**What Maintain gives you:**
-
-1. **One command to build everything.** `cargo run --bin Maintain -- --profile
-   debug-mountain` builds the entire editor with the right flags.
-2. **Scriptable build logic.** Rhai scripts define custom build steps. Change
-   the build pipeline without recompiling the orchestrator.
-3. **Type-safe config editing.** Programmatic TOML and JSON5 editing for
-   Cargo.toml, tauri.conf.json, and package.json. No string manipulation.
-4. **Named build profiles.** `--list-profiles` shows all available
-   configurations. `--profile release-universal` builds a macOS universal binary.
+Maintain builds the entire Land ecosystem with Rhai scripting for flexible build logic, compile-time validated TOML and JSON5 configurations, and deterministic artifact generation. GritQL queries handle automated refactoring across the codebase. The same commit always produces the same output across all machines.
 
 📖 **[Rust API Documentation](https://Rust.Documentation.Maintain.Editor.Land/)**
 
 ---
 
-## Key Features 🔐
+## What It Does&#x2001;🔐
 
-- **Rhai Scripting Engine:** Embedded Rhai interpreter for flexible build
-  configuration and custom automation logic.
-- **Configuration Editing:** Type-safe TOML and JSON5 editing for Cargo.toml and
-  other configuration files with validation.
-- **Environment Resolution:** Dynamic environment variable handling with
-  scriptable resolvers for build-time configuration.
-- **CLI Interface:** Comprehensive command-line interface with subcommands for
-  build, debug, release, and profile operations.
-- **Build Orchestration:** Central coordination of multi-stage builds across the
-  Land ecosystem.
+- **Rhai scripting.** Flexible build logic without shell script fragility.
+- **Deterministic output.** Same commit, same artifacts, across all machines and CI environments.
+- **GritQL refactoring.** Automated codebase-wide refactoring with structural pattern matching.
+- **Compile-time config.** TOML and JSON5 configurations validated at build time.
 
 ---
 
-## Core Architecture Principles 🏗️
-
-| Principle                 | Description                                                                               | Key Components Involved                  |
-| :------------------------ | :---------------------------------------------------------------------------------------- | :--------------------------------------- |
-| **Scriptability**         | Enable flexible build logic through embedded Rhai scripting with full environment access. | `Rhai/ConfigLoader`, `Rhai/ScriptRunner` |
-| **Type Safety**           | Provide compile-time checked configuration access with validation for TOML/JSON5.         | `toml_edit`, `json5` crates              |
-| **Modularity**            | Separate concerns between CLI, scripting, and configuration editing components.           | `CLI.rs`, `Rhai/`, `Build/*`             |
-| **Environment Awareness** | Dynamic resolution of environment variables for flexible build configurations.            | `EnvironmentResolver.rs`                 |
-
----
-
-## `Maintain` in the Land Ecosystem 💪🏻 + 🏞️
-
-| Component                 | Role & Key Responsibilities                                  |
-| :------------------------ | :----------------------------------------------------------- |
-| **Build Orchestrator**    | Central coordination of builds across all Land elements.     |
-| **Scripting Host**        | Rhai engine for custom build logic and automation.           |
-| **Configuration Manager** | TOML/JSON5 editing for Cargo.toml and project configuration. |
-| **CLI Provider**          | Command-line interface for developers and CI/CD pipelines.   |
-
----
-
-## Getting Started 🚀
-
-### Installation 📥
-
-To add `Maintain` to your project:
-
-```toml
-[dependencies]
-Maintain = { git = "https://github.com/CodeEditorLand/Maintain.git", branch = "Current" }
-```
-
-Or install the CLI:
-
-```sh
-cargo install Maintain
-```
-
-**Key Dependencies:**
-
-- `rhai`: Embedded scripting engine
-- `clap`: CLI argument parsing
-- `toml_edit`: TOML parsing and editing
-- `json5`: JSON5 configuration support
-- `chrono`: Date/time handling
-- `colored`: Colored terminal output
-
-### Usage Pattern 🚀
-
-`Maintain` is typically invoked through shell scripts:
-
-```sh
-# Debug build
-./Maintain/Debug.sh
-
-# Development mode for Mountain
-./Maintain/Dev-Mountain.sh
-
-# Release build
-./Maintain/Release.sh
-```
-
----
-
-## Overview 📖
-
-Maintain serves as the central build orchestration tool, offering:
-
-- **Build System:** Comprehensive build configuration and execution
-- **Rhai Scripting:** Embedded scripting for custom build logic
-- **Configuration Management:** TOML and JSON5 editing capabilities
-- **CLI Interface:** Command-line interface for build operations
-- **Environment Resolution:** Dynamic environment variable handling
-
-## Installation 📥
-
-```sh
-cargo install Maintain
-```
-
----
-
-## System Architecture Diagram 🏗️
-
-This diagram illustrates `Maintain`'s build orchestration architecture. It shows
-how the CLI, Rhai engine, and configuration editor relate to external scripts
-and config files.
+## In the Ecosystem&#x2001;💪🏻 + 🏞️
 
 ```mermaid
 graph LR
@@ -209,157 +106,30 @@ ConfigEditor --> JSON5Config
 
 ---
 
-## Usage 🚀
+## Development&#x2001;🛠️
 
-### As Binary
-
-```sh
-# Run Maintain build system
-Maintain [OPTIONS] [COMMAND]
-```
-
-### As Library
-
-```rust
-use maintain::Build;
-
-let build = Build::new();
-build.execute()?;
-```
-
-## Project Structure 🗺️
-
-```
-Element/Maintain/
-├── Source/
-│   ├── Library.rs # Main entry point
-│   └── Build/
-│       ├── CLI.rs # Command-line interface
-│       ├── Constant.rs # Build constants
-│       ├── Definition.rs # Build definitions
-│       ├── Fn.rs # Build functions
-│       ├── Rhai/ # Rhai scripting engine
-│       │   ├── ConfigLoader.rs
-│       │   ├── EnvironmentResolver.rs
-│       │   └── ScriptRunner.rs
-│       └── ...
-└── Debug/ # Debug scripts
-    ├── All.sh
-    ├── Build.sh
-    ├── Run.sh
-    └── Wind.sh
-```
+Maintain is a component of the Land workspace. Follow the
+[Land Repository](https://github.com/CodeEditorLand/Land) instructions to
+build and run.
 
 ---
 
-## Deep Dive & Component Breakdown 🔬
+## License&#x2001;⚖️
 
-To understand how `Maintain`'s internal components interact, see the following
-source files:
-
-- **[`Source/Library.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Library.rs)** -
-  Main entry point and module declarations
-- **[`Source/Build/CLI.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/CLI.rs)** -
-  Command-line interface with clap
-- **[`Source/Build/Rhai/`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/)** -
-  Rhai scripting engine integration
-- [`ConfigLoader.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/ConfigLoader.rs) -
-  Configuration file loading
-- [`EnvironmentResolver.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/EnvironmentResolver.rs) -
-  Environment variable resolution
-- [`ScriptRunner.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/ScriptRunner.rs) -
-  Script execution engine
-
-The source files explain the Rhai scripting integration, TOML/JSON5 editing
-capabilities, and the build orchestration patterns.
+CC0 1.0 Universal. Public domain. No restrictions.
+[LICENSE](https://github.com/CodeEditorLand/Maintain/tree/Current/LICENSE)
 
 ---
-
-## Shell Scripts 📝
-
-Maintain includes several helper scripts in the `Maintain/` directory:
-
-- [`Debug.sh`](Debug.sh) — Debug mode execution
-- [`Dev-Mountain.sh`](Dev-Mountain.sh) — Mountain development mode
-- [`Profile.sh`](Profile.sh) — Performance profiling
-- [`Release.sh`](Release.sh) — Release build
-
-### Debug Subdirectory
-
-The `Maintain/Debug/` directory contains additional debug scripts:
-
-- [`All.sh`](Debug/All.sh) — Debug all components
-- [`Build.sh`](Debug/Build.sh) — Debug build process
-- [`Run.sh`](Debug/Run.sh) — Debug runtime
-- [`Wind.sh`](Debug/Wind.sh) — Debug Wind component
-
-## Features
-
-### Rhai Scripting Support
-
-Maintain embeds the Rhai scripting language for flexible build configuration:
-
-- **ConfigLoader:** Load and parse Rhai configuration files
-- **EnvironmentResolver:** Resolve environment variables in scripts
-- **ScriptRunner:** Execute Rhai scripts in the build context
-
-### Configuration Editing
-
-- **TOML Editing:** Modify Cargo.toml and other TOML files
-- **JSON5 Support:** Handle JSON5 configuration files
-- **Type-safe Operations:** Compile-time checked configuration access
-
-## Dependencies
-
-- `clap` — CLI argument parsing
-- `rhai` — Embedded scripting engine
-- `toml` / `toml_edit` — TOML parsing and editing
-- `json5` — JSON5 configuration support
-- `chrono` — Date/time handling
-- `colored` — Colored terminal output
-- `log` / `env_logger` — Logging framework
-
-## Development
-
-### Building
-
-```sh
-cd Element/Maintain
-cargo build --release
-```
-
-### Running Tests
-
-```sh
-cargo test
-```
-
-### Examples 💡
-
-See [`examples/`](examples/) directory for usage examples.
-
-## License ⚖️
-
-This project is licensed under Creative Commons CC0.
-
-See the LICENSE file for details.
-
----
-
-## Changelog 📜
-
-Stay updated with our progress! See
-[`CHANGELOG.md`](https://github.com/CodeEditorLand/Maintain/tree/Current/) for a
-history of changes specific to **Maintain**.
-
----
-
 
 ## See Also
 
+- [Maintain Documentation](https://editor.land/Doc/maintain)
 - [Architecture Overview](https://editor.land/Doc/architecture)
+- [Why Rust](https://editor.land/Doc/why-rust)
 - [Mountain](https://github.com/CodeEditorLand/Mountain)
 - [Rest](https://github.com/CodeEditorLand/Rest)
+- [Output](https://github.com/CodeEditorLand/Output)
+
 
 ## Funding & Acknowledgements 🙏🏻
 
