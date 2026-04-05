@@ -1,0 +1,3 @@
+[submodule "Documentation/Rust"]
+	path = Documentation/Rust
+	url = ssh://git@github.com/CodeEditorLand/RustDocumentationMaintainLand.git
