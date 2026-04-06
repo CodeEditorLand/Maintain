@@ -2,8 +2,8 @@
 
 This document provides the technical foundation for the Maintain build system
 and CI/CD toolkit within the Land ecosystem. **Maintain** orchestrates builds
-across all Land elements, embeds a Rhai scripting engine for flexible automation,
-and provides type-safe TOML/JSON5 configuration editing.
+across all Land elements, embeds a Rhai scripting engine for flexible
+automation, and provides type-safe TOML/JSON5 configuration editing.
 
 ---
 
@@ -67,23 +67,23 @@ graph TB
 
 ## Key Modules
 
-| Path | Description |
-| :--- | :--- |
-| `Source/Library.rs` | Binary entry point; wires together CLI, logging, and error handling |
-| `Source/Build/CLI.rs` | `clap`-based CLI with subcommands: debug, release, profile, dev |
-| `Source/Build/Definition.rs` | Build group definitions: which elements to build, in what order |
-| `Source/Build/Fn.rs` | Core build function dispatch: clean, compile, link, post-process |
-| `Source/Build/Process.rs` | Child process spawning with stdout/stderr capture and exit code handling |
-| `Source/Build/TomlEdit.rs` | Non-lossy TOML editing for `Cargo.toml` version bumps and dependency changes |
-| `Source/Build/JsonEdit.rs` | JSON5-aware configuration editing for `package.json` and `.json5` files |
-| `Source/Build/Pascalize.rs` | PascalCase ↔ words conversion utilities for naming convention enforcement |
-| `Source/Build/GetTauriTargetTriple.rs` | Detects current Rust target triple for SideCar binary selection |
-| `Source/Build/EnvironmentResolver.rs` | Resolves environment variables with fallbacks for build-time configuration |
-| `Source/Build/Logger.rs` | Colored terminal output using the `colored` crate |
-| `Source/Build/Error.rs` | Unified error type for build failures |
-| `Source/Build/Rhai/ConfigLoader.rs` | Loads and parses Rhai build configuration scripts |
-| `Source/Build/Rhai/ScriptRunner.rs` | Executes Rhai scripts within the build context with Land API bindings |
-| `Source/Build/Rhai/EnvironmentResolver.rs` | Exposes environment variable resolution to Rhai scripts |
+| Path                                       | Description                                                                  |
+| :----------------------------------------- | :--------------------------------------------------------------------------- |
+| `Source/Library.rs`                        | Binary entry point; wires together CLI, logging, and error handling          |
+| `Source/Build/CLI.rs`                      | `clap`-based CLI with subcommands: debug, release, profile, dev              |
+| `Source/Build/Definition.rs`               | Build group definitions: which elements to build, in what order              |
+| `Source/Build/Fn.rs`                       | Core build function dispatch: clean, compile, link, post-process             |
+| `Source/Build/Process.rs`                  | Child process spawning with stdout/stderr capture and exit code handling     |
+| `Source/Build/TomlEdit.rs`                 | Non-lossy TOML editing for `Cargo.toml` version bumps and dependency changes |
+| `Source/Build/JsonEdit.rs`                 | JSON5-aware configuration editing for `package.json` and `.json5` files      |
+| `Source/Build/Pascalize.rs`                | PascalCase ↔ words conversion utilities for naming convention enforcement    |
+| `Source/Build/GetTauriTargetTriple.rs`     | Detects current Rust target triple for SideCar binary selection              |
+| `Source/Build/EnvironmentResolver.rs`      | Resolves environment variables with fallbacks for build-time configuration   |
+| `Source/Build/Logger.rs`                   | Colored terminal output using the `colored` crate                            |
+| `Source/Build/Error.rs`                    | Unified error type for build failures                                        |
+| `Source/Build/Rhai/ConfigLoader.rs`        | Loads and parses Rhai build configuration scripts                            |
+| `Source/Build/Rhai/ScriptRunner.rs`        | Executes Rhai scripts within the build context with Land API bindings        |
+| `Source/Build/Rhai/EnvironmentResolver.rs` | Exposes environment variable resolution to Rhai scripts                      |
 
 ---
 
@@ -116,35 +116,35 @@ sequenceDiagram
 
 ## Integration Points
 
-| Connecting Element | Direction | Mechanism | Description |
-| :--- | :--- | :--- | :--- |
-| **Mountain** | Build target | `cargo build` subprocess | Maintain compiles Mountain as part of the debug/release build group |
-| **Air** | Build target | `cargo build` subprocess | Air daemon compiled alongside Mountain |
-| **Echo** | Build target | `cargo build` subprocess | Echo scheduler compiled as a dependency of Mountain |
-| **Rest** | Build target | `cargo build` subprocess | Rest compiler binary built for use by Output |
-| **SideCar** | Build target | `cargo build` subprocess | SideCar Download tool compiled and run as part of setup |
-| **Output** | Build trigger | `pnpm run prepublishOnly` subprocess | Maintain triggers TypeScript builds via pnpm |
-| **Wind / Sky** | Build trigger | `pnpm run prepublishOnly` subprocess | Frontend packages built through Turborepo via Maintain |
+| Connecting Element | Direction     | Mechanism                            | Description                                                         |
+| :----------------- | :------------ | :----------------------------------- | :------------------------------------------------------------------ |
+| **Mountain**       | Build target  | `cargo build` subprocess             | Maintain compiles Mountain as part of the debug/release build group |
+| **Air**            | Build target  | `cargo build` subprocess             | Air daemon compiled alongside Mountain                              |
+| **Echo**           | Build target  | `cargo build` subprocess             | Echo scheduler compiled as a dependency of Mountain                 |
+| **Rest**           | Build target  | `cargo build` subprocess             | Rest compiler binary built for use by Output                        |
+| **SideCar**        | Build target  | `cargo build` subprocess             | SideCar Download tool compiled and run as part of setup             |
+| **Output**         | Build trigger | `pnpm run prepublishOnly` subprocess | Maintain triggers TypeScript builds via pnpm                        |
+| **Wind / Sky**     | Build trigger | `pnpm run prepublishOnly` subprocess | Frontend packages built through Turborepo via Maintain              |
 
 ---
 
 ## Configuration
 
-| Option | CLI Flag | Description |
-| :--- | :--- | :--- |
-| Build mode | `debug` / `release` subcommand | Controls `--release` flag and optimization level |
-| Target triple | `--target` | Rust target triple for cross-compilation |
-| Element filter | `--element` | Build only a specific element rather than the full group |
-| Script path | `--script` | Override the default Rhai build configuration script |
-| Verbosity | `--verbose` | Enable detailed subprocess output logging |
+| Option         | CLI Flag                       | Description                                              |
+| :------------- | :----------------------------- | :------------------------------------------------------- |
+| Build mode     | `debug` / `release` subcommand | Controls `--release` flag and optimization level         |
+| Target triple  | `--target`                     | Rust target triple for cross-compilation                 |
+| Element filter | `--element`                    | Build only a specific element rather than the full group |
+| Script path    | `--script`                     | Override the default Rhai build configuration script     |
+| Verbosity      | `--verbose`                    | Enable detailed subprocess output logging                |
 
 **Shell script entry points:**
 
-| Script | Purpose |
-| :--- | :--- |
-| `Debug.sh` | Full debug build of all elements |
-| `Dev-Mountain.sh` | Hot-reload development mode for Mountain |
-| `Release.sh` | Optimized release build with all elements |
-| `Profile.sh` | Release build with profiling instrumentation |
-| `Debug/All.sh` | Debug all components including frontend |
-| `Debug/Wind.sh` | Debug Wind TypeScript service layer only |
+| Script            | Purpose                                      |
+| :---------------- | :------------------------------------------- |
+| `Debug.sh`        | Full debug build of all elements             |
+| `Dev-Mountain.sh` | Hot-reload development mode for Mountain     |
+| `Release.sh`      | Optimized release build with all elements    |
+| `Profile.sh`      | Release build with profiling instrumentation |
+| `Debug/All.sh`    | Debug all components including frontend      |
+| `Debug/Wind.sh`   | Debug Wind TypeScript service layer only     |
