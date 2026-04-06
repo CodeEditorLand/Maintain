@@ -9,7 +9,7 @@
 </h3>
 </td>
 <td align="left" valign="middle">
-<h3 align="left"> + </h3>
+<h3 align="left"> + </h3>
 </td>
 <td align="left" valign="middle">
 <h3 align="left">
@@ -102,7 +102,7 @@ TOML and JSON5 files.
 
 ---
 
-## `Maintain` in the Land Ecosystem&#x2001;💪🏻 + 🏞️
+## `Maintain` in the Land Ecosystem&#x2001;💪🏻 + 🏞️
 
 | Component                 | Role & Key Responsibilities                                  |
 | :------------------------ | :----------------------------------------------------------- |
