@@ -62,14 +62,12 @@
 /// let words = WordsFromPascal("Development");
 /// assert_eq!(words, vec!["development"]);
 /// ```
-//
 // Example 2: Multi-word PascalCase
 /// ```rust
 /// use crate::Maintain::Source::Build::WordsFromPascal;
 /// let words = WordsFromPascal("NodeEnvironment");
 /// assert_eq!(words, vec!["node", "environment"]);
 /// ```
-//
 // Example 3: Acronyms
 /// ```rust
 /// use crate::Maintain::Source::Build::WordsFromPascal;
@@ -142,88 +140,82 @@
 ///
 /// This ensures that multi-letter sequences like "Apps" stay together while
 /// properly splitting "HelloWorld" into "hello" and "world".
-pub fn WordsFromPascal(Text: &str) -> Vec<String> {
-    if Text.is_empty() {
-        return Vec::new();
-    }
+pub fn WordsFromPascal(Text:&str) -> Vec<String> {
+	if Text.is_empty() {
+		return Vec::new();
+	}
 
-    let mut Words = Vec::new();
+	let mut Words = Vec::new();
 
-    let mut CurrentWord = String::new();
+	let mut CurrentWord = String::new();
 
-    let mut LastCharWasUppercase = false;
+	let mut LastCharWasUppercase = false;
 
-    for Char in Text.chars() {
-        if Char.is_uppercase() {
-            if !CurrentWord.is_empty() && !LastCharWasUppercase {
-                Words.push(CurrentWord.to_ascii_lowercase());
+	for Char in Text.chars() {
+		if Char.is_uppercase() {
+			if !CurrentWord.is_empty() && !LastCharWasUppercase {
+				Words.push(CurrentWord.to_ascii_lowercase());
 
-                CurrentWord.clear();
-            }
+				CurrentWord.clear();
+			}
 
-            CurrentWord.push(Char);
+			CurrentWord.push(Char);
 
-            LastCharWasUppercase = true;
-        } else {
-            CurrentWord.push(Char);
+			LastCharWasUppercase = true;
+		} else {
+			CurrentWord.push(Char);
 
-            LastCharWasUppercase = false;
-        }
-    }
+			LastCharWasUppercase = false;
+		}
+	}
 
-    if !CurrentWord.is_empty() {
-        Words.push(CurrentWord.to_ascii_lowercase());
-    }
+	if !CurrentWord.is_empty() {
+		Words.push(CurrentWord.to_ascii_lowercase());
+	}
 
-    Words
+	Words
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+	use super::*;
 
-    #[test]
-    fn test_single_word() {
-        assert_eq!(WordsFromPascal("Hello"), vec!["hello"]);
-        assert_eq!(WordsFromPascal("World"), vec!["world"]);
-    }
+	#[test]
+	fn test_single_word() {
+		assert_eq!(WordsFromPascal("Hello"), vec!["hello"]);
+		assert_eq!(WordsFromPascal("World"), vec!["world"]);
+	}
 
-    #[test]
-    fn test_two_words() {
-        assert_eq!(WordsFromPascal("HelloWorld"), vec!["hello", "world"]);
-        assert_eq!(WordsFromPascal("NodeEnvironment"), vec!["node", "environment"]);
-    }
+	#[test]
+	fn test_two_words() {
+		assert_eq!(WordsFromPascal("HelloWorld"), vec!["hello", "world"]);
+		assert_eq!(WordsFromPascal("NodeEnvironment"), vec!["node", "environment"]);
+	}
 
-    #[test]
-    fn test_multiple_words() {
-        assert_eq!(
-            WordsFromPascal("TauriAppsTauri"),
-            vec!["tauri", "apps", "tauri"]
-        );
-        assert_eq!(
-            WordsFromPascal("MyAwesomeAppName"),
-            vec!["my", "awesome", "app", "name"]
-        );
-    }
+	#[test]
+	fn test_multiple_words() {
+		assert_eq!(WordsFromPascal("TauriAppsTauri"), vec!["tauri", "apps", "tauri"]);
+		assert_eq!(WordsFromPascal("MyAwesomeAppName"), vec!["my", "awesome", "app", "name"]);
+	}
 
-    #[test]
-    fn test_empty_string() {
-        assert_eq!(WordsFromPascal(""), Vec::<String>::new());
-    }
+	#[test]
+	fn test_empty_string() {
+		assert_eq!(WordsFromPascal(""), Vec::<String>::new());
+	}
 
-    #[test]
-    fn test_all_lowercase() {
-        assert_eq!(WordsFromPascal("hello"), vec!["hello"]);
-    }
+	#[test]
+	fn test_all_lowercase() {
+		assert_eq!(WordsFromPascal("hello"), vec!["hello"]);
+	}
 
-    #[test]
-    fn test_all_uppercase() {
-        assert_eq!(WordsFromPascal("HELLO"), vec!["hello"]);
-    }
+	#[test]
+	fn test_all_uppercase() {
+		assert_eq!(WordsFromPascal("HELLO"), vec!["hello"]);
+	}
 
-    #[test]
-    fn test_single_character() {
-        assert_eq!(WordsFromPascal("A"), vec!["a"]);
-        assert_eq!(WordsFromPascal("a"), vec!["a"]);
-    }
+	#[test]
+	fn test_single_character() {
+		assert_eq!(WordsFromPascal("A"), vec!["a"]);
+		assert_eq!(WordsFromPascal("a"), vec!["a"]);
+	}
 }

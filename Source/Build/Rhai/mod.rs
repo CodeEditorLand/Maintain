@@ -16,14 +16,14 @@ pub mod EnvironmentResolver;
 pub use ConfigLoader::*;
 pub use ScriptRunner::*;
 pub use EnvironmentResolver::*;
-
 use rhai::Engine;
 
 //=============================================================================
 // Public API
 //=============================================================================
 
-/// Creates and configures a new Rhai engine with all necessary modules and functions.
+/// Creates and configures a new Rhai engine with all necessary modules and
+/// functions.
 pub fn create_engine() -> Engine {
 	let mut engine = Engine::new();
 
@@ -39,21 +39,17 @@ pub fn create_engine() -> Engine {
 }
 
 /// Registers utility functions that can be called from Rhai scripts.
-fn register_utility_functions(engine: &mut Engine) {
+fn register_utility_functions(engine:&mut Engine) {
 	// System information
 	engine.register_fn("get_os_type", || std::env::consts::OS.to_string());
 	engine.register_fn("get_arch", || std::env::consts::ARCH.to_string());
 	engine.register_fn("get_family", || std::env::consts::FAMILY.to_string());
 
 	// Environment access (read-only for safety)
-	engine.register_fn("get_env", |name: &str| -> String {
-		std::env::var(name).unwrap_or_default()
-	});
+	engine.register_fn("get_env", |name:&str| -> String { std::env::var(name).unwrap_or_default() });
 
 	// File system utilities
-	engine.register_fn("path_exists", |path: &str| -> bool {
-		std::path::Path::new(path).exists()
-	});
+	engine.register_fn("path_exists", |path:&str| -> bool { std::path::Path::new(path).exists() });
 
 	// Time utilities
 	engine.register_fn("timestamp", || -> i64 {
@@ -64,7 +60,7 @@ fn register_utility_functions(engine: &mut Engine) {
 	});
 
 	// Logging functions
-	engine.register_fn("print", |s: &str| {
+	engine.register_fn("print", |s:&str| {
 		println!("[Rhai] {}", s);
 	});
 }
@@ -78,48 +74,54 @@ mod tests {
 	use super::*;
 
 	/// Expected environment variables for each profile
-	fn get_expected_env_vars(profile_name: &str) -> Vec<(&'static str, &'static str)> {
+	fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)> {
 		match profile_name {
-			"debug" => vec![
-				("Debug", "true"),
-				("Browser", "true"),
-				("Bundle", "true"),
-				("Clean", "true"),
-				("Compile", "false"),
-				("NODE_ENV", "development"),
-				("NODE_VERSION", "22"),
-				("NODE_OPTIONS", "--max-old-space-size=16384"),
-				("RUST_LOG", "debug"),
-				("AIR_LOG_JSON", "false"),
-				("AIR_LOG_FILE", ""),
-				("Dependency", "Microsoft/VSCode"),
-			],
-			"production" => vec![
-				("Debug", "false"),
-				("Browser", "false"),
-				("Bundle", "true"),
-				("Clean", "true"),
-				("Compile", "true"),
-				("NODE_ENV", "production"),
-				("NODE_VERSION", "22"),
-				("NODE_OPTIONS", "--max-old-space-size=8192"),
-				("RUST_LOG", "info"),
-				("AIR_LOG_JSON", "false"),
-				("Dependency", "Microsoft/VSCode"),
-			],
-			"release" => vec![
-				("Debug", "false"),
-				("Browser", "false"),
-				("Bundle", "true"),
-				("Clean", "true"),
-				("Compile", "true"),
-				("NODE_ENV", "production"),
-				("NODE_VERSION", "22"),
-				("NODE_OPTIONS", "--max-old-space-size=8192"),
-				("RUST_LOG", "warn"),
-				("AIR_LOG_JSON", "false"),
-				("Dependency", "Microsoft/VSCode"),
-			],
+			"debug" => {
+				vec![
+					("Debug", "true"),
+					("Browser", "true"),
+					("Bundle", "true"),
+					("Clean", "true"),
+					("Compile", "false"),
+					("NODE_ENV", "development"),
+					("NODE_VERSION", "22"),
+					("NODE_OPTIONS", "--max-old-space-size=16384"),
+					("RUST_LOG", "debug"),
+					("AIR_LOG_JSON", "false"),
+					("AIR_LOG_FILE", ""),
+					("Dependency", "Microsoft/VSCode"),
+				]
+			},
+			"production" => {
+				vec![
+					("Debug", "false"),
+					("Browser", "false"),
+					("Bundle", "true"),
+					("Clean", "true"),
+					("Compile", "true"),
+					("NODE_ENV", "production"),
+					("NODE_VERSION", "22"),
+					("NODE_OPTIONS", "--max-old-space-size=8192"),
+					("RUST_LOG", "info"),
+					("AIR_LOG_JSON", "false"),
+					("Dependency", "Microsoft/VSCode"),
+				]
+			},
+			"release" => {
+				vec![
+					("Debug", "false"),
+					("Browser", "false"),
+					("Bundle", "true"),
+					("Clean", "true"),
+					("Compile", "true"),
+					("NODE_ENV", "production"),
+					("NODE_VERSION", "22"),
+					("NODE_OPTIONS", "--max-old-space-size=8192"),
+					("RUST_LOG", "warn"),
+					("AIR_LOG_JSON", "false"),
+					("Dependency", "Microsoft/VSCode"),
+				]
+			},
 			_ => vec![],
 		}
 	}
@@ -128,7 +130,11 @@ mod tests {
 	fn test_config_loader_load() {
 		let result = ConfigLoader::load(".");
 
-		assert!(result.is_ok(), "ConfigLoader::load() should succeed but got error: {:?}", result.err());
+		assert!(
+			result.is_ok(),
+			"ConfigLoader::load() should succeed but got error: {:?}",
+			result.err()
+		);
 
 		let config = result.unwrap();
 
@@ -149,8 +155,14 @@ mod tests {
 
 		let debug_profile = profile.unwrap();
 		assert!(debug_profile.description.is_some(), "Debug profile should have a description");
-		assert!(debug_profile.env.is_some(), "Debug profile should have environment variables defined");
-		assert!(debug_profile.rhai_script.is_some(), "Debug profile should have a Rhai script defined");
+		assert!(
+			debug_profile.env.is_some(),
+			"Debug profile should have environment variables defined"
+		);
+		assert!(
+			debug_profile.rhai_script.is_some(),
+			"Debug profile should have a Rhai script defined"
+		);
 
 		let debug_env = debug_profile.env.as_ref().unwrap();
 		assert_eq!(debug_env.get("Debug"), Some(&"true".to_string()));
@@ -182,10 +194,10 @@ mod tests {
 
 		let engine = create_engine();
 		let context = ScriptRunner::ScriptContext {
-			profile_name: "debug".to_string(),
-			cwd: ".".to_string(),
-			manifest_dir: ".".to_string(),
-			target_triple: None,
+			profile_name:"debug".to_string(),
+			cwd:".".to_string(),
+			manifest_dir:".".to_string(),
+			target_triple:None,
 		};
 
 		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
@@ -220,7 +232,10 @@ mod tests {
 		let config = ConfigLoader::load(".").expect("Failed to load configuration");
 		let profile = ConfigLoader::get_profile(&config, "production").expect("Profile 'production' not found");
 
-		let script_path = profile.rhai_script.as_ref().expect("No Rhai script defined for production profile");
+		let script_path = profile
+			.rhai_script
+			.as_ref()
+			.expect("No Rhai script defined for production profile");
 		let full_script_path = std::path::Path::new(".").join(".vscode").join(script_path);
 
 		if !full_script_path.exists() {
@@ -229,10 +244,10 @@ mod tests {
 
 		let engine = create_engine();
 		let context = ScriptRunner::ScriptContext {
-			profile_name: "production".to_string(),
-			cwd: ".".to_string(),
-			manifest_dir: ".".to_string(),
-			target_triple: None,
+			profile_name:"production".to_string(),
+			cwd:".".to_string(),
+			manifest_dir:".".to_string(),
+			target_triple:None,
 		};
 
 		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
@@ -266,7 +281,10 @@ mod tests {
 		let config = ConfigLoader::load(".").expect("Failed to load configuration");
 		let profile = ConfigLoader::get_profile(&config, "release").expect("Profile 'release' not found");
 
-		let script_path = profile.rhai_script.as_ref().expect("No Rhai script defined for release profile");
+		let script_path = profile
+			.rhai_script
+			.as_ref()
+			.expect("No Rhai script defined for release profile");
 		let full_script_path = std::path::Path::new(".").join(".vscode").join(script_path);
 
 		if !full_script_path.exists() {
@@ -275,10 +293,10 @@ mod tests {
 
 		let engine = create_engine();
 		let context = ScriptRunner::ScriptContext {
-			profile_name: "release".to_string(),
-			cwd: ".".to_string(),
-			manifest_dir: ".".to_string(),
-			target_triple: None,
+			profile_name:"release".to_string(),
+			cwd:".".to_string(),
+			manifest_dir:".".to_string(),
+			target_triple:None,
 		};
 
 		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
@@ -313,7 +331,9 @@ mod tests {
 		let profile = ConfigLoader::get_profile(&config, "bundler-preparation")
 			.expect("Profile 'bundler-preparation' not found in configuration");
 
-		let script_path = profile.rhai_script.as_ref()
+		let script_path = profile
+			.rhai_script
+			.as_ref()
 			.expect("No Rhai script defined for bundler-preparation profile");
 		let full_script_path = std::path::Path::new(".").join(".vscode").join(script_path);
 
@@ -324,15 +344,19 @@ mod tests {
 
 		let engine = create_engine();
 		let context = ScriptRunner::ScriptContext {
-			profile_name: "bundler-preparation".to_string(),
-			cwd: ".".to_string(),
-			manifest_dir: ".".to_string(),
-			target_triple: None,
+			profile_name:"bundler-preparation".to_string(),
+			cwd:".".to_string(),
+			manifest_dir:".".to_string(),
+			target_triple:None,
 		};
 
 		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
 
-		assert!(result.is_ok(), "Script execution should succeed but got error: {:?}", result.err());
+		assert!(
+			result.is_ok(),
+			"Script execution should succeed but got error: {:?}",
+			result.err()
+		);
 		let script_result = result.unwrap();
 		assert!(script_result.success, "Script execution should report success");
 		assert!(!script_result.env_vars.is_empty(), "Script should return environment variables");
@@ -345,10 +369,12 @@ mod tests {
 	#[test]
 	fn test_execute_profile_script_swc_bundle() {
 		let config = ConfigLoader::load(".").expect("Failed to load configuration");
-		let profile = ConfigLoader::get_profile(&config, "swc-bundle")
-			.expect("Profile 'swc-bundle' not found in configuration");
+		let profile =
+			ConfigLoader::get_profile(&config, "swc-bundle").expect("Profile 'swc-bundle' not found in configuration");
 
-		let script_path = profile.rhai_script.as_ref()
+		let script_path = profile
+			.rhai_script
+			.as_ref()
 			.expect("No Rhai script defined for swc-bundle profile");
 		let full_script_path = std::path::Path::new(".").join(".vscode").join(script_path);
 
@@ -359,15 +385,19 @@ mod tests {
 
 		let engine = create_engine();
 		let context = ScriptRunner::ScriptContext {
-			profile_name: "swc-bundle".to_string(),
-			cwd: ".".to_string(),
-			manifest_dir: ".".to_string(),
-			target_triple: None,
+			profile_name:"swc-bundle".to_string(),
+			cwd:".".to_string(),
+			manifest_dir:".".to_string(),
+			target_triple:None,
 		};
 
 		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
 
-		assert!(result.is_ok(), "Script execution should succeed but got error: {:?}", result.err());
+		assert!(
+			result.is_ok(),
+			"Script execution should succeed but got error: {:?}",
+			result.err()
+		);
 		let script_result = result.unwrap();
 		assert!(script_result.success, "Script execution should report success");
 		assert!(!script_result.env_vars.is_empty(), "Script should return environment variables");
@@ -379,10 +409,12 @@ mod tests {
 	#[test]
 	fn test_execute_profile_script_oxc_bundle() {
 		let config = ConfigLoader::load(".").expect("Failed to load configuration");
-		let profile = ConfigLoader::get_profile(&config, "oxc-bundle")
-			.expect("Profile 'oxc-bundle' not found in configuration");
+		let profile =
+			ConfigLoader::get_profile(&config, "oxc-bundle").expect("Profile 'oxc-bundle' not found in configuration");
 
-		let script_path = profile.rhai_script.as_ref()
+		let script_path = profile
+			.rhai_script
+			.as_ref()
 			.expect("No Rhai script defined for oxc-bundle profile");
 		let full_script_path = std::path::Path::new(".").join(".vscode").join(script_path);
 
@@ -393,15 +425,19 @@ mod tests {
 
 		let engine = create_engine();
 		let context = ScriptRunner::ScriptContext {
-			profile_name: "oxc-bundle".to_string(),
-			cwd: ".".to_string(),
-			manifest_dir: ".".to_string(),
-			target_triple: None,
+			profile_name:"oxc-bundle".to_string(),
+			cwd:".".to_string(),
+			manifest_dir:".".to_string(),
+			target_triple:None,
 		};
 
 		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
 
-		assert!(result.is_ok(), "Script execution should succeed but got error: {:?}", result.err());
+		assert!(
+			result.is_ok(),
+			"Script execution should succeed but got error: {:?}",
+			result.err()
+		);
 		let script_result = result.unwrap();
 		assert!(script_result.success, "Script execution should report success");
 		assert!(!script_result.env_vars.is_empty(), "Script should return environment variables");
@@ -418,7 +454,9 @@ mod tests {
 			let profile = ConfigLoader::get_profile(&config, profile_name)
 				.expect(&format!("Profile '{}' not found", profile_name));
 
-			let script_path = profile.rhai_script.as_ref()
+			let script_path = profile
+				.rhai_script
+				.as_ref()
 				.expect(&format!("No Rhai script defined for {}", profile_name));
 
 			let full_script_path = std::path::Path::new(".").join(".vscode").join(script_path);
@@ -429,18 +467,20 @@ mod tests {
 
 			let engine = create_engine();
 			let context = ScriptRunner::ScriptContext {
-				profile_name: profile_name.to_string(),
-				cwd: ".".to_string(),
-				manifest_dir: ".".to_string(),
-				target_triple: None,
+				profile_name:profile_name.to_string(),
+				cwd:".".to_string(),
+				manifest_dir:".".to_string(),
+				target_triple:None,
 			};
 
-			let script_result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context)
-				.expect(&format!("Failed to execute script for profile '{}'", profile_name));
+			let script_result =
+				ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context)
+					.expect(&format!("Failed to execute script for profile '{}'", profile_name));
 
 			let static_env = ConfigLoader::resolve_profile_env(&config, profile_name);
 
-			// Verify that Rhai script returns values that match static config where appropriate
+			// Verify that Rhai script returns values that match static config where
+			// appropriate
 			if let Some(static_debug) = static_env.get("Debug") {
 				let dynamic_debug = script_result.env_vars.get("Debug");
 				assert_eq!(

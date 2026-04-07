@@ -66,134 +66,138 @@
 /// DEPENDENCY: Move this function to main.rs in a future refactor
 #[allow(dead_code)]
 pub fn main() {
-    use clap::Parser;
-    use std::env;
+	use std::env;
 
-    // Collect all arguments
-    let mut args: Vec<String> = env::args().collect();
+	use clap::Parser;
 
-    // Determine the mode based on arguments:
-    // - Run mode: --run/-r flag, --dev flag, or 'run' subcommand
-    // - Build mode: Direct flags like --list-profiles, --profile, --show-profile, or 'build' subcommand
-    // - Legacy mode: -- followed by a build command (like pnpm, cargo, npm)
-    // - No args: Show help
+	// Collect all arguments
+	let mut args:Vec<String> = env::args().collect();
 
-    if args.len() == 1 {
-        // No arguments - show build help (default)
-        let _ = Build::CLI::Cli::try_parse();
-        return;
-    }
+	// Determine the mode based on arguments:
+	// - Run mode: --run/-r flag, --dev flag, or 'run' subcommand
+	// - Build mode: Direct flags like --list-profiles, --profile, --show-profile,
+	//   or 'build' subcommand
+	// - Legacy mode: -- followed by a build command (like pnpm, cargo, npm)
+	// - No args: Show help
 
-    // Check if first arg after binary is a run-specific flag or subcommand
-    let first_arg = args.get(1).map(|s| s.as_str()).unwrap_or("");
+	if args.len() == 1 {
+		// No arguments - show build help (default)
+		let _ = Build::CLI::Cli::try_parse();
+		return;
+	}
 
-    // Check if we're in legacy mode (-- followed by a command)
-    let is_legacy_mode = first_arg == "--";
+	// Check if first arg after binary is a run-specific flag or subcommand
+	let first_arg = args.get(1).map(|s| s.as_str()).unwrap_or("");
 
-    // Check for run mode indicators
-    let is_run_flag = first_arg == "--run" || first_arg == "--dev" || first_arg == "-r";
-    let is_run_subcommand = first_arg == "run";
-    let is_run_mode = is_run_flag || is_run_subcommand;
+	// Check if we're in legacy mode (-- followed by a command)
+	let is_legacy_mode = first_arg == "--";
 
-    // Check for build mode indicators (subcommand or flags)
-    let is_build_subcommand = first_arg == "build";
+	// Check for run mode indicators
+	let is_run_flag = first_arg == "--run" || first_arg == "--dev" || first_arg == "-r";
+	let is_run_subcommand = first_arg == "run";
+	let is_run_mode = is_run_flag || is_run_subcommand;
 
-    // CLI flags that indicate we should use the build CLI mode
-    let build_cli_flags = [
-        "--list-profiles",
-        "--show-profile",
-        "--validate-profile",
-        "--profile",
-        "--dry-run",
-        "--help",
-        "-h",
-        "--version",
-        "-V",
-        "list-profiles",
-        "show-profile",
-        "validate-profile",
-        "resolve",
-    ];
+	// Check for build mode indicators (subcommand or flags)
+	let is_build_subcommand = first_arg == "build";
 
-    // Check if first arg is a build CLI flag
-    let is_build_cli_mode = if !is_run_mode && !is_legacy_mode && !is_build_subcommand {
-        build_cli_flags.iter().any(|flag| {
-            first_arg == *flag || first_arg.starts_with(&format!("{}=", flag))
-        }) || (!first_arg.starts_with('-') && !is_build_subcommand)
-    } else {
-        false
-    };
+	// CLI flags that indicate we should use the build CLI mode
+	let build_cli_flags = [
+		"--list-profiles",
+		"--show-profile",
+		"--validate-profile",
+		"--profile",
+		"--dry-run",
+		"--help",
+		"-h",
+		"--version",
+		"-V",
+		"list-profiles",
+		"show-profile",
+		"validate-profile",
+		"resolve",
+	];
 
-    if is_run_mode {
-        // Strip the --run/--dev/-r flag or 'run' subcommand before passing to Run CLI
-        // This allows Run::CLI to parse the remaining arguments correctly
-        if is_run_flag {
-            // Remove the flag (and its position) from args
-            args.remove(1);
-        } else if is_run_subcommand {
-            // Replace 'run' subcommand with arguments that Run CLI expects
-            args.remove(1);
-        }
+	// Check if first arg is a build CLI flag
+	let is_build_cli_mode = if !is_run_mode && !is_legacy_mode && !is_build_subcommand {
+		build_cli_flags
+			.iter()
+			.any(|flag| first_arg == *flag || first_arg.starts_with(&format!("{}=", flag)))
+			|| (!first_arg.starts_with('-') && !is_build_subcommand)
+	} else {
+		false
+	};
 
-        // Use Run mode (development workflow)
-        // Use try_parse_from with our modified args, not try_parse() which reads from env::args()
-        match Run::CLI::Cli::try_parse_from(args) {
-            Ok(cli) => {
-                if let Err(e) = cli.execute() {
-                    eprintln!("Error: {}", e);
-                    std::process::exit(1);
-                }
-            }
-            Err(e) => {
-                // If parsing fails, it might be a --help or --version request
-                // or invalid arguments - let clap handle it
-                e.print().expect("Failed to print error");
-                std::process::exit(e.exit_code());
-            }
-        }
-    } else if is_build_subcommand {
-        // Handle 'build' subcommand - strip it and pass to Build CLI
-        args.remove(1);
+	if is_run_mode {
+		// Strip the --run/--dev/-r flag or 'run' subcommand before passing to Run CLI
+		// This allows Run::CLI to parse the remaining arguments correctly
+		if is_run_flag {
+			// Remove the flag (and its position) from args
+			args.remove(1);
+		} else if is_run_subcommand {
+			// Replace 'run' subcommand with arguments that Run CLI expects
+			args.remove(1);
+		}
 
-        // Use try_parse_from with our modified args
-        match Build::CLI::Cli::try_parse_from(args) {
-            Ok(cli) => {
-                if let Err(e) = cli.execute() {
-                    eprintln!("Error: {}", e);
-                    std::process::exit(1);
-                }
-            }
-            Err(e) => {
-                e.print().expect("Failed to print error");
-                std::process::exit(e.exit_code());
-            }
-        }
-    } else if is_build_cli_mode {
-        // Use Build CLI mode (configuration based)
-        match Build::CLI::Cli::try_parse() {
-            Ok(cli) => {
-                if let Err(e) = cli.execute() {
-                    eprintln!("Error: {}", e);
-                    std::process::exit(1);
-                }
-            }
-            Err(e) => {
-                // If parsing fails, it might be a --help or --version request
-                // or invalid arguments - let clap handle it
-                e.print().expect("Failed to print error");
-                std::process::exit(e.exit_code());
-            }
-        }
-    } else {
-        // Use legacy build mode (environment variable based)
-        // This handles: ./Maintain -- pnpm tauri build
-        Build::Fn::Fn();
-    }
+		// Use Run mode (development workflow)
+		// Use try_parse_from with our modified args, not try_parse() which reads from
+		// env::args()
+		match Run::CLI::Cli::try_parse_from(args) {
+			Ok(cli) => {
+				if let Err(e) = cli.execute() {
+					eprintln!("Error: {}", e);
+					std::process::exit(1);
+				}
+			},
+			Err(e) => {
+				// If parsing fails, it might be a --help or --version request
+				// or invalid arguments - let clap handle it
+				e.print().expect("Failed to print error");
+				std::process::exit(e.exit_code());
+			},
+		}
+	} else if is_build_subcommand {
+		// Handle 'build' subcommand - strip it and pass to Build CLI
+		args.remove(1);
+
+		// Use try_parse_from with our modified args
+		match Build::CLI::Cli::try_parse_from(args) {
+			Ok(cli) => {
+				if let Err(e) = cli.execute() {
+					eprintln!("Error: {}", e);
+					std::process::exit(1);
+				}
+			},
+			Err(e) => {
+				e.print().expect("Failed to print error");
+				std::process::exit(e.exit_code());
+			},
+		}
+	} else if is_build_cli_mode {
+		// Use Build CLI mode (configuration based)
+		match Build::CLI::Cli::try_parse() {
+			Ok(cli) => {
+				if let Err(e) = cli.execute() {
+					eprintln!("Error: {}", e);
+					std::process::exit(1);
+				}
+			},
+			Err(e) => {
+				// If parsing fails, it might be a --help or --version request
+				// or invalid arguments - let clap handle it
+				e.print().expect("Failed to print error");
+				std::process::exit(e.exit_code());
+			},
+		}
+	} else {
+		// Use legacy build mode (environment variable based)
+		// This handles: ./Maintain -- pnpm tauri build
+		Build::Fn::Fn();
+	}
 }
 
-/*=============================================================================*/
-/* MODULE DECLARATIONS */
-/*=============================================================================*/
+// =============================================================================
+// MODULE DECLARATIONS
+// =============================================================================
 
 /// Build Orchestrator Module.
 ///

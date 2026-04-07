@@ -3,7 +3,8 @@
 //=============================================================================//
 // Module: Process
 //
-// Brief Description: Main orchestration logic for preparing and executing the build.
+// Brief Description: Main orchestration logic for preparing and executing the
+// build.
 //
 // RESPONSIBILITIES:
 // ================
@@ -28,7 +29,8 @@
 //
 // Dependencies (What this module requires):
 // - External crates: std (env, fs, path, process, os), log, toml
-// - Internal modules: Constant::*, Definition::*, Error::BuildError, Function::*
+// - Internal modules: Constant::*, Definition::*, Error::BuildError,
+//   Function::*
 // - Traits implemented: None
 //
 // Dependents (What depends on this module):
@@ -60,46 +62,43 @@
 // =========
 //
 // Example 1: Basic build orchestration
+use std::{
+	env,
+	fs,
+	path::PathBuf,
+	process::{Command as ProcessCommand, Stdio},
+};
+
+use log::info;
+use toml;
+
 /// ```rust
-/// use crate::Maintain::Source::Build::Process;
-/// use crate::Maintain::Source::Build::Argument;
+/// use crate::Maintain::Source::Build::{Argument, Process};
 /// let argument = Argument::parse();
 /// Process(&argument)?;
 /// ```
-//
 // Example 2: Handling build errors
 /// ```rust
 /// use crate::Maintain::Source::Build::Process;
 /// match Process(&argument) {
-/// Ok(_) => println!("Build succeeded"),
-/// Err(e) => println!("Build failed: {}", e),
+/// 	Ok(_) => println!("Build succeeded"),
+/// 	Err(e) => println!("Build failed: {}", e),
 /// }
 /// ```
 //
 //=============================================================================//
 // IMPLEMENTATION
 //=============================================================================//
-
 use crate::Build::Error::Error as BuildError;
-use crate::Build::Definition::{Argument, Guard, Manifest};
-use crate::Build::JsonEdit::JsonEdit;
-use crate::Build::TomlEdit::TomlEdit;
-use crate::Build::WordsFromPascal::WordsFromPascal;
-use crate::Build::Pascalize::Pascalize;
-use crate::Build::GetTauriTargetTriple::GetTauriTargetTriple;
-
-use crate::Build::Constant::{
-CargoFile, JsonFile, JsonfiveFile,
-NameDelimiter, IdDelimiter,
+use crate::Build::{
+	Constant::{CargoFile, IdDelimiter, JsonFile, JsonfiveFile, NameDelimiter},
+	Definition::{Argument, Guard, Manifest},
+	GetTauriTargetTriple::GetTauriTargetTriple,
+	JsonEdit::JsonEdit,
+	Pascalize::Pascalize,
+	TomlEdit::TomlEdit,
+	WordsFromPascal::WordsFromPascal,
 };
-
-use log::info;
-use std::{
-    env, fs,
-    path::PathBuf,
-    process::{Command as ProcessCommand, Stdio},
-};
-use toml;
 
 /// Main orchestration logic for preparing and executing the build.
 ///
@@ -108,7 +107,8 @@ use toml;
 ///
 /// 1. Validates the project directory and configuration files
 /// 2. Creates guards to backup and restore configuration files
-/// 3. Generates a unique product name and bundle identifier based on build flags
+/// 3. Generates a unique product name and bundle identifier based on build
+///    flags
 /// 4. Modifies Cargo.toml and Tauri configuration files
 /// 5. Optionally stages a Node.js sidecar binary
 /// 6. Executes the provided build command
@@ -130,7 +130,8 @@ use toml;
 /// * `BuildError::Exists` - If a backup file already exists
 /// * `BuildError::Io` - For file operation failures
 /// * `BuildError::Edit` - For TOML editing failures
-/// * `BuildError::Json` / `BuildError::Jsonfive` - For JSON/JSON5 parsing failures
+/// * `BuildError::Json` / `BuildError::Jsonfive` - For JSON/JSON5 parsing
+///   failures
 /// * `BuildError::Parse` - For TOML parsing failures
 /// * `BuildError::Shell` - If the build command fails
 ///
@@ -143,14 +144,17 @@ use toml;
 /// - **Node Version**: Node.js version if bundling a sidecar
 /// - **Build Flags**: Bundle, Clean, Browser, Compile, Debug
 ///
-/// Example product name: `Development_GenDependency_22NodeVersion_Debug_Mountain`
+/// Example product name:
+/// `Development_GenDependency_22NodeVersion_Debug_Mountain`
 ///
-/// Example bundle identifier: `land.editor.binary.development.generic.node.22.debug.mountain`
+/// Example bundle identifier:
+/// `land.editor.binary.development.generic.node.22.debug.mountain`
 ///
 /// # Node.js Sidecar Bundling
 ///
 /// If `NodeVersion` is specified:
-/// - The Node.js binary is copied from `Element/SideCar/{triple}/NODE/{version}/`
+/// - The Node.js binary is copied from
+///   `Element/SideCar/{triple}/NODE/{version}/`
 /// - The binary is staged in the project's `Binary/` directory
 /// - The Tauri configuration is updated to include the sidecar
 /// - The binary is given appropriate permissions on Unix-like systems
@@ -166,286 +170,283 @@ use toml;
 /// # Example
 ///
 /// ```no_run
-/// use crate::Maintain::Source::Build::Process;
-/// use crate::Maintain::Source::Build::Argument;
+/// use crate::Maintain::Source::Build::{Argument, Process};
 /// let argument = Argument::parse();
 /// Process(&argument)?;
 /// ```
-pub fn Process(Argument: &Argument) -> Result<(), BuildError> {
-    info!(target: "Build", "Starting build orchestration...");
+pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
+	info!(target: "Build", "Starting build orchestration...");
 
-    log::debug!(target: "Build", "Argument: {:?}", Argument);
+	log::debug!(target: "Build", "Argument: {:?}", Argument);
 
-    let ProjectDir = PathBuf::from(&Argument.Directory);
+	let ProjectDir = PathBuf::from(&Argument.Directory);
 
-    if !ProjectDir.is_dir() {
-        return Err(BuildError::Missing(ProjectDir));
-    }
+	if !ProjectDir.is_dir() {
+		return Err(BuildError::Missing(ProjectDir));
+	}
 
-    let CargoPath = ProjectDir.join(CargoFile);
+	let CargoPath = ProjectDir.join(CargoFile);
 
-    let ConfigPath = {
-        let Jsonfive = ProjectDir.join(JsonfiveFile);
+	let ConfigPath = {
+		let Jsonfive = ProjectDir.join(JsonfiveFile);
 
-        if Jsonfive.exists() {
-            Jsonfive
-        } else {
-            ProjectDir.join(JsonFile)
-        }
-    };
+		if Jsonfive.exists() { Jsonfive } else { ProjectDir.join(JsonFile) }
+	};
 
-    if !ConfigPath.exists() {
-        return Err(BuildError::Config);
-    }
+	if !ConfigPath.exists() {
+		return Err(BuildError::Config);
+	}
 
-    // Create guards for file backup and restoration
-    let mut CargoGuard = Guard::New(CargoPath.clone(), "Cargo.toml".to_string())?;
+	// Create guards for file backup and restoration
+	let mut CargoGuard = Guard::New(CargoPath.clone(), "Cargo.toml".to_string())?;
 
-    let mut ConfigGuard = Guard::New(ConfigPath.clone(), "Tauri config".to_string())?;
+	let mut ConfigGuard = Guard::New(ConfigPath.clone(), "Tauri config".to_string())?;
 
-    let mut NamePartsForProductName = Vec::new();
+	let mut NamePartsForProductName = Vec::new();
 
-    let mut NamePartsForId = Vec::new();
+	let mut NamePartsForId = Vec::new();
 
-    // Include Node.js environment in product name
-    if let Some(NodeValue) = &Argument.Environment {
-        if !NodeValue.is_empty() {
-            let PascalEnv = Pascalize(NodeValue);
+	// Include Node.js environment in product name
+	if let Some(NodeValue) = &Argument.Environment {
+		if !NodeValue.is_empty() {
+			let PascalEnv = Pascalize(NodeValue);
 
-            if !PascalEnv.is_empty() {
-                NamePartsForProductName.push(format!("{}NodeEnvironment", PascalEnv));
+			if !PascalEnv.is_empty() {
+				NamePartsForProductName.push(format!("{}NodeEnvironment", PascalEnv));
 
-                NamePartsForId.extend(WordsFromPascal(&PascalEnv));
+				NamePartsForId.extend(WordsFromPascal(&PascalEnv));
 
-                NamePartsForId.push("node".to_string());
+				NamePartsForId.push("node".to_string());
 
-                NamePartsForId.push("environment".to_string());
-            }
-        }
-    }
+				NamePartsForId.push("environment".to_string());
+			}
+		}
+	}
 
-    // Include dependency information in product name
-    if let Some(DependencyValue) = &Argument.Dependency {
-        if !DependencyValue.is_empty() {
-            let (PascalDepBase, IdDepWords) = if DependencyValue.eq_ignore_ascii_case("true") {
-                ("Generic".to_string(), vec!["generic".to_string()])
-            } else if let Some((Org, Repo)) = DependencyValue.split_once('/') {
-                (
-                    format!("{}{}", Pascalize(Org), Pascalize(Repo)),
-                    {
-                        let mut w = WordsFromPascal(&Pascalize(Org));
+	// Include dependency information in product name
+	if let Some(DependencyValue) = &Argument.Dependency {
+		if !DependencyValue.is_empty() {
+			let (PascalDepBase, IdDepWords) = if DependencyValue.eq_ignore_ascii_case("true") {
+				("Generic".to_string(), vec!["generic".to_string()])
+			} else if let Some((Org, Repo)) = DependencyValue.split_once('/') {
+				(format!("{}{}", Pascalize(Org), Pascalize(Repo)), {
+					let mut w = WordsFromPascal(&Pascalize(Org));
 
-                        w.extend(WordsFromPascal(&Pascalize(Repo)));
+					w.extend(WordsFromPascal(&Pascalize(Repo)));
 
-                        w
-                    },
-                )
-            } else {
-                (Pascalize(DependencyValue), WordsFromPascal(&Pascalize(DependencyValue)))
-            };
+					w
+				})
+			} else {
+				(Pascalize(DependencyValue), WordsFromPascal(&Pascalize(DependencyValue)))
+			};
 
-            if !PascalDepBase.is_empty() {
-                NamePartsForProductName.push(format!("{}Dependency", PascalDepBase));
+			if !PascalDepBase.is_empty() {
+				NamePartsForProductName.push(format!("{}Dependency", PascalDepBase));
 
-                NamePartsForId.extend(IdDepWords);
+				NamePartsForId.extend(IdDepWords);
 
-                NamePartsForId.push("dependency".to_string());
-            }
-        }
-    }
+				NamePartsForId.push("dependency".to_string());
+			}
+		}
+	}
 
-    // Include Node.js version in product name
-    if let Some(Version) = &Argument.NodeVersion {
-        if !Version.is_empty() {
-            let PascalVersion = format!("{}NodeVersion", Version);
+	// Include Node.js version in product name
+	if let Some(Version) = &Argument.NodeVersion {
+		if !Version.is_empty() {
+			let PascalVersion = format!("{}NodeVersion", Version);
 
-            NamePartsForProductName.push(PascalVersion.clone());
+			NamePartsForProductName.push(PascalVersion.clone());
 
-            NamePartsForId.push("node".to_string());
+			NamePartsForId.push("node".to_string());
 
-            NamePartsForId.push(Version.to_string());
-        }
-    }
+			NamePartsForId.push(Version.to_string());
+		}
+	}
 
-    // Include build flags in product name
-    if Argument.Bundle.as_ref().map_or(false, |v| v == "true") {
-        NamePartsForProductName.push("Bundle".to_string());
+	// Include build flags in product name
+	if Argument.Bundle.as_ref().map_or(false, |v| v == "true") {
+		NamePartsForProductName.push("Bundle".to_string());
 
-        NamePartsForId.push("bundle".to_string());
-    }
+		NamePartsForId.push("bundle".to_string());
+	}
 
-    if Argument.Clean.as_ref().map_or(false, |v| v == "true") {
-        NamePartsForProductName.push("Clean".to_string());
-
-        NamePartsForId.push("clean".to_string());
-    }
+	if Argument.Clean.as_ref().map_or(false, |v| v == "true") {
+		NamePartsForProductName.push("Clean".to_string());
 
-    if Argument.Browser.as_ref().map_or(false, |v| v == "true") {
-        NamePartsForProductName.push("Browser".to_string());
+		NamePartsForId.push("clean".to_string());
+	}
+
+	if Argument.Browser.as_ref().map_or(false, |v| v == "true") {
+		NamePartsForProductName.push("Browser".to_string());
 
-        NamePartsForId.push("browser".to_string());
-    }
+		NamePartsForId.push("browser".to_string());
+	}
 
-    if Argument.Compile.as_ref().map_or(false, |v| v == "true") {
-        NamePartsForProductName.push("Compile".to_string());
+	if Argument.Compile.as_ref().map_or(false, |v| v == "true") {
+		NamePartsForProductName.push("Compile".to_string());
 
-        NamePartsForId.push("compile".to_string());
-    }
+		NamePartsForId.push("compile".to_string());
+	}
 
-    if Argument.Debug.as_ref().map_or(false, |v| v == "true")
-        || Argument.Command.iter().any(|arg| arg.contains("--debug"))
-    {
-        NamePartsForProductName.push("Debug".to_string());
+	if Argument.Debug.as_ref().map_or(false, |v| v == "true")
+		|| Argument.Command.iter().any(|arg| arg.contains("--debug"))
+	{
+		NamePartsForProductName.push("Debug".to_string());
 
-        NamePartsForId.push("debug".to_string());
-    }
+		NamePartsForId.push("debug".to_string());
+	}
+
+	// Generate final product name
+	let ProductNamePrefix = NamePartsForProductName.join(NameDelimiter);
 
-    // Generate final product name
-    let ProductNamePrefix = NamePartsForProductName.join(NameDelimiter);
+	let FinalName = if !ProductNamePrefix.is_empty() {
+		format!("{}{}{}", ProductNamePrefix, NameDelimiter, Argument.Name)
+	} else {
+		Argument.Name.clone()
+	};
 
-    let FinalName = if !ProductNamePrefix.is_empty() {
-        format!("{}{}{}", ProductNamePrefix, NameDelimiter, Argument.Name)
-    } else {
-        Argument.Name.clone()
-    };
+	info!(target: "Build", "Final generated product name: '{}'", FinalName);
 
-    info!(target: "Build", "Final generated product name: '{}'", FinalName);
+	// Generate final bundle identifier
+	NamePartsForId.extend(WordsFromPascal(&Argument.Name));
 
-    // Generate final bundle identifier
-    NamePartsForId.extend(WordsFromPascal(&Argument.Name));
+	let IdSuffix = NamePartsForId
+		.into_iter()
+		.filter(|s| !s.is_empty())
+		.collect::<Vec<String>>()
+		.join(IdDelimiter);
 
-    let IdSuffix = NamePartsForId
-        .into_iter()
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<String>>()
-        .join(IdDelimiter);
+	let FinalId = format!("{}{}{}", Argument.Prefix, IdDelimiter, IdSuffix);
 
-    let FinalId = format!("{}{}{}", Argument.Prefix, IdDelimiter, IdSuffix);
+	info!(target: "Build", "Generated bundle identifier: '{}'", FinalId);
 
-    info!(target: "Build", "Generated bundle identifier: '{}'", FinalId);
+	// Update Cargo.toml if product name changed
+	if FinalName != Argument.Name {
+		TomlEdit(&CargoPath, &Argument.Name, &FinalName)?;
+	}
 
-    // Update Cargo.toml if product name changed
-    if FinalName != Argument.Name {
-        TomlEdit(&CargoPath, &Argument.Name, &FinalName)?;
-    }
+	// Get version from Cargo.toml
+	let AppVersion = toml::from_str::<Manifest>(&fs::read_to_string(&CargoPath)?)?
+		.get_version()
+		.to_string();
 
-    // Get version from Cargo.toml
-    let AppVersion = toml::from_str::<Manifest>(&fs::read_to_string(&CargoPath)?)?.get_version().to_string();
+	// Update Tauri configuration and optionally bundle Node.js sidecar
+	JsonEdit(
+		&ConfigPath,
+		&FinalName,
+		&FinalId,
+		&AppVersion,
+		(if let Some(version) = &Argument.NodeVersion {
+			info!(target: "Build", "Selected Node.js version: {}", version);
 
-    // Update Tauri configuration and optionally bundle Node.js sidecar
-    JsonEdit(
-        &ConfigPath,
-        &FinalName,
-        &FinalId,
-        &AppVersion,
-        (if let Some(version) = &Argument.NodeVersion {
-            info!(target: "Build", "Selected Node.js version: {}", version);
+			let Triple = GetTauriTargetTriple();
 
-            let Triple = GetTauriTargetTriple();
+			// Path to the pre-downloaded Node executable
+			let Executable = if cfg!(target_os = "windows") {
+				PathBuf::from(format!("./Element/SideCar/{}/NODE/{}/node.exe", Triple, version))
+			} else {
+				PathBuf::from(format!("./Element/SideCar/{}/NODE/{}/bin/node", Triple, version))
+			};
 
-            // Path to the pre-downloaded Node executable
-            let Executable = if cfg!(target_os = "windows") {
-                PathBuf::from(format!("./Element/SideCar/{}/NODE/{}/node.exe", Triple, version))
-            } else {
-                PathBuf::from(format!("./Element/SideCar/{}/NODE/{}/bin/node", Triple, version))
-            };
+			// Define a consistent, temporary directory for the staged binary
+			let DirectorySideCarTemporary = ProjectDir.join("Binary");
 
-            // Define a consistent, temporary directory for the staged binary
-            let DirectorySideCarTemporary = ProjectDir.join("Binary");
+			fs::create_dir_all(&DirectorySideCarTemporary)?;
 
-            fs::create_dir_all(&DirectorySideCarTemporary)?;
+			// Define the consistent name for the binary that Tauri will bundle
+			let PathExecutableDestination = if cfg!(target_os = "windows") {
+				DirectorySideCarTemporary.join(format!("node-{}.exe", Triple))
+			} else {
+				DirectorySideCarTemporary.join(format!("node-{}", Triple))
+			};
 
-            // Define the consistent name for the binary that Tauri will bundle
-            let PathExecutableDestination = if cfg!(target_os = "windows") {
-                DirectorySideCarTemporary.join(format!("node-{}.exe", Triple))
-            } else {
-                DirectorySideCarTemporary.join(format!("node-{}", Triple))
-            };
+			info!(
+				target: "Build",
+				"Staging sidecar from {} to {}",
+				Executable.display(),
+				PathExecutableDestination.display()
+			);
 
-            info!(
-                target: "Build",
-                "Staging sidecar from {} to {}",
-                Executable.display(),
-                PathExecutableDestination.display()
-            );
+			// Perform the copy
+			fs::copy(&Executable, &PathExecutableDestination)?;
 
-            // Perform the copy
-            fs::copy(&Executable, &PathExecutableDestination)?;
+			// On non-windows, make sure the copied binary is executable
+			#[cfg(not(target_os = "windows"))]
+			{
+				use std::os::unix::fs::PermissionsExt;
 
-            // On non-windows, make sure the copied binary is executable
-            #[cfg(not(target_os = "windows"))]
-            {
-                use std::os::unix::fs::PermissionsExt;
+				let mut Permission = fs::metadata(&PathExecutableDestination)?.permissions();
 
-                let mut Permission = fs::metadata(&PathExecutableDestination)?.permissions();
+				// rwxr-xr-x
+				Permission.set_mode(0o755);
 
-                // rwxr-xr-x
-                Permission.set_mode(0o755);
+				fs::set_permissions(&PathExecutableDestination, Permission)?;
+			}
 
-                fs::set_permissions(&PathExecutableDestination, Permission)?;
-            }
+			Some("Binary/node".to_string())
+		} else {
+			info!(target: "Build", "No Node.js flavour selected for bundling.");
 
-            Some("Binary/node".to_string())
-        } else {
-            info!(target: "Build", "No Node.js flavour selected for bundling.");
+			None
+		})
+		.as_deref(),
+	)?;
 
-            None
-        })
-        .as_deref(),
-    )?;
+	// Execute the build command
+	if Argument.Command.is_empty() {
+		return Err(BuildError::NoCommand);
+	}
 
-    // Execute the build command
-    if Argument.Command.is_empty() {
-        return Err(BuildError::NoCommand);
-    }
+	let mut ShellCommand = if cfg!(target_os = "windows") {
+		let mut Command = ProcessCommand::new("cmd");
 
-    let mut ShellCommand = if cfg!(target_os = "windows") {
-        let mut Command = ProcessCommand::new("cmd");
+		Command.arg("/C").args(&Argument.Command);
 
-        Command.arg("/C").args(&Argument.Command);
+		Command
+	} else {
+		let mut Command = ProcessCommand::new(&Argument.Command[0]);
 
-        Command
-    } else {
-        let mut Command = ProcessCommand::new(&Argument.Command[0]);
+		Command.args(&Argument.Command[1..]);
 
-        Command.args(&Argument.Command[1..]);
+		Command
+	};
 
-        Command
-    };
+	info!(target: "Build::Exec", "Executing final build command: {:?}", ShellCommand);
 
-    info!(target: "Build::Exec", "Executing final build command: {:?}", ShellCommand);
+	let Status = ShellCommand
+		.current_dir(env::current_dir()?)
+		.stdout(Stdio::inherit())
+		.stderr(Stdio::inherit())
+		.status()?;
 
-    let Status = ShellCommand
-        .current_dir(env::current_dir()?)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()?;
+	// Handle build failure
+	if !Status.success() {
+		let temp_sidecar_dir = ProjectDir.join("bin");
 
-    // Handle build failure
-    if !Status.success() {
-        let temp_sidecar_dir = ProjectDir.join("bin");
+		if temp_sidecar_dir.exists() {
+			let _ = fs::remove_dir_all(&temp_sidecar_dir);
+		}
 
-        if temp_sidecar_dir.exists() {
-            let _ = fs::remove_dir_all(&temp_sidecar_dir);
-        }
+		return Err(BuildError::Shell(Status));
+	}
 
-        return Err(BuildError::Shell(Status));
-    }
+	// Final cleanup of the temporary sidecar directory after a successful build
+	let DirectorySideCarTemporary = ProjectDir.join("bin");
 
-    // Final cleanup of the temporary sidecar directory after a successful build
-    let DirectorySideCarTemporary = ProjectDir.join("bin");
+	if DirectorySideCarTemporary.exists() {
+		fs::remove_dir_all(&DirectorySideCarTemporary)?;
 
-    if DirectorySideCarTemporary.exists() {
-        fs::remove_dir_all(&DirectorySideCarTemporary)?;
+		info!(target: "Build", "Cleaned up temporary sidecar directory.");
+	}
 
-        info!(target: "Build", "Cleaned up temporary sidecar directory.");
-        }
-        
-        // Disarm guards to preserve the modified configuration files
-        CargoGuard.disarm();
-        ConfigGuard.disarm();
-        
-        info!(target: "Build", "Build orchestration completed successfully.");
+	// Guards drop here, restoring Cargo.toml and tauri.conf.json to their
+	// original state and deleting the .Backup files.  The binary has already
+	// been compiled with the generated product name so restoring the source
+	// files is safe and required for the next build to succeed.
+	drop(CargoGuard);
+	drop(ConfigGuard);
 
-    Ok(())
+	info!(target: "Build", "Build orchestration completed successfully.");
+
+	Ok(())
 }

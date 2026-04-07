@@ -58,36 +58,38 @@
 // =========
 //
 // Example 1: Parsing arguments
+use std::{
+	fs,
+	path::{Path, PathBuf},
+};
+
+use clap::Parser;
+use serde::Deserialize;
+use log::{error, info};
+
 /// ```rust
 /// use clap::Parser;
+///
 /// use crate::Maintain::Source::Build::Definition;
 /// let argument = Argument::parse();
 /// println!("Building directory: {}", argument.Directory);
 /// ```
-//
 // Example 2: Creating a guard
 /// ```rust
 /// use crate::Maintain::Source::Build::Definition;
 /// let guard = Guard::New(file_path, description.to_string())?;
 /// ```
-//
 // Example 3: Parsing cargo.toml
 /// ```rust
 /// use crate::Maintain::Source::Build::Definition;
 /// let content = std::fs::read_to_string("Cargo.toml")?;
-/// let manifest: Manifest = toml::from_str(&content)?;
+/// let manifest:Manifest = toml::from_str(&content)?;
 /// ```
 //
 //=============================================================================//
 // IMPLEMENTATION
 //=============================================================================//
-
 use crate::Build::Constant::*;
-
-use clap::Parser;
-use serde::Deserialize;
-use log::{error, info};
-use std::{fs, path::{Path, PathBuf}};
 
 //=============================================================================
 // Argument Definition
@@ -123,111 +125,111 @@ use std::{fs, path::{Path, PathBuf}};
 /// - **Command**: The build command and its arguments to execute
 #[derive(Parser, Debug, Clone)]
 #[clap(
-    author,
-    version,
-    about = "Prepares, builds, and restores project configurations."
+	author,
+	version,
+	about = "Prepares, builds, and restores project configurations."
 )]
 pub struct Argument {
-    /// The main directory of the project.
-    ///
-    /// This field specifies the project directory that contains the
-    /// `Cargo.toml` and `tauri.conf.json` files. It can be set via:
-    /// - Command-line: `--directory <path>`
-    /// - Environment: `MOUNTAIN_DIR`
-    /// - Default: "Element/Mountain"
-    #[clap(long, env = DirEnv, default_value = DirectoryDefault)]
-    pub Directory: String,
+	/// The main directory of the project.
+	///
+	/// This field specifies the project directory that contains the
+	/// `Cargo.toml` and `tauri.conf.json` files. It can be set via:
+	/// - Command-line: `--directory <path>`
+	/// - Environment: `MOUNTAIN_DIR`
+	/// - Default: "Element/Mountain"
+	#[clap(long, env = DirEnv, default_value = DirectoryDefault)]
+	pub Directory:String,
 
-    /// The original base name of the project/package.
-    ///
-    /// This field specifies the base name of the project, which serves as
-    /// the suffix for generated product names. It can be set via:
-    /// - Command-line: `--name <name>`
-    /// - Environment: `MOUNTAIN_ORIGINAL_BASE_NAME`
-    /// - Default: "Mountain"
-    #[clap(long, env = NameEnv, default_value = NameDefault)]
-    pub Name: String,
+	/// The original base name of the project/package.
+	///
+	/// This field specifies the base name of the project, which serves as
+	/// the suffix for generated product names. It can be set via:
+	/// - Command-line: `--name <name>`
+	/// - Environment: `MOUNTAIN_ORIGINAL_BASE_NAME`
+	/// - Default: "Mountain"
+	#[clap(long, env = NameEnv, default_value = NameDefault)]
+	pub Name:String,
 
-    /// The prefix for the application's bundle identifier.
-    ///
-    /// This field specifies the reverse domain prefix for the bundle
-    /// identifier. It can be set via:
-    /// - Command-line: `--prefix <prefix>`
-    /// - Environment: `MOUNTAIN_BUNDLE_ID_PREFIX`
-    /// - Default: "land.editor.binary"
-    #[clap(long, env = PrefixEnv, default_value = PrefixDefault)]
-    pub Prefix: String,
+	/// The prefix for the application's bundle identifier.
+	///
+	/// This field specifies the reverse domain prefix for the bundle
+	/// identifier. It can be set via:
+	/// - Command-line: `--prefix <prefix>`
+	/// - Environment: `MOUNTAIN_BUNDLE_ID_PREFIX`
+	/// - Default: "land.editor.binary"
+	#[clap(long, env = PrefixEnv, default_value = PrefixDefault)]
+	pub Prefix:String,
 
-    /// Flag or value indicating browser-specific build aspects.
-    ///
-    /// When set to "true", enables browser-specific configuration and affects
-    /// the generated product name and bundle identifier.
-    #[clap(long, env = BrowserEnv)]
-    pub Browser: Option<String>,
+	/// Flag or value indicating browser-specific build aspects.
+	///
+	/// When set to "true", enables browser-specific configuration and affects
+	/// the generated product name and bundle identifier.
+	#[clap(long, env = BrowserEnv)]
+	pub Browser:Option<String>,
 
-    /// Flag or value indicating bundling-specific aspects.
-    ///
-    /// When set to "true", enables bundling-specific configuration and affects
-    /// the generated product name and bundle identifier.
-    #[clap(long, env = BundleEnv)]
-    pub Bundle: Option<String>,
+	/// Flag or value indicating bundling-specific aspects.
+	///
+	/// When set to "true", enables bundling-specific configuration and affects
+	/// the generated product name and bundle identifier.
+	#[clap(long, env = BundleEnv)]
+	pub Bundle:Option<String>,
 
-    /// Flag or value indicating compile-specific aspects.
-    ///
-    /// When set to "true", enables compile-specific configuration and affects
-    /// the generated product name and bundle identifier.
-    #[clap(long, env = CompileEnv)]
-    pub Compile: Option<String>,
+	/// Flag or value indicating compile-specific aspects.
+	///
+	/// When set to "true", enables compile-specific configuration and affects
+	/// the generated product name and bundle identifier.
+	#[clap(long, env = CompileEnv)]
+	pub Compile:Option<String>,
 
-    /// Flag or value indicating cleaning-specific aspects.
-    ///
-    /// When set to "true", enables clean-specific configuration and affects
-    /// the generated product name and bundle identifier.
-    #[clap(long, env = CleanEnv)]
-    pub Clean: Option<String>,
+	/// Flag or value indicating cleaning-specific aspects.
+	///
+	/// When set to "true", enables clean-specific configuration and affects
+	/// the generated product name and bundle identifier.
+	#[clap(long, env = CleanEnv)]
+	pub Clean:Option<String>,
 
-    /// Flag or value indicating debug-specific aspects.
-    ///
-    /// When set to "true", enables debug-specific configuration and affects
-    /// the generated product name and bundle identifier. Also automatically
-    /// detected if the command contains "--debug".
-    #[clap(long, env = DebugEnv)]
-    pub Debug: Option<String>,
+	/// Flag or value indicating debug-specific aspects.
+	///
+	/// When set to "true", enables debug-specific configuration and affects
+	/// the generated product name and bundle identifier. Also automatically
+	/// detected if the command contains "--debug".
+	#[clap(long, env = DebugEnv)]
+	pub Debug:Option<String>,
 
-    /// Information about a dependency, often 'org/repo' or a boolean string.
-    ///
-    /// This field specifies dependency information that affects the generated
-    /// product name and bundle identifier. Can be:
-    /// - "true" for generic dependencies
-    /// - "org/repo" for specific repository dependencies
-    /// - Any custom string
-    #[clap(long, env = DependencyEnv)]
-    pub Dependency: Option<String>,
+	/// Information about a dependency, often 'org/repo' or a boolean string.
+	///
+	/// This field specifies dependency information that affects the generated
+	/// product name and bundle identifier. Can be:
+	/// - "true" for generic dependencies
+	/// - "org/repo" for specific repository dependencies
+	/// - Any custom string
+	#[clap(long, env = DependencyEnv)]
+	pub Dependency:Option<String>,
 
-    /// The Node.js environment (e.g., "development", "production").
-    ///
-    /// This field specifies the Node.js runtime environment and affects the
-    /// generated product name and bundle identifier.
-    #[clap(long, env = NodeEnv)]
-    pub Environment: Option<String>,
+	/// The Node.js environment (e.g., "development", "production").
+	///
+	/// This field specifies the Node.js runtime environment and affects the
+	/// generated product name and bundle identifier.
+	#[clap(long, env = NodeEnv)]
+	pub Environment:Option<String>,
 
-    /// Specifies the Node.js sidecar version to bundle (e.g., "22").
-    ///
-    /// This field specifies which Node.js version should be bundled as a
-    /// sidecar binary with the application. The executable is sourced from
-    /// the Element/SideCar directory.
-    #[clap(long, env = NodeVersionEnv)]
-    pub NodeVersion: Option<String>,
+	/// Specifies the Node.js sidecar version to bundle (e.g., "22").
+	///
+	/// This field specifies which Node.js version should be bundled as a
+	/// sidecar binary with the application. The executable is sourced from
+	/// the Element/SideCar directory.
+	#[clap(long, env = NodeVersionEnv)]
+	pub NodeVersion:Option<String>,
 
-    /// The build command and its arguments to execute.
-    ///
-    /// This field accepts all remaining command-line arguments as the build
-    /// command to execute after configuring the project files. This field
-    /// is required and must be provided as the final arguments.
-    ///
-    /// Example: `pnpm tauri build`
-    #[clap(required = true, last = true)]
-    pub Command: Vec<String>,
+	/// The build command and its arguments to execute.
+	///
+	/// This field accepts all remaining command-line arguments as the build
+	/// command to execute after configuring the project files. This field
+	/// is required and must be provided as the final arguments.
+	///
+	/// Example: `pnpm tauri build`
+	#[clap(required = true, last = true)]
+	pub Command:Vec<String>,
 }
 
 //=============================================================================
@@ -254,7 +256,8 @@ pub struct Argument {
 ///
 /// # Backup Naming
 ///
-/// Backup files are created by appending a suffix to the original file extension:
+/// Backup files are created by appending a suffix to the original file
+/// extension:
 /// - `Cargo.toml` → `Cargo.toml.Backup`
 /// - `tauri.conf.json` → `tauri.conf.json.Backup`
 ///
@@ -274,148 +277,144 @@ pub struct Argument {
 /// - **Active**: Whether a backup was created
 /// - **Note**: A descriptive note for logging purposes
 pub struct Guard {
-    /// The path to the original file that will be modified.
-    Path: PathBuf,
+	/// The path to the original file that will be modified.
+	Path:PathBuf,
 
-    /// The path to the backup file created by this guard.
-    Store: PathBuf,
+	/// The path to the backup file created by this guard.
+	Store:PathBuf,
 
-    /// Whether a backup was actually created
-    /// (false if the original file didn't exist).
-    Active: bool,
+	/// Whether a backup was actually created
+	/// (false if the original file didn't exist).
+	Active:bool,
 
-    /// Whether the guard is armed to restore on drop.
-    /// When true, the file will be restored on drop.
-    /// When false (disarmed), the modified file is preserved.
-    Armed: bool,
+	/// Whether the guard is armed to restore on drop.
+	/// When true, the file will be restored on drop.
+	/// When false (disarmed), the modified file is preserved.
+	Armed:bool,
 
-    /// A descriptive note for logging and debugging purposes.
-    #[allow(dead_code)]
-    Note: String,
+	/// A descriptive note for logging and debugging purposes.
+	#[allow(dead_code)]
+	Note:String,
 }
 
 impl Guard {
-    /// Creates a new Guard that backs up the specified file.
-    ///
-    /// This constructor creates a backup of the original file if it exists,
-    /// and prepares to restore it when the Guard is dropped. The backup
-    /// file is created with a special suffix to prevent accidental conflicts.
-    ///
-    /// # Parameters
-    ///
-    /// * `OriginalPath` - The path to the file to be backed up
-    /// * `Description` - A descriptive note for logging purposes
-    ///
-    /// # Returns
-    ///
-    /// Returns a `Result` containing the Guard or a `BuildError` if:
-    /// - A backup file already exists
-    /// - The file cannot be copied
-    ///
-    /// # Errors
-    ///
-    /// * `BuildError::Exists` - If a backup file already exists
-    /// * `BuildError::Io` - If the file copy operation fails
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use crate::Maintain::Source::Build::Definition;
-    /// let path = PathBuf::from("Cargo.toml");
-    /// let guard = Guard::New(path, "Cargo manifest".to_string())?;
-    /// ```
-    ///
-    /// # Safety
-    ///
-    /// The Guard ensures that the original file is restored even in the
-    /// presence of panics, providing exception safety.
-    pub fn New(OriginalPath: PathBuf, Description: String) -> Result<Self, crate::Build::Error::Error> {
-        let BackupPath = OriginalPath.with_extension(format!(
-            "{}{}",
-            OriginalPath.extension().unwrap_or_default().to_str().unwrap_or(""),
-            BackupSuffix
-        ));
-    
-        if BackupPath.exists() {
-            error!("Backup file {} already exists.", BackupPath.display());
-    
-            return Err(crate::Build::Error::Error::Exists(BackupPath));
-        }
+	/// Creates a new Guard that backs up the specified file.
+	///
+	/// This constructor creates a backup of the original file if it exists,
+	/// and prepares to restore it when the Guard is dropped. The backup
+	/// file is created with a special suffix to prevent accidental conflicts.
+	///
+	/// # Parameters
+	///
+	/// * `OriginalPath` - The path to the file to be backed up
+	/// * `Description` - A descriptive note for logging purposes
+	///
+	/// # Returns
+	///
+	/// Returns a `Result` containing the Guard or a `BuildError` if:
+	/// - A backup file already exists
+	/// - The file cannot be copied
+	///
+	/// # Errors
+	///
+	/// * `BuildError::Exists` - If a backup file already exists
+	/// * `BuildError::Io` - If the file copy operation fails
+	///
+	/// # Example
+	///
+	/// ```no_run
+	/// use crate::Maintain::Source::Build::Definition;
+	/// let path = PathBuf::from("Cargo.toml");
+	/// let guard = Guard::New(path, "Cargo manifest".to_string())?;
+	/// ```
+	///
+	/// # Safety
+	///
+	/// The Guard ensures that the original file is restored even in the
+	/// presence of panics, providing exception safety.
+	pub fn New(OriginalPath:PathBuf, Description:String) -> Result<Self, crate::Build::Error::Error> {
+		let BackupPath = OriginalPath.with_extension(format!(
+			"{}{}",
+			OriginalPath.extension().unwrap_or_default().to_str().unwrap_or(""),
+			BackupSuffix
+		));
 
-        let mut BackupMade = false;
+		if BackupPath.exists() {
+			error!("Backup file {} already exists.", BackupPath.display());
 
-        if OriginalPath.exists() {
-            fs::copy(&OriginalPath, &BackupPath)?;
+			return Err(crate::Build::Error::Error::Exists(BackupPath));
+		}
 
-            info!(
-                target: "Build::Guard",
-                "Backed {} to {}",
-                OriginalPath.display(),
-                BackupPath.display()
-            );
+		let mut BackupMade = false;
 
-            BackupMade = true;
-        }
+		if OriginalPath.exists() {
+			fs::copy(&OriginalPath, &BackupPath)?;
 
-        Ok(Self {
-            Path: OriginalPath,
-            Store: BackupPath,
-            Active: BackupMade,
-            Armed: true,
-            Note: Description,
-        })
-    }
+			info!(
+				target: "Build::Guard",
+				"Backed {} to {}",
+				OriginalPath.display(),
+				BackupPath.display()
+			);
 
-    /// Returns a reference to the original file path.
-    ///
-    /// This method provides read access to the path of the original file
-    /// that this guard is protecting.
-    ///
-    /// # Returns
-    ///
-    /// A reference to the original file's `Path`.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use crate::Maintain::Source::Build::Definition;
-    /// let guard = Guard::New(original_path, description.to_string())?;
-    /// println!("Original file: {}", guard.Path().display());
-    /// ```
-    pub fn Path(&self) -> &Path {
-        &self.Path
-    }
+			BackupMade = true;
+		}
 
-    /// Returns a reference to the backup file path.
-    ///
-    /// This method provides read access to the path where the backup
-    /// file is stored.
-    ///
-    /// # Returns
-    ///
-    /// A reference to the backup file's `Path`.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use crate::Maintain::Source::Build::Definition;
-    /// let guard = Guard::New(original_path, description.to_string())?;
-    /// println!("Backup file: {}", guard.Store().display());
-    /// ```
-    pub fn Store(&self) -> &Path {
-        &self.Store
-    }
-    
-    /// Disarms the guard, preventing restoration of the original file.
-    ///
-    /// Call this after successful build to preserve modified config files.
-    /// When disarmed, the Drop implementation will not restore the backup,
-    /// leaving the modified file in place.
-    pub fn disarm(&mut self) {
-        self.Armed = false;
-    }
-    }
-    
+		Ok(Self {
+			Path:OriginalPath,
+			Store:BackupPath,
+			Active:BackupMade,
+			Armed:true,
+			Note:Description,
+		})
+	}
+
+	/// Returns a reference to the original file path.
+	///
+	/// This method provides read access to the path of the original file
+	/// that this guard is protecting.
+	///
+	/// # Returns
+	///
+	/// A reference to the original file's `Path`.
+	///
+	/// # Example
+	///
+	/// ```no_run
+	/// use crate::Maintain::Source::Build::Definition;
+	/// let guard = Guard::New(original_path, description.to_string())?;
+	/// println!("Original file: {}", guard.Path().display());
+	/// ```
+	pub fn Path(&self) -> &Path { &self.Path }
+
+	/// Returns a reference to the backup file path.
+	///
+	/// This method provides read access to the path where the backup
+	/// file is stored.
+	///
+	/// # Returns
+	///
+	/// A reference to the backup file's `Path`.
+	///
+	/// # Example
+	///
+	/// ```no_run
+	/// use crate::Maintain::Source::Build::Definition;
+	/// let guard = Guard::New(original_path, description.to_string())?;
+	/// println!("Backup file: {}", guard.Store().display());
+	/// ```
+	pub fn Store(&self) -> &Path { &self.Store }
+
+	/// Disarms the guard, preventing restoration of the original file,
+	/// and deletes the backup so the next build is not blocked.
+	pub fn disarm(&mut self) {
+		self.Armed = false;
+		if self.Active && self.Store.exists() {
+			let _ = fs::remove_file(&self.Store);
+		}
+	}
+}
+
 /// Drop implementation that automatically restores the original file.
 ///
 /// This is the core of the RAII pattern: when the Guard goes out of scope,
@@ -436,37 +435,37 @@ impl Guard {
 /// If the restoration fails, it logs an error but does not panic, ensuring
 /// that cleanup failures don't cause secondary failures.
 impl Drop for Guard {
-    fn drop(&mut self) {
-        // Only restore if armed (build failed) and backup is active
-        if self.Armed && self.Active && self.Store.exists() {
-            info!(
-                target: "Build::Guard",
-                "Restoring {} from {}...",
-                self.Path.display(),
-                self.Store.display()
-            );
+	fn drop(&mut self) {
+		// Only restore if armed (build failed) and backup is active
+		if self.Armed && self.Active && self.Store.exists() {
+			info!(
+				target: "Build::Guard",
+				"Restoring {} from {}...",
+				self.Path.display(),
+				self.Store.display()
+			);
 
-            if let Ok(_) = fs::copy(&self.Store, &self.Path) {
-                info!(target: "Build::Guard", "Restore successful.");
+			if let Ok(_) = fs::copy(&self.Store, &self.Path) {
+				info!(target: "Build::Guard", "Restore successful.");
 
-                if let Err(e) = fs::remove_file(&self.Store) {
-                    error!(
-                        target: "Build::Guard",
-                        "Failed to delete backup {}: {}",
-                        self.Store.display(),
-                        e
-                    );
-                }
-            } else if let Err(e) = fs::copy(&self.Store, &self.Path) {
-                error!(
-                    target: "Build::Guard",
-                    "Restore FAILED: {}. {} is now inconsistent.",
-                    e,
-                    self.Path.display()
-                );
-            }
-        }
-    }
+				if let Err(e) = fs::remove_file(&self.Store) {
+					error!(
+						target: "Build::Guard",
+						"Failed to delete backup {}: {}",
+						self.Store.display(),
+						e
+					);
+				}
+			} else if let Err(e) = fs::copy(&self.Store, &self.Path) {
+				error!(
+					target: "Build::Guard",
+					"Restore FAILED: {}. {} is now inconsistent.",
+					e,
+					self.Path.display()
+				);
+			}
+		}
+	}
 }
 
 //=============================================================================
@@ -498,34 +497,32 @@ impl Drop for Guard {
 /// - **package**: Contains the metadata extracted from the package section
 #[derive(Deserialize, Debug)]
 pub struct Manifest {
-    /// Represents metadata within the `package` section of `Cargo.toml`.
-    ///
-    /// This nested struct contains the individual metadata fields from the
-    /// package section, including the version string.
-    package: Meta,
+	/// Represents metadata within the `package` section of `Cargo.toml`.
+	///
+	/// This nested struct contains the individual metadata fields from the
+	/// package section, including the version string.
+	package:Meta,
 }
 
 impl Manifest {
-    /// Retrieves the version string from the manifest.
-    ///
-    /// This method provides access to the version field, which is stored
-    /// privately. The version is used when updating the Tauri configuration
-    /// file during the build process.
-    ///
-    /// # Returns
-    ///
-    /// A string slice containing the version number.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use crate::Maintain::Source::Build::Definition;
-    /// let version = manifest.get_version();
-    /// println!("Application version: {}", version);
-    /// ```
-    pub fn get_version(&self) -> &str {
-        &self.package.version
-    }
+	/// Retrieves the version string from the manifest.
+	///
+	/// This method provides access to the version field, which is stored
+	/// privately. The version is used when updating the Tauri configuration
+	/// file during the build process.
+	///
+	/// # Returns
+	///
+	/// A string slice containing the version number.
+	///
+	/// # Example
+	///
+	/// ```no_run
+	/// use crate::Maintain::Source::Build::Definition;
+	/// let version = manifest.get_version();
+	/// println!("Application version: {}", version);
+	/// ```
+	pub fn get_version(&self) -> &str { &self.package.version }
 }
 
 /// Represents metadata within the `package` section of `Cargo.toml`.
@@ -538,9 +535,9 @@ impl Manifest {
 /// parent `Manifest` struct.
 #[derive(Deserialize, Debug)]
 struct Meta {
-    /// The version string from the package metadata.
-    ///
-    /// This field contains the version identifier as specified in the
-    /// Cargo.toml file (e.g., "1.0.0", "2.3.4-beta.1").
-    version: String,
+	/// The version string from the package metadata.
+	///
+	/// This field contains the version identifier as specified in the
+	/// Cargo.toml file (e.g., "1.0.0", "2.3.4-beta.1").
+	version:String,
 }

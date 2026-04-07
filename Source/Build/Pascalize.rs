@@ -63,14 +63,12 @@
 /// let result = Pascalize("development");
 /// assert_eq!(result, "Development");
 /// ```
-//
 // Example 2: Snake_case conversion
 /// ```rust
 /// use crate::Maintain::Source::Build::Pascalize;
 /// let result = Pascalize("node_environment");
 /// assert_eq!(result, "NodeEnvironment");
 /// ```
-//
 // Example 3: Mixed delimiters
 /// ```rust
 /// use crate::Maintain::Source::Build::Pascalize;
@@ -84,10 +82,10 @@
 
 /// Converts a kebab-case or snake_case string to `PascalCase`.
 ///
-/// This function processes strings separated by hyphens (`-`) or underscores (`_`)
-/// and converts them to PascalCase by capitalizing the first letter of each word.
-/// The function handles strings with single or multiple delimiters and filters
-/// out empty segments.
+/// This function processes strings separated by hyphens (`-`) or underscores
+/// (`_`) and converts them to PascalCase by capitalizing the first letter of
+/// each word. The function handles strings with single or multiple delimiters
+/// and filters out empty segments.
 ///
 /// # Parameters
 ///
@@ -121,57 +119,56 @@
 /// - Strings with only delimiters return an empty string
 /// - Single word strings are capitalized
 /// - Words already in PascalCase are not modified (no delimiter detection)
-pub fn Pascalize(Text: &str) -> String {
-    Text
-        .split(|c: char| c == '-' || c == '_')
-        .filter(|s| !s.is_empty())
-        .map(|s| {
-            let mut c = s.chars();
+pub fn Pascalize(Text:&str) -> String {
+	Text.split(|c:char| c == '-' || c == '_')
+		.filter(|s| !s.is_empty())
+		.map(|s| {
+			let mut c = s.chars();
 
-            c.next()
-                .map_or(String::new(), |f| f.to_uppercase().collect::<String>() + c.as_str())
-        })
-        .collect()
+			c.next()
+				.map_or(String::new(), |f| f.to_uppercase().collect::<String>() + c.as_str())
+		})
+		.collect()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+	use super::*;
 
-    #[test]
-    fn test_kebab_case() {
-        assert_eq!(Pascalize("development"), "Development");
-        assert_eq!(Pascalize("node-version"), "NodeVersion");
-        assert_eq!(Pascalize("tauri-apps"), "TauriApps");
-    }
+	#[test]
+	fn test_kebab_case() {
+		assert_eq!(Pascalize("development"), "Development");
+		assert_eq!(Pascalize("node-version"), "NodeVersion");
+		assert_eq!(Pascalize("tauri-apps"), "TauriApps");
+	}
 
-    #[test]
-    fn test_snake_case() {
-        assert_eq!(Pascalize("node_environment"), "NodeEnvironment");
-        assert_eq!(Pascalize("my_variable_name"), "MyVariableName");
-    }
+	#[test]
+	fn test_snake_case() {
+		assert_eq!(Pascalize("node_environment"), "NodeEnvironment");
+		assert_eq!(Pascalize("my_variable_name"), "MyVariableName");
+	}
 
-    #[test]
-    fn test_mixed_delimiters() {
-        assert_eq!(Pascalize("tauri-apps_tauri"), "TauriAppsTauri");
-        assert_eq!(Pascalize("my-app_name"), "MyAppName");
-    }
+	#[test]
+	fn test_mixed_delimiters() {
+		assert_eq!(Pascalize("tauri-apps_tauri"), "TauriAppsTauri");
+		assert_eq!(Pascalize("my-app_name"), "MyAppName");
+	}
 
-    #[test]
-    fn test_empty_string() {
-        assert_eq!(Pascalize(""), "");
-    }
+	#[test]
+	fn test_empty_string() {
+		assert_eq!(Pascalize(""), "");
+	}
 
-    #[test]
-    fn test_only_delimiters() {
-        assert_eq!(Pascalize("---"), "");
-        assert_eq!(Pascalize("___"), "");
-        assert_eq!(Pascalize("-_-"), "");
-    }
+	#[test]
+	fn test_only_delimiters() {
+		assert_eq!(Pascalize("---"), "");
+		assert_eq!(Pascalize("___"), "");
+		assert_eq!(Pascalize("-_-"), "");
+	}
 
-    #[test]
-    fn test_single_word() {
-        assert_eq!(Pascalize("hello"), "Hello");
-        assert_eq!(Pascalize("WORLD"), "WORLD");
-    }
+	#[test]
+	fn test_single_word() {
+		assert_eq!(Pascalize("hello"), "Hello");
+		assert_eq!(Pascalize("WORLD"), "WORLD");
+	}
 }

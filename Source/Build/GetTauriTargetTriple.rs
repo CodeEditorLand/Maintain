@@ -3,7 +3,8 @@
 //=============================================================================//
 // Module: GetTauriTargetTriple
 //
-// Brief Description: Returns the Tauri-compatible target triple for the current build environment.
+// Brief Description: Returns the Tauri-compatible target triple for the current
+// build environment.
 //
 // RESPONSIBILITIES:
 // ================
@@ -64,7 +65,6 @@
 /// let triple = GetTauriTargetTriple();
 /// assert_eq!(triple, "x86_64-apple-darwin");
 /// ```
-//
 // Example 2: Getting target triple on Windows
 /// ```rust
 /// use crate::Maintain::Source::Build::GetTauriTargetTriple;
@@ -72,7 +72,6 @@
 /// let triple = GetTauriTargetTriple();
 /// assert_eq!(triple, "x86_64-pc-windows-msvc");
 /// ```
-//
 // Example 3: Building sidecar path
 /// ```rust
 /// use crate::Maintain::Source::Build::GetTauriTargetTriple;
@@ -83,7 +82,6 @@
 //=============================================================================//
 // IMPLEMENTATION
 //=============================================================================//
-
 use std::env;
 
 /// Gets the Tauri-compatible target triple for the current build environment.
@@ -136,10 +134,8 @@ use std::env;
 /// let version = "22";
 ///
 /// # #[cfg(target_os = "windows")]
-/// let node_path = PathBuf::from(format!(
-/// "./Element/SideCar/{}/NODE/{}/node.exe",
-/// triple, version
-/// ));
+/// let node_path =
+/// 	PathBuf::from(format!("./Element/SideCar/{}/NODE/{}/node.exe", triple, version));
 /// # #[cfg(not(target_os = "windows"))]
 /// # let node_path = PathBuf::from(format!(
 /// # "./Element/SideCar/{}/NODE/{}/bin/node",
@@ -167,40 +163,41 @@ use std::env;
 /// 2. Return the appropriate target triple string
 /// 3. Ensure Node.js binaries are available at the corresponding paths
 pub fn GetTauriTargetTriple() -> String {
-    let Os = env::consts::OS;
+	let Os = env::consts::OS;
 
-    let Arch = env::consts::ARCH;
+	let Arch = env::consts::ARCH;
 
-    match (Os, Arch) {
-        ("windows", "x86_64") => "x86_64-pc-windows-msvc".to_string(),
+	match (Os, Arch) {
+		("windows", "x86_64") => "x86_64-pc-windows-msvc".to_string(),
 
-        ("linux", "x86_64") => "x86_64-unknown-linux-gnu".to_string(),
+		("linux", "x86_64") => "x86_64-unknown-linux-gnu".to_string(),
 
-        ("linux", "aarch64") => "aarch64-unknown-linux-gnu".to_string(),
+		("linux", "aarch64") => "aarch64-unknown-linux-gnu".to_string(),
 
-        ("macos", "x86_64") => "x86_64-apple-darwin".to_string(),
+		("macos", "x86_64") => "x86_64-apple-darwin".to_string(),
 
-        ("macos", "aarch64") => "aarch64-apple-darwin".to_string(),
+		("macos", "aarch64") => "aarch64-apple-darwin".to_string(),
 
-        _ => panic!("Unsupported OS-Arch for sidecar: {}-{}", Os, Arch),
-    }
+		_ => panic!("Unsupported OS-Arch for sidecar: {}-{}", Os, Arch),
+	}
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+	use super::*;
 
-    #[test]
-    fn test_known_platforms() {
-        // We can't fully test this without a cross-compilation environment,
-        // but we can verify the function returns a valid-looking string
-        let triple = GetTauriTargetTriple();
+	#[test]
+	fn test_known_platforms() {
+		// We can't fully test this without a cross-compilation environment,
+		// but we can verify the function returns a valid-looking string
+		let triple = GetTauriTargetTriple();
 
-        // All valid target triples should contain hyphens and be lowercase alphabetic/numeric
-        let valid_chars = |c: char| c.is_alphanumeric() || c == '-' || c == '_';
-        assert!(triple.chars().all(valid_chars));
+		// All valid target triples should contain hyphens and be lowercase
+		// alphabetic/numeric
+		let valid_chars = |c:char| c.is_alphanumeric() || c == '-' || c == '_';
+		assert!(triple.chars().all(valid_chars));
 
-        // Should contain at least two hyphens (arch-vendor-os or arch-vendor-os-env)
-        assert!(triple.matches('-').count() >= 2);
-    }
+		// Should contain at least two hyphens (arch-vendor-os or arch-vendor-os-env)
+		assert!(triple.matches('-').count() >= 2);
+	}
 }

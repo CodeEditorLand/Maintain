@@ -58,28 +58,23 @@
 // =========
 //
 // Example 1: Direct invocation
+use clap::Parser;
+use log::{error, info};
+
 /// ```rust
 /// use crate::Maintain::Source::Build::Fn;
 /// Fn();
 /// ```
-//
 // Example 2: Usage in main function
 /// ```rust
-/// fn main() {
-/// crate::Maintain::Source::Build::Fn();
-/// }
+/// fn main() { crate::Maintain::Source::Build::Fn(); }
 /// ```
 //
 //=============================================================================//
 // IMPLEMENTATION
 //=============================================================================//
-
 use crate::Build::Definition::Argument;
-use crate::Build::Process::Process;
-use crate::Build::Logger::Logger;
-
-use clap::Parser;
-use log::{error, info};
+use crate::Build::{Logger::Logger, Process::Process};
 
 /// The main entry point of the binary.
 ///
@@ -180,39 +175,39 @@ use log::{error, info};
 /// This pattern is common for Rust binaries that serve as command-line
 /// tools or build scripts.
 pub fn Fn() {
-    // Step 1: Initialize the logger with colored output
-    Logger();
+	// Step 1: Initialize the logger with colored output
+	Logger();
 
-    // Step 2: Parse command-line arguments and environment variables
-    let Argument = Argument::parse();
+	// Step 2: Parse command-line arguments and environment variables
+	let Argument = Argument::parse();
 
-    log::debug!("Parsed arguments: {:?}", Argument);
+	log::debug!("Parsed arguments: {:?}", Argument);
 
-    // Step 3: Execute the build orchestration process
-    match Process(&Argument) {
-        Ok(_) => info!("Build process completed successfully."),
+	// Step 3: Execute the build orchestration process
+	match Process(&Argument) {
+		Ok(_) => info!("Build process completed successfully."),
 
-        Err(e) => {
-            error!("Build process failed: {}", e);
+		Err(e) => {
+			error!("Build process failed: {}", e);
 
-            std::process::exit(1);
-        },
-    }
+			std::process::exit(1);
+		},
+	}
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+	use super::*;
 
-    // Note: Actual tests require integration test setup
-    // because Fn() initializes the logger and processes arguments.
-    // Unit tests should focus on the underlying Process function
-    // instead.
+	// Note: Actual tests require integration test setup
+	// because Fn() initializes the logger and processes arguments.
+	// Unit tests should focus on the underlying Process function
+	// instead.
 
-    #[test]
-    fn test_fn_exists() {
-        // Verify the function compiles and is callable
-        // (actual execution would be integration tests)
-        let _ = Fn as fn();
-    }
+	#[test]
+	fn test_fn_exists() {
+		// Verify the function compiles and is callable
+		// (actual execution would be integration tests)
+		let _ = Fn as fn();
+	}
 }

@@ -36,12 +36,12 @@
 // IMPLEMENTATION
 //=============================================================================//
 
-use crate::Run::Constant::*;
+use std::{collections::HashMap, path::PathBuf};
 
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
+
+use crate::Run::Constant::*;
 
 //=============================================================================
 // Argument Definition
@@ -54,97 +54,93 @@ use std::path::PathBuf;
 /// automatically parses command-line arguments and environment variables into
 /// a strongly-typed configuration object.
 #[derive(Parser, Debug, Clone)]
-#[clap(
-    author,
-    version,
-    about = "Development run orchestrator with hot-reload support."
-)]
+#[clap(author, version, about = "Development run orchestrator with hot-reload support.")]
 pub struct Argument {
-    /// The working directory for the run process.
-    ///
-    /// This field specifies the directory where the development server
-    /// will be started. It can be set via:
-    /// - Command-line: `--directory <path>`
-    /// - Environment: `RUN_DIR`
-    /// - Default: "."
-    #[clap(long, env = DirEnv, default_value = DirectoryDefault)]
-    pub Directory: PathBuf,
+	/// The working directory for the run process.
+	///
+	/// This field specifies the directory where the development server
+	/// will be started. It can be set via:
+	/// - Command-line: `--directory <path>`
+	/// - Environment: `RUN_DIR`
+	/// - Default: "."
+	#[clap(long, env = DirEnv, default_value = DirectoryDefault)]
+	pub Directory:PathBuf,
 
-    /// The build profile to use for the run.
-    ///
-    /// This field specifies which profile from the configuration to use.
-    /// It can be set via:
-    /// - Command-line: `--profile <name>`
-    /// - Environment: `RUN_PROFILE`
-    /// - Default: "debug"
-    #[clap(long, short = 'p', env = ProfileEnv, default_value = ProfileDefault)]
-    pub Profile: String,
+	/// The build profile to use for the run.
+	///
+	/// This field specifies which profile from the configuration to use.
+	/// It can be set via:
+	/// - Command-line: `--profile <name>`
+	/// - Environment: `RUN_PROFILE`
+	/// - Default: "debug"
+	#[clap(long, short = 'p', env = ProfileEnv, default_value = ProfileDefault)]
+	pub Profile:String,
 
-    /// Enable hot-reload for development.
-    ///
-    /// When enabled, automatically reloads the application when source
-    /// files change.
-    #[clap(long, env = HotReloadEnv, default_value = "true")]
-    pub HotReload: bool,
+	/// Enable hot-reload for development.
+	///
+	/// When enabled, automatically reloads the application when source
+	/// files change.
+	#[clap(long, env = HotReloadEnv, default_value = "true")]
+	pub HotReload:bool,
 
-    /// Enable watch mode for file changes.
-    ///
-    /// When enabled, watches for file changes and triggers rebuilds.
-    #[clap(long, env = WatchEnv, default_value = "true")]
-    pub Watch: bool,
+	/// Enable watch mode for file changes.
+	///
+	/// When enabled, watches for file changes and triggers rebuilds.
+	#[clap(long, env = WatchEnv, default_value = "true")]
+	pub Watch:bool,
 
-    /// Port for live-reload server.
-    ///
-    /// Specifies the port used by the live-reload server.
-    #[clap(long, env = LiveReloadPortEnv, default_value = "3001")]
-    pub LiveReloadPort: u16,
+	/// Port for live-reload server.
+	///
+	/// Specifies the port used by the live-reload server.
+	#[clap(long, env = LiveReloadPortEnv, default_value = "3001")]
+	pub LiveReloadPort:u16,
 
-    /// Override workbench type.
-    ///
-    /// Specifies which workbench to use (Browser, Wind, Mountain, Electron).
-    #[clap(long, short = 'w', env = WorkbenchEnv)]
-    pub Workbench: Option<String>,
+	/// Override workbench type.
+	///
+	/// Specifies which workbench to use (Browser, Wind, Mountain, Electron).
+	#[clap(long, short = 'w', env = WorkbenchEnv)]
+	pub Workbench:Option<String>,
 
-    /// Enable debug mode.
-    ///
-    /// When enabled, runs in debug mode with additional logging.
-    #[clap(long, env = DebugEnv)]
-    pub Debug: Option<String>,
+	/// Enable debug mode.
+	///
+	/// When enabled, runs in debug mode with additional logging.
+	#[clap(long, env = DebugEnv)]
+	pub Debug:Option<String>,
 
-    /// Log level for the run process.
-    #[clap(long, short = 'l', env = LevelEnv)]
-    pub Level: Option<String>,
+	/// Log level for the run process.
+	#[clap(long, short = 'l', env = LevelEnv)]
+	pub Level:Option<String>,
 
-    /// Node.js environment (development, production).
-    #[clap(long, env = NodeEnv)]
-    pub NodeEnvironment: Option<String>,
+	/// Node.js environment (development, production).
+	#[clap(long, env = NodeEnv)]
+	pub NodeEnvironment:Option<String>,
 
-    /// Node.js version to use.
-    #[clap(long, env = NodeVersionEnv)]
-    pub NodeVersion: Option<String>,
+	/// Node.js version to use.
+	#[clap(long, env = NodeVersionEnv)]
+	pub NodeVersion:Option<String>,
 
-    /// Dependency source.
-    #[clap(long, env = DependencyEnv)]
-    pub Dependency: Option<String>,
-    
-    /// Override environment variables (key=value pairs).
-    #[clap(long = "env", value_parser = parse_key_val::<String, String>, action = clap::ArgAction::Append)]
-    pub env_override: Vec<(String, String)>,
-    
-    /// Enable verbose output.
-    #[clap(long, short = 'v')]
-    pub Verbose: bool,
+	/// Dependency source.
+	#[clap(long, env = DependencyEnv)]
+	pub Dependency:Option<String>,
 
-    /// Dry run mode (show configuration without running).
-    #[clap(long)]
-    pub DryRun: bool,
+	/// Override environment variables (key=value pairs).
+	#[clap(long = "env", value_parser = parse_key_val::<String, String>, action = clap::ArgAction::Append)]
+	pub env_override:Vec<(String, String)>,
 
-    /// The run command and its arguments to execute.
-    ///
-    /// This field accepts all remaining command-line arguments as the run
-    /// command to execute.
-    #[clap(last = true)]
-    pub Command: Vec<String>,
+	/// Enable verbose output.
+	#[clap(long, short = 'v')]
+	pub Verbose:bool,
+
+	/// Dry run mode (show configuration without running).
+	#[clap(long)]
+	pub DryRun:bool,
+
+	/// The run command and its arguments to execute.
+	///
+	/// This field accepts all remaining command-line arguments as the run
+	/// command to execute.
+	#[clap(last = true)]
+	pub Command:Vec<String>,
 }
 
 //=============================================================================
@@ -158,76 +154,74 @@ pub struct Argument {
 /// settings, and run-specific options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunConfig {
-    /// The profile name used for this run.
-    pub profile_name: String,
+	/// The profile name used for this run.
+	pub profile_name:String,
 
-    /// The workbench type (Browser, Wind, Mountain, Electron).
-    pub workbench: Option<String>,
+	/// The workbench type (Browser, Wind, Mountain, Electron).
+	pub workbench:Option<String>,
 
-    /// Resolved environment variables.
-    pub env_vars: HashMap<String, String>,
+	/// Resolved environment variables.
+	pub env_vars:HashMap<String, String>,
 
-    /// Whether hot-reload is enabled.
-    pub hot_reload: bool,
+	/// Whether hot-reload is enabled.
+	pub hot_reload:bool,
 
-    /// Whether watch mode is enabled.
-    pub watch: bool,
+	/// Whether watch mode is enabled.
+	pub watch:bool,
 
-    /// Port for live-reload server.
-    pub live_reload_port: u16,
+	/// Port for live-reload server.
+	pub live_reload_port:u16,
 
-    /// The command to execute.
-    pub command: Vec<String>,
+	/// The command to execute.
+	pub command:Vec<String>,
 
-    /// Working directory for the run.
-    pub working_dir: PathBuf,
+	/// Working directory for the run.
+	pub working_dir:PathBuf,
 }
 
 impl RunConfig {
-    /// Creates a new RunConfig from an Argument and resolved environment.
-    ///
-    /// # Arguments
-    ///
-    /// * `arg` - The parsed command-line arguments
-    /// * `env_vars` - Resolved environment variables from profile
-    ///
-    /// # Returns
-    ///
-    /// A new RunConfig instance
-    pub fn new(arg: &Argument, env_vars: HashMap<String, String>) -> Self {
-        Self {
-            profile_name: arg.Profile.clone(),
-            workbench: arg.Workbench.clone(),
-            env_vars,
-            hot_reload: arg.HotReload,
-            watch: arg.Watch,
-            live_reload_port: arg.LiveReloadPort,
-            command: arg.Command.clone(),
-            working_dir: arg.Directory.clone(),
-        }
-    }
+	/// Creates a new RunConfig from an Argument and resolved environment.
+	///
+	/// # Arguments
+	///
+	/// * `arg` - The parsed command-line arguments
+	/// * `env_vars` - Resolved environment variables from profile
+	///
+	/// # Returns
+	///
+	/// A new RunConfig instance
+	pub fn new(arg:&Argument, env_vars:HashMap<String, String>) -> Self {
+		Self {
+			profile_name:arg.Profile.clone(),
+			workbench:arg.Workbench.clone(),
+			env_vars,
+			hot_reload:arg.HotReload,
+			watch:arg.Watch,
+			live_reload_port:arg.LiveReloadPort,
+			command:arg.Command.clone(),
+			working_dir:arg.Directory.clone(),
+		}
+	}
 
-    /// Checks if this is a debug run.
-    pub fn is_debug(&self) -> bool {
-        self.env_vars.get(DebugEnv).map(|s| s == "true").unwrap_or(false)
-    }
+	/// Checks if this is a debug run.
+	pub fn is_debug(&self) -> bool { self.env_vars.get(DebugEnv).map(|s| s == "true").unwrap_or(false) }
 
-    /// Gets the workbench type from environment or config.
-    pub fn get_workbench(&self) -> Option<String> {
-        self.workbench.clone().or_else(|| {
-            if self.env_vars.get(BrowserEnv).map(|s| s == "true").unwrap_or(false) {
-                Some("Browser".to_string())
-            } else if self.env_vars.get(WindEnv).map(|s| s == "true").unwrap_or(false) {
-                Some("Wind".to_string())
-            } else if self.env_vars.get(MountainEnv).map(|s| s == "true").unwrap_or(false) {
-                Some("Mountain".to_string())
-            } else if self.env_vars.get(ElectronEnv).map(|s| s == "true").unwrap_or(false) {
-                Some("Electron".to_string())
-            } else {
-                None
-            }
-        })
-    }
+	/// Gets the workbench type from environment or config.
+	pub fn get_workbench(&self) -> Option<String> {
+		self.workbench.clone().or_else(|| {
+			if self.env_vars.get(BrowserEnv).map(|s| s == "true").unwrap_or(false) {
+				Some("Browser".to_string())
+			} else if self.env_vars.get(WindEnv).map(|s| s == "true").unwrap_or(false) {
+				Some("Wind".to_string())
+			} else if self.env_vars.get(MountainEnv).map(|s| s == "true").unwrap_or(false) {
+				Some("Mountain".to_string())
+			} else if self.env_vars.get(ElectronEnv).map(|s| s == "true").unwrap_or(false) {
+				Some("Electron".to_string())
+			} else {
+				None
+			}
+		})
+	}
 }
 
 //=============================================================================
@@ -240,67 +234,60 @@ impl RunConfig {
 /// including workbench settings, environment variables, and run options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Profile {
-    /// Profile name identifier.
-    pub name: String,
+	/// Profile name identifier.
+	pub name:String,
 
-    /// Human-readable description of the profile.
-    #[serde(default)]
-    pub description: Option<String>,
+	/// Human-readable description of the profile.
+	#[serde(default)]
+	pub description:Option<String>,
 
-    /// Workbench type for this profile.
-    #[serde(default)]
-    pub workbench: Option<String>,
+	/// Workbench type for this profile.
+	#[serde(default)]
+	pub workbench:Option<String>,
 
-    /// Environment variables specific to this profile.
-    #[serde(default)]
-    pub env: Option<HashMap<String, String>>,
+	/// Environment variables specific to this profile.
+	#[serde(default)]
+	pub env:Option<HashMap<String, String>>,
 
-    /// Run-specific configuration.
-    #[serde(default)]
-    pub run_config: Option<RunProfileConfig>,
+	/// Run-specific configuration.
+	#[serde(default)]
+	pub run_config:Option<RunProfileConfig>,
 }
 
 /// Run-specific profile configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunProfileConfig {
-    /// Enable hot-reload.
-    #[serde(default = "default_true")]
-    pub hot_reload: bool,
+	/// Enable hot-reload.
+	#[serde(default = "default_true")]
+	pub hot_reload:bool,
 
-    /// Enable watch mode.
-    #[serde(default = "default_true")]
-    pub watch: bool,
+	/// Enable watch mode.
+	#[serde(default = "default_true")]
+	pub watch:bool,
 
-    /// Live-reload port.
-    #[serde(default = "default_reload_port")]
-    pub live_reload_port: u16,
+	/// Live-reload port.
+	#[serde(default = "default_reload_port")]
+	pub live_reload_port:u16,
 
-    /// Additional features enabled for this profile.
-    #[serde(default)]
-    pub features: Option<HashMap<String, bool>>,
+	/// Additional features enabled for this profile.
+	#[serde(default)]
+	pub features:Option<HashMap<String, bool>>,
 }
 
-fn default_true() -> bool {
-true
-}
+fn default_true() -> bool { true }
 
-fn default_reload_port() -> u16 {
-DefaultLiveReloadPort
-}
+fn default_reload_port() -> u16 { DefaultLiveReloadPort }
 
 /// Parse a key=value pair from command line.
-fn parse_key_val<K, V>(s: &str) -> Result<(K, V), String>
+fn parse_key_val<K, V>(s:&str) -> Result<(K, V), String>
 where
-K: std::str::FromStr,
-V: std::str::FromStr,
-K::Err: std::fmt::Display,
-V::Err: std::fmt::Display,
-{
-let pos = s
-.find('=')
-.ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
-Ok((
-s[..pos].parse().map_err(|e| format!("key parse error: {e}"))?,
-s[pos + 1..].parse().map_err(|e| format!("value parse error: {e}"))?,
-))
+	K: std::str::FromStr,
+	V: std::str::FromStr,
+	K::Err: std::fmt::Display,
+	V::Err: std::fmt::Display, {
+	let pos = s.find('=').ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
+	Ok((
+		s[..pos].parse().map_err(|e| format!("key parse error: {e}"))?,
+		s[pos + 1..].parse().map_err(|e| format!("value parse error: {e}"))?,
+	))
 }

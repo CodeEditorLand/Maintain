@@ -57,28 +57,23 @@
 // =========
 //
 // Example 1: Direct invocation
+use clap::Parser;
+use log::{error, info};
+
 /// ```rust
 /// use crate::Maintain::Source::Run::Fn;
 /// Fn();
 /// ```
-//
 // Example 2: Usage in main function
 /// ```rust
-/// fn main() {
-///     crate::Maintain::Source::Run::Fn();
-/// }
+/// fn main() { crate::Maintain::Source::Run::Fn(); }
 /// ```
 //
 //=============================================================================//
 // IMPLEMENTATION
 //=============================================================================//
-
 use crate::Run::Definition::Argument;
-use crate::Run::Process;
-use crate::Run::Logger;
-
-use clap::Parser;
-use log::{error, info};
+use crate::Run::{Logger, Process};
 
 /// The main entry point of the run binary.
 ///
@@ -89,8 +84,8 @@ use log::{error, info};
 ///    and log level based on the `RUST_LOG` environment variable.
 ///
 /// 2. **Argument Parsing**: Parses command-line arguments and environment
-///    variables using the `Argument` struct, which includes automatic validation
-///    and help text generation.
+///    variables using the `Argument` struct, which includes automatic
+///    validation and help text generation.
 ///
 /// 3. **Orchestration**: Delegates to the `Process` function to execute the
 ///    complete run orchestration workflow, including:
@@ -172,39 +167,39 @@ use log::{error, info};
 /// This pattern is common for Rust binaries that serve as command-line
 /// tools or development scripts.
 pub fn Fn() {
-    // Step 1: Initialize the logger with colored output
-    Logger::Logger();
+	// Step 1: Initialize the logger with colored output
+	Logger::Logger();
 
-    // Step 2: Parse command-line arguments and environment variables
-    let argument = Argument::parse();
+	// Step 2: Parse command-line arguments and environment variables
+	let argument = Argument::parse();
 
-    log::debug!("Parsed arguments: {:?}", argument);
+	log::debug!("Parsed arguments: {:?}", argument);
 
-    // Step 3: Execute the run orchestration process
-    match Process::Process(&argument) {
-        Ok(_) => info!("Run process completed successfully."),
+	// Step 3: Execute the run orchestration process
+	match Process::Process(&argument) {
+		Ok(_) => info!("Run process completed successfully."),
 
-        Err(e) => {
-            error!("Run process failed: {}", e);
+		Err(e) => {
+			error!("Run process failed: {}", e);
 
-            std::process::exit(1);
-        },
-    }
+			std::process::exit(1);
+		},
+	}
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+	use super::*;
 
-    // Note: Actual tests require integration test setup
-    // because Fn() initializes the logger and processes arguments.
-    // Unit tests should focus on the underlying Process function
-    // instead.
+	// Note: Actual tests require integration test setup
+	// because Fn() initializes the logger and processes arguments.
+	// Unit tests should focus on the underlying Process function
+	// instead.
 
-    #[test]
-    fn test_fn_exists() {
-        // Verify the function compiles and is callable
-        // (actual execution would be integration tests)
-        let _ = Fn as fn();
-    }
+	#[test]
+	fn test_fn_exists() {
+		// Verify the function compiles and is callable
+		// (actual execution would be integration tests)
+		let _ = Fn as fn();
+	}
 }

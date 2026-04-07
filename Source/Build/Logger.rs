@@ -58,12 +58,17 @@
 // =========
 //
 // Example 1: Basic logger initialization
+use std::{env, io::Write};
+
+use colored::*;
+use env_logger::Builder;
+use log::LevelFilter;
+
 /// ```rust
 /// use crate::Maintain::Source::Build::Logger;
 /// Logger();
 /// log::info!("Logger initialized");
 /// ```
-//
 // Example 2: Setting custom log level
 /// ```sh
 /// export RUST_LOG=debug
@@ -73,14 +78,7 @@
 //=============================================================================//
 // IMPLEMENTATION
 //=============================================================================//
-
 use crate::Build::Constant::LogEnv;
-
-use colored::*;
-use env_logger::Builder;
-use log::LevelFilter;
-use std::env;
-use std::io::Write;
 
 /// Sets up the global logger for the application.
 ///
@@ -133,8 +131,9 @@ use std::io::Write;
 /// # Usage Example
 ///
 /// ```no_run
+/// use log::{error, info};
+///
 /// use crate::Maintain::Source::Build::Logger;
-/// use log::{info, error};
 ///
 /// // Initialize logger first
 /// Logger();
@@ -172,27 +171,27 @@ use std::io::Write;
 /// The logger is typically called once at program startup, before any other
 /// operations that might generate log messages.
 pub fn Logger() {
-    let LevelText = env::var(LogEnv).unwrap_or_else(|_| "info".to_string());
+	let LevelText = env::var(LogEnv).unwrap_or_else(|_| "info".to_string());
 
-    let LogLevel = LevelText.parse::<LevelFilter>().unwrap_or(LevelFilter::Info);
+	let LogLevel = LevelText.parse::<LevelFilter>().unwrap_or(LevelFilter::Info);
 
-    Builder::new()
-        .filter_level(LogLevel)
-        .format(|Buffer, Record| {
-            let LevelStyle = match Record.level() {
-                log::Level::Error => "ERROR".red().bold(),
+	Builder::new()
+		.filter_level(LogLevel)
+		.format(|Buffer, Record| {
+			let LevelStyle = match Record.level() {
+				log::Level::Error => "ERROR".red().bold(),
 
-                log::Level::Warn => "WARN".yellow().bold(),
+				log::Level::Warn => "WARN".yellow().bold(),
 
-                log::Level::Info => "INFO".green(),
+				log::Level::Info => "INFO".green(),
 
-                log::Level::Debug => "DEBUG".blue(),
+				log::Level::Debug => "DEBUG".blue(),
 
-                log::Level::Trace => "TRACE".magenta(),
-            };
+				log::Level::Trace => "TRACE".magenta(),
+			};
 
-            writeln!(Buffer, "[{}] [{}]: {}", "Build".red(), LevelStyle, Record.args())
-        })
-        .parse_default_env()
-        .init();
+			writeln!(Buffer, "[{}] [{}]: {}", "Build".red(), LevelStyle, Record.args())
+		})
+		.parse_default_env()
+		.init();
 }

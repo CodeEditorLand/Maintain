@@ -3,7 +3,8 @@
 //=============================================================================//
 // Module: JsonEdit
 //
-// Brief Description: Implements JSON/JSON5 file editing for Tauri configuration.
+// Brief Description: Implements JSON/JSON5 file editing for Tauri
+// configuration.
 //
 // RESPONSIBILITIES:
 // ================
@@ -58,40 +59,34 @@
 // =========
 //
 // Example 1: Full configuration update
+use std::{fs, path::Path};
+
+use log::{debug, info};
+use serde::Serialize;
+use serde_json::Value as JsonValue;
+
 /// ```rust
 /// use crate::Maintain::Source::Build::JsonEdit;
 /// let config_path = PathBuf::from("tauri.conf.json");
 /// let modified = JsonEdit(
-/// &config_path,
-/// "Debug_Mountain",
-/// "land.editor.binary.debug.mountain",
-/// "1.0.0",
-/// Some("Binary/node")
+/// 	&config_path,
+/// 	"Debug_Mountain",
+/// 	"land.editor.binary.debug.mountain",
+/// 	"1.0.0",
+/// 	Some("Binary/node"),
 /// )?;
 /// ```
-//
 // Example 2: Version and identifier update only
 /// ```rust
 /// use crate::Maintain::Source::Build::JsonEdit;
-/// let modified = JsonEdit(
-/// &config_path,
-/// "Mountain",
-/// "land.editor.binary.mountain",
-/// "1.0.0",
-/// None
-/// )?;
+/// let modified =
+/// 	JsonEdit(&config_path, "Mountain", "land.editor.binary.mountain", "1.0.0", None)?;
 /// ```
 //
 //=============================================================================//
 // IMPLEMENTATION
 //=============================================================================//
-
 use crate::Build::Error::Error as BuildError;
-
-use log::{debug, info};
-use serde::Serialize;
-use serde_json::Value as JsonValue;
-use std::{fs, path::Path};
 
 /// Dynamically modifies fields in a `tauri.conf.json` or `tauri.conf.json5`
 /// file, including the sidecar path.
@@ -151,95 +146,87 @@ use std::{fs, path::Path};
 /// use crate::Maintain::Source::Build::JsonEdit;
 /// let path = PathBuf::from("tauri.conf.json");
 /// let modified = JsonEdit(
-/// &path,
-/// "Debug_Mountain",
-/// "land.editor.binary.debug.mountain",
-/// "1.0.0",
-/// Some("Binary/node")
+/// 	&path,
+/// 	"Debug_Mountain",
+/// 	"land.editor.binary.debug.mountain",
+/// 	"1.0.0",
+/// 	Some("Binary/node"),
 /// )?;
 /// ```
-pub fn JsonEdit(
-    File: &Path,
-    Product: &str,
-    Id: &str,
-    Version: &str,
-    SidecarPath: Option<&str>,
-) -> Result<bool, BuildError> {
-    debug!(target: "Build::Json", "Attempting to modify JSON file: {}", File.display());
+pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Option<&str>) -> Result<bool, BuildError> {
+	debug!(target: "Build::Json", "Attempting to modify JSON file: {}", File.display());
 
-    let Data = fs::read_to_string(File)?;
+	let Data = fs::read_to_string(File)?;
 
-    let mut Parsed: JsonValue = if File.extension().and_then(|s| s.to_str()) == Some("json5") {
-        json5::from_str(&Data)?
-    } else {
-        serde_json::from_str(&Data)?
-    };
+	let mut Parsed:JsonValue = if File.extension().and_then(|s| s.to_str()) == Some("json5") {
+		json5::from_str(&Data)?
+	} else {
+		serde_json::from_str(&Data)?
+	};
 
-    let mut Modified = false;
+	let mut Modified = false;
 
-    let Root = Parsed
-        .as_object_mut()
-        .ok_or_else(|| {
-            BuildError::Io(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "JSON root is not an object",
-            ))
-        })?;
+	let Root = Parsed.as_object_mut().ok_or_else(|| {
+		BuildError::Io(std::io::Error::new(
+			std::io::ErrorKind::InvalidData,
+			"JSON root is not an object",
+		))
+	})?;
 
-    // Update version
-    if Root.get("version").and_then(JsonValue::as_str) != Some(Version) {
-        Root.insert("version".to_string(), JsonValue::String(Version.to_string()));
+	// Update version
+	if Root.get("version").and_then(JsonValue::as_str) != Some(Version) {
+		Root.insert("version".to_string(), JsonValue::String(Version.to_string()));
 
-        Modified = true;
-    }
+		Modified = true;
+	}
 
-    // Update productName
-    if Root.get("productName").and_then(JsonValue::as_str) != Some(Product) {
-        Root.insert("productName".to_string(), JsonValue::String(Product.to_string()));
+	// Update productName
+	if Root.get("productName").and_then(JsonValue::as_str) != Some(Product) {
+		Root.insert("productName".to_string(), JsonValue::String(Product.to_string()));
 
-        Modified = true;
-    }
+		Modified = true;
+	}
 
-    // Update identifier
-    if Root.get("identifier").and_then(JsonValue::as_str) != Some(Id) {
-        Root.insert("identifier".to_string(), JsonValue::String(Id.to_string()));
+	// Update identifier
+	if Root.get("identifier").and_then(JsonValue::as_str) != Some(Id) {
+		Root.insert("identifier".to_string(), JsonValue::String(Id.to_string()));
 
-        Modified = true;
-    }
+		Modified = true;
+	}
 
-    // Add sidecar path if provided
-    if let Some(Path) = SidecarPath {
-        let Bundle = Root
-            .entry("bundle")
-            .or_insert_with(|| JsonValue::Object(Default::default()))
-            .as_object_mut()
-            .unwrap();
+	// Add sidecar path if provided
+	if let Some(Path) = SidecarPath {
+		let Bundle = Root
+			.entry("bundle")
+			.or_insert_with(|| JsonValue::Object(Default::default()))
+			.as_object_mut()
+			.unwrap();
 
-        let Bins = Bundle
-            .entry("externalBin")
-            .or_insert_with(|| JsonValue::Array(Default::default()))
-            .as_array_mut()
-            .unwrap();
+		let Bins = Bundle
+			.entry("externalBin")
+			.or_insert_with(|| JsonValue::Array(Default::default()))
+			.as_array_mut()
+			.unwrap();
 
-        Bins.push(JsonValue::String(Path.to_string()));
+		Bins.push(JsonValue::String(Path.to_string()));
 
-        Modified = true;
-    }
+		Modified = true;
+	}
 
-    // Write the file if any changes were made
-    if Modified {
-        let mut Buffer = Vec::new();
+	// Write the file if any changes were made
+	if Modified {
+		let mut Buffer = Vec::new();
 
-        let Formatter = serde_json::ser::PrettyFormatter::with_indent(b"\t");
+		let Formatter = serde_json::ser::PrettyFormatter::with_indent(b"\t");
 
-        let mut Serializer = serde_json::Serializer::with_formatter(&mut Buffer, Formatter);
+		let mut Serializer = serde_json::Serializer::with_formatter(&mut Buffer, Formatter);
 
-        Parsed.serialize(&mut Serializer)?;
+		Parsed.serialize(&mut Serializer)?;
 
-        fs::write(File, String::from_utf8(Buffer)?)?;
+		fs::write(File, String::from_utf8(Buffer)?)?;
 
-        info!(target: "Build::Json", "Dynamically configured {}", File.display());
-    }
+		info!(target: "Build::Json", "Dynamically configured {}", File.display());
+	}
 
-    Ok(Modified)
+	Ok(Modified)
 }
