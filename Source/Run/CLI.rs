@@ -45,7 +45,7 @@ use std::{collections::HashMap, path::PathBuf};
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
 
-use crate::Build::Rhai::{LandConfig, Profile as ConfigProfile, load_config};
+use crate::Build::Rhai::ConfigLoader::{LandConfig, Profile, load_config};
 
 //=============================================================================
 // CLI Argument Definitions
@@ -504,7 +504,7 @@ impl Cli {
 //=============================================================================
 
 /// Print run header
-fn print_run_header(profile_name:&str, profile:&ConfigProfile) {
+fn print_run_header(profile_name:&str, profile:&Profile) {
 	println!("\n{}", "========================================");
 	println!("Land Run: {}", profile_name);
 	println!("========================================");
@@ -578,7 +578,7 @@ fn resolve_profile_name(name:&str, config:&LandConfig) -> String {
 ///
 /// Merged HashMap of environment variables
 fn resolve_environment_dual_path(
-	profile:&ConfigProfile,
+	profile:&Profile,
 	config:&LandConfig,
 	merge_env:bool,
 	cli_overrides:&[(String, String)],

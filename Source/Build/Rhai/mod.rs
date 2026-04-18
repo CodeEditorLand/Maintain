@@ -12,10 +12,6 @@ pub mod ConfigLoader;
 pub mod ScriptRunner;
 pub mod EnvironmentResolver;
 
-// Re-export commonly used items
-pub use ConfigLoader::*;
-pub use ScriptRunner::*;
-pub use EnvironmentResolver::*;
 use rhai::Engine;
 
 //=============================================================================
@@ -71,6 +67,8 @@ fn register_utility_functions(engine:&mut Engine) {
 
 #[cfg(test)]
 mod tests {
+	use std::collections::HashMap;
+
 	use super::*;
 
 	/// Expected environment variables for each profile
@@ -198,9 +196,11 @@ mod tests {
 			cwd:".".to_string(),
 			manifest_dir:".".to_string(),
 			target_triple:None,
+			workbench_type:None,
+			features:HashMap::new(),
 		};
 
-		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
+		let result = ScriptRunner::ExecuteProfileScript(&engine, full_script_path.to_str().unwrap(), &context);
 
 		assert!(
 			result.is_ok(),
@@ -248,9 +248,11 @@ mod tests {
 			cwd:".".to_string(),
 			manifest_dir:".".to_string(),
 			target_triple:None,
+			workbench_type:None,
+			features:HashMap::new(),
 		};
 
-		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
+		let result = ScriptRunner::ExecuteProfileScript(&engine, full_script_path.to_str().unwrap(), &context);
 
 		assert!(
 			result.is_ok(),
@@ -297,9 +299,11 @@ mod tests {
 			cwd:".".to_string(),
 			manifest_dir:".".to_string(),
 			target_triple:None,
+			workbench_type:None,
+			features:HashMap::new(),
 		};
 
-		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
+		let result = ScriptRunner::ExecuteProfileScript(&engine, full_script_path.to_str().unwrap(), &context);
 
 		assert!(
 			result.is_ok(),
@@ -348,9 +352,11 @@ mod tests {
 			cwd:".".to_string(),
 			manifest_dir:".".to_string(),
 			target_triple:None,
+			workbench_type:None,
+			features:HashMap::new(),
 		};
 
-		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
+		let result = ScriptRunner::ExecuteProfileScript(&engine, full_script_path.to_str().unwrap(), &context);
 
 		assert!(
 			result.is_ok(),
@@ -389,9 +395,11 @@ mod tests {
 			cwd:".".to_string(),
 			manifest_dir:".".to_string(),
 			target_triple:None,
+			workbench_type:None,
+			features:HashMap::new(),
 		};
 
-		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
+		let result = ScriptRunner::ExecuteProfileScript(&engine, full_script_path.to_str().unwrap(), &context);
 
 		assert!(
 			result.is_ok(),
@@ -429,9 +437,11 @@ mod tests {
 			cwd:".".to_string(),
 			manifest_dir:".".to_string(),
 			target_triple:None,
+			workbench_type:None,
+			features:HashMap::new(),
 		};
 
-		let result = ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context);
+		let result = ScriptRunner::ExecuteProfileScript(&engine, full_script_path.to_str().unwrap(), &context);
 
 		assert!(
 			result.is_ok(),
@@ -471,10 +481,12 @@ mod tests {
 				cwd:".".to_string(),
 				manifest_dir:".".to_string(),
 				target_triple:None,
+				workbench_type:None,
+				features:HashMap::new(),
 			};
 
 			let script_result =
-				ScriptRunner::execute_profile_script(&engine, full_script_path.to_str().unwrap(), &context)
+				ScriptRunner::ExecuteProfileScript(&engine, full_script_path.to_str().unwrap(), &context)
 					.expect(&format!("Failed to execute script for profile '{}'", profile_name));
 
 			let static_env = ConfigLoader::resolve_profile_env(&config, profile_name);

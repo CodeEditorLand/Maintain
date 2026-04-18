@@ -45,7 +45,7 @@ use std::{collections::HashMap, path::PathBuf};
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
 
-use crate::Build::Rhai::{LandConfig, Profile, load_config};
+use crate::Build::Rhai::ConfigLoader::{LandConfig, Profile, load_config};
 
 //=============================================================================
 // CLI Argument Definitions
