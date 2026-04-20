@@ -687,8 +687,10 @@ fn is_build_env_var(key:&str) -> bool {
 		key,
 		"Browser"
 			| "Bundle"
-			| "Clean" | "Compile"
-			| "Debug" | "Dependency"
+			| "CargoFeatures"
+			| "Clean" | "CocoonEsbuildDefine"
+			| "Compile" | "Debug"
+			| "Dependency"
 			| "Mountain"
 			| "Wind" | "Electron"
 			| "BrowserProxy"

@@ -91,7 +91,10 @@ use toml;
 //=============================================================================//
 use crate::Build::Error::Error as BuildError;
 use crate::Build::{
-	Constant::{CargoFile, IdDelimiter, JsonFile, JsonfiveFile, NameDelimiter},
+	Constant::{
+		CargoFile, CocoonEsbuildDefineEnv, IdDelimiter, JsonFile, JsonfiveFile,
+		NameDelimiter,
+	},
 	Definition::{Argument, Guard, Manifest},
 	GetTauriTargetTriple::GetTauriTargetTriple,
 	JsonEdit::JsonEdit,
@@ -178,6 +181,19 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	info!(target: "Build", "Starting build orchestration...");
 
 	log::debug!(target: "Build", "Argument: {:?}", Argument);
+
+	// Tier fan-out observability. The shell helper
+	// `Maintain/Script/TierEnvironment.sh` exports `CargoFeatures` and
+	// `CocoonEsbuildDefine`; surface them here so a build transcript shows
+	// which tier set shipped into the binary without having to replay the
+	// shell environment.
+	if let Some(Features) = Argument.CargoFeatures.as_deref().filter(|v| !v.is_empty()) {
+		info!(target: "Build", "Cargo features: {}", Features);
+	}
+
+	if let Some(Defines) = Argument.CocoonEsbuildDefine.as_deref().filter(|v| !v.is_empty()) {
+		info!(target: "Build", "Cocoon esbuild defines: {}", Defines);
+	}
 
 	let ProjectDir = PathBuf::from(&Argument.Directory);
 
@@ -296,6 +312,38 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 		NamePartsForId.push("debug".to_string());
 	}
 
+	// Workbench-profile suffixes. These are what keep `debug-mountain` and
+	// `debug-electron` binaries separated on disk. Without them, both
+	// profiles would compile into the same `Target/debug/<LongName>_Mountain`
+	// binary (because the Cargo bin name is "Mountain"), so switching
+	// profiles couldn't run side-by-side and the bundler would thrash the
+	// same artefacts every rebuild.
+	if Argument.Mountain.as_ref().map_or(false, |v| v == "true") {
+		NamePartsForProductName.push("MountainProfile".to_string());
+		NamePartsForId.push("mountain".to_string());
+		NamePartsForId.push("profile".to_string());
+	}
+
+	if Argument.Electron.as_ref().map_or(false, |v| v == "true") {
+		NamePartsForProductName.push("ElectronProfile".to_string());
+		NamePartsForId.push("electron".to_string());
+		NamePartsForId.push("profile".to_string());
+	}
+
+	// Compiler variant (e.g. "Rest") — distinguishes the OXC build path
+	// from the default TypeScript compiler path so two binaries with the
+	// same workbench flavour but different compilers don't collide.
+	if let Some(Variant) = &Argument.Compiler {
+		if !Variant.is_empty() {
+			let PascalCompiler = Pascalize(Variant);
+			if !PascalCompiler.is_empty() {
+				NamePartsForProductName.push(format!("{}Compiler", PascalCompiler));
+				NamePartsForId.extend(WordsFromPascal(&PascalCompiler));
+				NamePartsForId.push("compiler".to_string());
+			}
+		}
+	}
+
 	// Generate final product name
 	let ProductNamePrefix = NamePartsForProductName.join(NameDelimiter);
 
@@ -397,19 +445,61 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 		return Err(BuildError::NoCommand);
 	}
 
+	// Materialise the command into an owned Vec so we can append
+	// `--features <list>` to `pnpm tauri build [--debug]` invocations
+	// without mutating the parsed `Argument`. The guard below keeps the
+	// append scoped to tauri builds — other commands (e.g. cargo, direct
+	// tooling) pass through unchanged.
+	let mut CommandArguments:Vec<String> = Argument.Command.clone();
+
+	let IsTauriBuild = CommandArguments.len() >= 3
+		&& CommandArguments[0] == "pnpm"
+		&& CommandArguments[1] == "tauri"
+		&& CommandArguments[2] == "build";
+
+	if IsTauriBuild {
+		if let Some(Features) =
+			Argument.CargoFeatures.as_deref().filter(|v| !v.is_empty())
+		{
+			let AlreadyPresent = CommandArguments
+				.iter()
+				.any(|a| a == "--features" || a == "-f");
+
+			if !AlreadyPresent {
+				info!(
+					target: "Build",
+					"Forwarding Cargo features to `tauri build`: {}",
+					Features
+				);
+				CommandArguments.push("--features".to_string());
+				CommandArguments.push(Features.to_string());
+			}
+		}
+	}
+
 	let mut ShellCommand = if cfg!(target_os = "windows") {
 		let mut Command = ProcessCommand::new("cmd");
 
-		Command.arg("/C").args(&Argument.Command);
+		Command.arg("/C").args(&CommandArguments);
 
 		Command
 	} else {
-		let mut Command = ProcessCommand::new(&Argument.Command[0]);
+		let mut Command = ProcessCommand::new(&CommandArguments[0]);
 
-		Command.args(&Argument.Command[1..]);
+		Command.args(&CommandArguments[1..]);
 
 		Command
 	};
+
+	// Re-assert `CocoonEsbuildDefine` on the child environment so Cocoon's
+	// esbuild step sees the tier `define` blob even if a wrapper ever calls
+	// `.env_clear()` on our `ProcessCommand`. `ProcessCommand` inherits the
+	// parent env by default, so without a clear this is belt-and-braces.
+	if let Some(Defines) =
+		Argument.CocoonEsbuildDefine.as_deref().filter(|v| !v.is_empty())
+	{
+		ShellCommand.env(CocoonEsbuildDefineEnv, Defines);
+	}
 
 	info!(target: "Build::Exec", "Executing final build command: {:?}", ShellCommand);
 

@@ -95,12 +95,17 @@ pub const NameDelimiter:&str = "_";
 // Environment variable constants
 pub const BrowserEnv:&str = "Browser";
 pub const BundleEnv:&str = "Bundle";
+pub const CargoFeaturesEnv:&str = "CargoFeatures";
 pub const CleanEnv:&str = "Clean";
+pub const CocoonEsbuildDefineEnv:&str = "CocoonEsbuildDefine";
 pub const CompileEnv:&str = "Compile";
+pub const CompilerEnv:&str = "Compiler";
 pub const DebugEnv:&str = "Debug";
 pub const DependencyEnv:&str = "Dependency";
 pub const DirEnv:&str = "MOUNTAIN_DIR";
+pub const ElectronEnv:&str = "Electron";
 pub const LogEnv:&str = "RUST_LOG";
+pub const MountainEnv:&str = "Mountain";
 pub const NameEnv:&str = "MOUNTAIN_ORIGINAL_BASE_NAME";
 pub const NodeEnv:&str = "NODE_ENV";
 pub const NodeVersionEnv:&str = "NODE_VERSION";

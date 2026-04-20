@@ -196,6 +196,41 @@ pub struct Argument {
 	#[clap(long, env = DebugEnv)]
 	pub Debug:Option<String>,
 
+	/// Flag indicating the Mountain workbench profile (debug-mountain).
+	/// Mutually exclusive with `Electron` and `Browser`; when set to "true"
+	/// the product name gains a `_Mountain` suffix so Cargo/Tauri emit a
+	/// distinct binary path that doesn't collide with other workbenches.
+	#[clap(long, env = MountainEnv)]
+	pub Mountain:Option<String>,
+
+	/// Flag indicating the Electron workbench profile (debug-electron).
+	/// Mutually exclusive with `Mountain` and `Browser`; adds a
+	/// `_Electron` suffix to the generated product name + identifier.
+	#[clap(long, env = ElectronEnv)]
+	pub Electron:Option<String>,
+
+	/// Compiler variant (e.g. "Rest"). When present the product name gains
+	/// a `_Compiler<Name>` suffix so variant compilers don't collide with
+	/// the default TypeScript/tsc path.
+	#[clap(long, env = CompilerEnv)]
+	pub Compiler:Option<String>,
+
+	/// Comma-joined Cargo features derived from `.env.Land` tier selections
+	/// by `Maintain/Script/TierEnvironment.sh`. When present and the build
+	/// command is `pnpm tauri build [--debug]`, these are forwarded to Cargo
+	/// via `-- --features "<list>"` so tier-gated Rust code compiles in.
+	/// Example: "TierRemoteProcedureCallSharedMemory,TierLoggerRing".
+	#[clap(long, env = CargoFeaturesEnv)]
+	pub CargoFeatures:Option<String>,
+
+	/// JSON blob of `__LandTier_<Capability>__` replacement tokens produced
+	/// by `Maintain/Script/TierEnvironment.sh`. Cocoon's `TargetConfig.ts`
+	/// merges it into its esbuild `define` options so tier constants compile
+	/// into the Cocoon bundle. Maintain only needs to pass it through to
+	/// the child process environment — no parsing happens here.
+	#[clap(long, env = CocoonEsbuildDefineEnv)]
+	pub CocoonEsbuildDefine:Option<String>,
+
 	/// Information about a dependency, often 'org/repo' or a boolean string.
 	///
 	/// This field specifies dependency information that affects the generated
