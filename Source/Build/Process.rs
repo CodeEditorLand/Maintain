@@ -330,7 +330,7 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 		NamePartsForId.push("profile".to_string());
 	}
 
-	// Compiler variant (e.g. "Rest") — distinguishes the OXC build path
+	// Compiler variant (e.g. "Rest") - distinguishes the OXC build path
 	// from the default TypeScript compiler path so two binaries with the
 	// same workbench flavour but different compilers don't collide.
 	if let Some(Variant) = &Argument.Compiler {
@@ -448,7 +448,7 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	// Materialise the command into an owned Vec so we can append
 	// `--features <list>` to `pnpm tauri build [--debug]` invocations
 	// without mutating the parsed `Argument`. The guard below keeps the
-	// append scoped to tauri builds — other commands (e.g. cargo, direct
+	// append scoped to tauri builds - other commands (e.g. cargo, direct
 	// tooling) pass through unchanged.
 	let mut CommandArguments:Vec<String> = Argument.Command.clone();
 

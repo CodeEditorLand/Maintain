@@ -227,7 +227,7 @@ pub struct Argument {
 	/// by `Maintain/Script/TierEnvironment.sh`. Cocoon's `TargetConfig.ts`
 	/// merges it into its esbuild `define` options so tier constants compile
 	/// into the Cocoon bundle. Maintain only needs to pass it through to
-	/// the child process environment — no parsing happens here.
+	/// the child process environment - no parsing happens here.
 	#[clap(long, env = CocoonEsbuildDefineEnv)]
 	pub CocoonEsbuildDefine:Option<String>,
 
