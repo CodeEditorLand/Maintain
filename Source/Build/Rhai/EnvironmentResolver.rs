@@ -340,28 +340,22 @@ fn ExpandVariables(env_vars:&mut HashMap<String, String>) {
 mod tests {
 
 	use super::*;
-#[test]
-fn test_resolve() {
-    let template = HashMap::from([
-        (String::from("A"), "1".to_string()),
-        (String::from("B"), "2".to_string()),
-    ]);
+	#[test]
+	fn test_resolve() {
+		let template = HashMap::from([(String::from("A"), "1".to_string()), (String::from("B"), "2".to_string())]);
 
-    let profile = HashMap::from([
-        (String::from("B"), "3".to_string()),
-        (String::from("C"), "4".to_string()),
-    ]);
+		let profile = HashMap::from([(String::from("B"), "3".to_string()), (String::from("C"), "4".to_string())]);
 
-    let script = HashMap::from([(String::from("C"), "5".to_string())]);
+		let script = HashMap::from([(String::from("C"), "5".to_string())]);
 
-    let result = Resolve(template, profile, script, false);
+		let result = Resolve(template, profile, script, false);
 
-    assert_eq!(result.get("A"), Some(&"1".to_string())); // From template
+		assert_eq!(result.get("A"), Some(&"1".to_string())); // From template
 
-    assert_eq!(result.get("B"), Some(&"3".to_string())); // Profile overrides template
+		assert_eq!(result.get("B"), Some(&"3".to_string())); // Profile overrides template
 
-    assert_eq!(result.get("C"), Some(&"5".to_string())); // Script overrides profile
-}
+		assert_eq!(result.get("C"), Some(&"5".to_string())); // Script overrides profile
+	}
 	#[test]
 	fn test_generate_workbench_env() {
 		let env = generate_workbench_env("Mountain");

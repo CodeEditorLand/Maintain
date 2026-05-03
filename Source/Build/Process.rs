@@ -91,10 +91,7 @@ use toml;
 //=============================================================================//
 use crate::Build::Error::Error as BuildError;
 use crate::Build::{
-	Constant::{
-		CargoFile, CocoonEsbuildDefineEnv, IdDelimiter, JsonFile, JsonfiveFile,
-		NameDelimiter,
-	},
+	Constant::{CargoFile, CocoonEsbuildDefineEnv, IdDelimiter, JsonFile, JsonfiveFile, NameDelimiter},
 	Definition::{Argument, Guard, Manifest},
 	GetTauriTargetTriple::GetTauriTargetTriple,
 	JsonEdit::JsonEdit,
@@ -458,12 +455,8 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 		&& CommandArguments[2] == "build";
 
 	if IsTauriBuild {
-		if let Some(Features) =
-			Argument.CargoFeatures.as_deref().filter(|v| !v.is_empty())
-		{
-			let AlreadyPresent = CommandArguments
-				.iter()
-				.any(|a| a == "--features" || a == "-f");
+		if let Some(Features) = Argument.CargoFeatures.as_deref().filter(|v| !v.is_empty()) {
+			let AlreadyPresent = CommandArguments.iter().any(|a| a == "--features" || a == "-f");
 
 			if !AlreadyPresent {
 				info!(
@@ -495,9 +488,7 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	// esbuild step sees the tier `define` blob even if a wrapper ever calls
 	// `.env_clear()` on our `ProcessCommand`. `ProcessCommand` inherits the
 	// parent env by default, so without a clear this is belt-and-braces.
-	if let Some(Defines) =
-		Argument.CocoonEsbuildDefine.as_deref().filter(|v| !v.is_empty())
-	{
+	if let Some(Defines) = Argument.CocoonEsbuildDefine.as_deref().filter(|v| !v.is_empty()) {
 		ShellCommand.env(CocoonEsbuildDefineEnv, Defines);
 	}
 
