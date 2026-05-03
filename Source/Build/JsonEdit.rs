@@ -194,7 +194,7 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 		Modified = true;
 	}
 
-	// Add sidecar path if provided
+	// Add sidecar path if provided (dedupe: only insert if not already present)
 	if let Some(Path) = SidecarPath {
 		let Bundle = Root
 			.entry("bundle")
@@ -208,8 +208,19 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 			.as_array_mut()
 			.unwrap();
 
-		Bins.push(JsonValue::String(Path.to_string()));
+		let AlreadyPresent = Bins.iter().any(|Entry| Entry.as_str() == Some(Path));
 
+		if !AlreadyPresent {
+			Bins.push(JsonValue::String(Path.to_string()));
+
+			Modified = true;
+		}
+	}
+
+	// Recursively dedupe every array in the document. Order is preserved
+	// (first occurrence wins). Catches duplicates introduced upstream as
+	// well as anything left over from prior runs.
+	if DedupeJson(&mut Parsed) {
 		Modified = true;
 	}
 
@@ -229,4 +240,54 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 	}
 
 	Ok(Modified)
+}
+
+/// Recursively dedupe arrays within a JSON tree. Returns `true` if any
+/// duplicates were removed. Equality is structural (compares whole
+/// `JsonValue`s), order is preserved, first occurrence wins. Object keys are
+/// already unique by JSON semantics, so we only descend into them.
+fn DedupeJson(Value:&mut JsonValue) -> bool {
+	match Value {
+		JsonValue::Array(Items) => {
+			let mut Changed = false;
+
+			for Item in Items.iter_mut() {
+				if DedupeJson(Item) {
+					Changed = true;
+				}
+			}
+
+			let mut Seen:Vec<JsonValue> = Vec::with_capacity(Items.len());
+
+			let mut Index = 0;
+
+			while Index < Items.len() {
+				if Seen.iter().any(|Existing| Existing == &Items[Index]) {
+					Items.remove(Index);
+
+					Changed = true;
+				} else {
+					Seen.push(Items[Index].clone());
+
+					Index += 1;
+				}
+			}
+
+			Changed
+		},
+
+		JsonValue::Object(Map) => {
+			let mut Changed = false;
+
+			for (_Key, Child) in Map.iter_mut() {
+				if DedupeJson(Child) {
+					Changed = true;
+				}
+			}
+
+			Changed
+		},
+
+		_ => false,
+	}
 }
