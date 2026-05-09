@@ -58,7 +58,6 @@
 //
 // Example 1: Direct invocation
 use clap::Parser;
-
 use log::{error, info};
 
 /// ```rust
@@ -74,7 +73,6 @@ use log::{error, info};
 // IMPLEMENTATION
 //=============================================================================//
 use crate::Run::Definition::Argument;
-
 use crate::Run::{Logger, Process};
 
 /// The main entry point of the run binary.
@@ -169,7 +167,6 @@ use crate::Run::{Logger, Process};
 /// This pattern is common for Rust binaries that serve as command-line
 /// tools or development scripts.
 pub fn Fn() {
-
 	// Step 1: Initialize the logger with colored output
 	Logger::Logger();
 
@@ -180,11 +177,9 @@ pub fn Fn() {
 
 	// Step 3: Execute the run orchestration process
 	match Process::Process(&argument) {
-
 		Ok(_) => info!("Run process completed successfully."),
 
 		Err(e) => {
-
 			error!("Run process failed: {}", e);
 
 			std::process::exit(1);
@@ -204,7 +199,6 @@ mod tests {
 
 	#[test]
 	fn test_fn_exists() {
-
 		// Verify the function compiles and is callable
 		// (actual execution would be integration tests)
 		let _ = Fn as fn();

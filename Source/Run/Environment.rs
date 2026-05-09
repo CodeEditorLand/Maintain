@@ -59,7 +59,6 @@ use crate::Run::{Constant::*, Definition::Profile, Error::Result};
 ///
 /// A HashMap of resolved environment variables
 pub fn Resolve(Profile:&Profile, MergeShell:bool, Overrides:&[(String, String)]) -> Result<HashMap<String, String>> {
-
 	let mut env = HashMap::new();
 
 	// Layer 1: Template defaults
@@ -67,22 +66,18 @@ pub fn Resolve(Profile:&Profile, MergeShell:bool, Overrides:&[(String, String)])
 
 	// Layer 2: Shell environment (if enabled)
 	if MergeShell {
-
 		MergeShellEnv(&mut env);
 	}
 
 	// Layer 3: Profile environment
 	if let Some(ProfileEnvironment) = &Profile.env {
-
 		for (Key, Value) in ProfileEnvironment {
-
 			env.insert(Key.clone(), Value.clone());
 		}
 	}
 
 	// Layer 4: CLI overrides (highest priority)
 	for (Key, Value) in Overrides {
-
 		env.insert(Key.clone(), Value.clone());
 	}
 
@@ -95,7 +90,6 @@ pub fn Resolve(Profile:&Profile, MergeShell:bool, Overrides:&[(String, String)])
 ///
 /// * `env` - The environment HashMap to populate
 fn ApplyTemplateDefaults(env:&mut HashMap<String, String>) {
-
 	// Default Node.js configuration
 	env.entry("NODE_VERSION".to_string()).or_insert("22".to_string());
 
@@ -124,53 +118,31 @@ fn ApplyTemplateDefaults(env:&mut HashMap<String, String>) {
 ///
 /// * `env` - The environment HashMap to merge into
 fn MergeShellEnv(env:&mut HashMap<String, String>) {
-
 	let RelevantVars = [
 		"Browser",
-
 		"Bundle",
-
 		"Clean",
-
 		"Compile",
-
 		"Debug",
-
 		"Dependency",
-
 		"Mountain",
-
 		"Wind",
-
 		"Electron",
-
 		"BrowserProxy",
-
 		"NODE_ENV",
-
 		"NODE_VERSION",
-
 		"NODE_OPTIONS",
-
 		"RUST_LOG",
-
 		"AIR_LOG_JSON",
-
 		"AIR_LOG_FILE",
-
 		"Level",
-
 		"HOT_RELOAD",
-
 		"WATCH",
-
 		"LIVE_RELOAD_PORT",
 	];
 
 	for Var in RelevantVars {
-
 		if let Ok(Value) = std::env::var(Var) {
-
 			env.insert(Var.to_string(), Value);
 		}
 	}
@@ -186,18 +158,15 @@ fn MergeShellEnv(env:&mut HashMap<String, String>) {
 ///
 /// A list of validation errors (empty if valid)
 pub fn Validate(Env:&HashMap<String, String>) -> Vec<String> {
-
 	let mut Errors = Vec::new();
 
 	// Check NODE_VERSION is set
 	if !Env.contains_key("NODE_VERSION") {
-
 		Errors.push("NODE_VERSION environment variable is required".to_string());
 	}
 
 	// Check NODE_ENV is set
 	if !Env.contains_key("NODE_ENV") {
-
 		Errors.push("NODE_ENV environment variable is required".to_string());
 	}
 
@@ -207,21 +176,16 @@ pub fn Validate(Env:&HashMap<String, String>) -> Vec<String> {
 	let HasWorkbench = Workbenches.iter().any(|W| Env.get(*W).map(|V| V == "true").unwrap_or(false));
 
 	if !HasWorkbench {
-
 		Errors.push("At least one workbench must be enabled (Browser, Wind, Mountain, or Electron)".to_string());
 	}
 
 	// Check LIVE_RELOAD_PORT is valid
 	if let Some(PortStr) = Env.get("LIVE_RELOAD_PORT") {
-
 		if let Ok(Port) = PortStr.parse::<u16>() {
-
 			if Port == 0 {
-
 				Errors.push("LIVE_RELOAD_PORT cannot be 0".to_string());
 			}
 		} else {
-
 			Errors.push("LIVE_RELOAD_PORT must be a valid port number".to_string());
 		}
 	}
@@ -239,21 +203,15 @@ pub fn Validate(Env:&HashMap<String, String>) -> Vec<String> {
 ///
 /// The name of the enabled workbench, or None if none enabled
 pub fn get_workbench(env:&HashMap<String, String>) -> Option<String> {
-
 	let workbenches = [
 		("Browser", "Browser"),
-
 		("Wind", "Wind"),
-
 		("Mountain", "Mountain"),
-
 		("Electron", "Electron"),
 	];
 
 	for (var, name) in workbenches {
-
 		if env.get(var).map(|v| v == "true").unwrap_or(false) {
-
 			return Some(name.to_string());
 		}
 	}
@@ -282,7 +240,6 @@ pub fn is_debug(env:&HashMap<String, String>) -> bool { env.get(DebugEnv).map(|v
 ///
 /// True if hot-reload is enabled
 pub fn is_hot_reload_enabled(env:&HashMap<String, String>) -> bool {
-
 	env.get(HotReloadEnv).map(|v| v == "true").unwrap_or(true)
 }
 
@@ -307,7 +264,6 @@ pub fn is_watch_enabled(env:&HashMap<String, String>) -> bool { env.get(WatchEnv
 ///
 /// A formatted string representation
 pub fn format_for_display(env:&HashMap<String, String>) -> String {
-
 	let mut lines:Vec<String> = env
 		.iter()
 		.map(|(k, v)| {
@@ -331,38 +287,22 @@ pub fn format_for_display(env:&HashMap<String, String>) -> String {
 ///
 /// A filtered HashMap with only run-related variables
 pub fn filter_run_vars(env:&HashMap<String, String>) -> HashMap<String, String> {
-
 	let run_prefixes = [
 		"NODE_",
-
 		"HOT_",
-
 		"WATCH",
-
 		"LIVE_",
-
 		"AIR_",
-
 		"RUST_",
-
 		"Browser",
-
 		"Bundle",
-
 		"Clean",
-
 		"Compile",
-
 		"Debug",
-
 		"Dependency",
-
 		"Mountain",
-
 		"Wind",
-
 		"Electron",
-
 		"Level",
 	];
 

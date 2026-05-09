@@ -32,7 +32,6 @@ use serde::Deserialize;
 /// The main configuration structure loaded from land-config.json
 #[derive(Debug, Deserialize, Clone)]
 pub struct LandConfig {
-
 	/// Configuration version
 	pub version:String,
 
@@ -70,7 +69,6 @@ pub struct LandConfig {
 /// CLI configuration settings
 #[derive(Debug, Deserialize, Clone)]
 pub struct CliConfig {
-
 	/// Default profile to use
 	#[serde(rename = "default_profile")]
 	pub default_profile:Option<String>,
@@ -101,7 +99,6 @@ pub struct CliConfig {
 /// Environment variable inventory structure
 #[derive(Debug, Deserialize, Clone)]
 pub struct EnvironmentVariableInventory {
-
 	/// Build flags
 	#[serde(rename = "build_flags")]
 	pub build_flags:Option<HashMap<String, EnvironmentVariableInfo>>,
@@ -141,7 +138,6 @@ pub struct EnvironmentVariableInventory {
 /// Environment variable information
 #[derive(Debug, Deserialize, Clone)]
 pub struct EnvironmentVariableInfo {
-
 	/// Variable type
 	#[serde(rename = "type")]
 	pub var_type:Option<String>,
@@ -166,7 +162,6 @@ pub struct EnvironmentVariableInfo {
 /// Workbench configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct WorkbenchConfig {
-
 	/// Default workbench type
 	pub default:Option<String>,
 
@@ -180,7 +175,6 @@ pub struct WorkbenchConfig {
 /// Features for a specific workbench
 #[derive(Debug, Deserialize, Clone)]
 pub struct WorkbenchFeatures {
-
 	/// Human-readable description
 	pub description:Option<String>,
 
@@ -216,7 +210,6 @@ pub struct WorkbenchFeatures {
 /// Feature flag configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct FeatureConfig {
-
 	/// Human-readable description
 	pub description:Option<String>,
 
@@ -231,7 +224,6 @@ pub struct FeatureConfig {
 /// Binary configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct BinaryConfig {
-
 	/// Binary name template
 	#[serde(rename = "name_template")]
 	pub name_template:Option<String>,
@@ -257,7 +249,6 @@ pub struct BinaryConfig {
 /// Signing configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct SignConfig {
-
 	/// macOS signing settings
 	pub macos:Option<MacOSSignConfig>,
 
@@ -271,7 +262,6 @@ pub struct SignConfig {
 /// macOS signing configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct MacOSSignConfig {
-
 	/// Signing identity
 	pub identity:Option<String>,
 
@@ -290,7 +280,6 @@ pub struct MacOSSignConfig {
 /// Windows signing configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct WindowsSignConfig {
-
 	/// Certificate path
 	pub certificate:Option<String>,
 
@@ -306,7 +295,6 @@ pub struct WindowsSignConfig {
 /// Linux signing configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct LinuxSignConfig {
-
 	/// GPG key
 	#[serde(rename = "gpg_key")]
 	pub gpg_key:Option<String>,
@@ -319,7 +307,6 @@ pub struct LinuxSignConfig {
 /// Notarization configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct NotarizeConfig {
-
 	/// macOS notarization settings
 	pub macos:Option<MacOSNotarizeConfig>,
 }
@@ -327,7 +314,6 @@ pub struct NotarizeConfig {
 /// macOS notarization configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct MacOSNotarizeConfig {
-
 	/// Apple ID
 	#[serde(rename = "apple_id")]
 	pub apple_id:Option<String>,
@@ -344,7 +330,6 @@ pub struct MacOSNotarizeConfig {
 /// Updater configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct UpdaterConfig {
-
 	/// Enable updater
 	pub enabled:Option<bool>,
 
@@ -358,7 +343,6 @@ pub struct UpdaterConfig {
 /// A build profile configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct Profile {
-
 	/// Human-readable description
 	pub description:Option<String>,
 
@@ -379,7 +363,6 @@ pub struct Profile {
 /// Default template values used across profiles
 #[derive(Debug, Deserialize, Clone)]
 pub struct Templates {
-
 	/// Default environment variables
 	pub env:HashMap<String, String>,
 }
@@ -406,7 +389,6 @@ pub struct Templates {
 /// let debug_profile = config.profiles.get("debug");
 /// ```
 pub fn load(workspace_root:&str) -> Result<LandConfig, String> {
-
 	let config_path = Path::new(workspace_root).join(".vscode").join("land-config.json");
 
 	load_config(&config_path)
@@ -430,9 +412,7 @@ pub fn load(workspace_root:&str) -> Result<LandConfig, String> {
 /// let debug_profile = config.profiles.get("debug");
 /// ```
 pub fn load_config(config_path:&Path) -> Result<LandConfig, String> {
-
 	if !config_path.exists() {
-
 		return Err(format!("Configuration file not found: {}", config_path.display()));
 	}
 
@@ -455,7 +435,6 @@ pub fn load_config(config_path:&Path) -> Result<LandConfig, String> {
 ///
 /// Option containing the profile if found
 pub fn get_profile<'a>(config:&'a LandConfig, profile_name:&str) -> Option<&'a Profile> {
-
 	config.profiles.get(profile_name)
 }
 
@@ -470,20 +449,15 @@ pub fn get_profile<'a>(config:&'a LandConfig, profile_name:&str) -> Option<&'a P
 ///
 /// The workbench type for the profile, or the default workbench
 pub fn get_workbench_type(config:&LandConfig, profile_name:&str) -> String {
-
 	if let Some(profile) = config.profiles.get(profile_name) {
-
 		if let Some(workbench) = &profile.workbench {
-
 			return workbench.clone();
 		}
 	}
 
 	// Return default workbench from config
 	if let Some(workbench_config) = &config.workbench {
-
 		if let Some(default) = &workbench_config.default {
-
 			return default.clone();
 		}
 	}
@@ -503,11 +477,8 @@ pub fn get_workbench_type(config:&LandConfig, profile_name:&str) -> String {
 ///
 /// Option containing the workbench features if found
 pub fn get_workbench_features<'a>(config:&'a LandConfig, workbench_type:&str) -> Option<&'a WorkbenchFeatures> {
-
 	if let Some(workbench_config) = &config.workbench {
-
 		if let Some(features) = &workbench_config.features {
-
 			return features.get(workbench_type);
 		}
 	}
@@ -529,25 +500,19 @@ pub fn get_workbench_features<'a>(config:&'a LandConfig, workbench_type:&str) ->
 ///
 /// HashMap of all environment variables for the profile
 pub fn resolve_profile_env(config:&LandConfig, profile_name:&str) -> HashMap<String, String> {
-
 	let mut env_vars = HashMap::new();
 
 	// Start with template values
 	if let Some(templates) = &config.templates {
-
 		for (key, value) in &templates.env {
-
 			env_vars.insert(key.clone(), value.clone());
 		}
 	}
 
 	// Apply profile-specific values (overriding templates)
 	if let Some(profile) = config.profiles.get(profile_name) {
-
 		if let Some(profile_env) = &profile.env {
-
 			for (key, value) in profile_env {
-
 				env_vars.insert(key.clone(), value.clone());
 			}
 		}
@@ -574,25 +539,19 @@ pub fn resolve_profile_env(config:&LandConfig, profile_name:&str) -> HashMap<Str
 ///
 /// HashMap of all feature flags for the profile
 pub fn resolve_profile_features(config:&LandConfig, profile_name:&str) -> HashMap<String, bool> {
-
 	let mut features = HashMap::new();
 
 	// Start with default feature values
 	if let Some(feature_config) = &config.features {
-
 		for (name, config) in feature_config {
-
 			features.insert(name.clone(), config.default.unwrap_or(false));
 		}
 	}
 
 	// Apply profile-specific feature overrides
 	if let Some(profile) = config.profiles.get(profile_name) {
-
 		if let Some(profile_features) = &profile.features {
-
 			for (key, value) in profile_features {
-
 				features.insert(key.clone(), *value);
 			}
 		}
@@ -613,11 +572,9 @@ pub fn resolve_profile_features(config:&LandConfig, profile_name:&str) -> HashMa
 ///
 /// HashMap of FEATURE_* environment variables
 pub fn features_to_env(features:&HashMap<String, bool>) -> HashMap<String, String> {
-
 	let mut env_vars = HashMap::new();
 
 	for (name, value) in features {
-
 		let env_key = format!("FEATURE_{}", name.to_uppercase().replace("-", "_"));
 
 		env_vars.insert(env_key, value.to_string());
@@ -637,7 +594,6 @@ pub fn features_to_env(features:&HashMap<String, bool>) -> HashMap<String, Strin
 ///
 /// Option containing the build command if found
 pub fn get_build_command(config:&LandConfig, profile_name:&str) -> Option<String> {
-
 	config.build_commands.as_ref()?.get(profile_name).cloned()
 }
 
@@ -659,7 +615,6 @@ mod tests {
 
 	#[test]
 	fn test_features_to_env() {
-
 		let mut features = HashMap::new();
 
 		features.insert("tauri_ipc".to_string(), true);

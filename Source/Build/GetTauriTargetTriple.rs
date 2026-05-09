@@ -163,13 +163,11 @@ use std::env;
 /// 2. Return the appropriate target triple string
 /// 3. Ensure Node.js binaries are available at the corresponding paths
 pub fn GetTauriTargetTriple() -> String {
-
 	let Os = env::consts::OS;
 
 	let Arch = env::consts::ARCH;
 
 	match (Os, Arch) {
-
 		("windows", "x86_64") => "x86_64-pc-windows-msvc".to_string(),
 
 		("linux", "x86_64") => "x86_64-unknown-linux-gnu".to_string(),
@@ -191,7 +189,6 @@ mod tests {
 
 	#[test]
 	fn test_known_platforms() {
-
 		// We can't fully test this without a cross-compilation environment,
 		// but we can verify the function returns a valid-looking string
 		let triple = GetTauriTargetTriple();

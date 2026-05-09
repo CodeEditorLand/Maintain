@@ -106,7 +106,6 @@ use thiserror::Error;
 /// - `std::string::FromUtf8Error` → `Error::Utf`
 #[derive(Error, Debug)]
 pub enum Error {
-
 	/// IO operation error.
 	///
 	/// This variant wraps standard Rust IO errors that can occur during

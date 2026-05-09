@@ -13,13 +13,11 @@
 use std::{collections::HashMap, path::Path};
 
 use serde::Deserialize;
-
 use rhai::{AST, Dynamic, Engine, Scope};
 
 // Configuration types (mirrored from ConfigLoader.rs)
 #[derive(Debug, Deserialize, Clone)]
 struct LandConfig {
-
 	pub version:String,
 
 	pub profiles:HashMap<String, Profile>,
@@ -35,7 +33,6 @@ struct LandConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 struct Profile {
-
 	pub description:Option<String>,
 
 	pub env:Option<HashMap<String, String>>,
@@ -46,96 +43,58 @@ struct Profile {
 
 #[derive(Debug, Deserialize, Clone)]
 struct Templates {
-
 	pub env:HashMap<String, String>,
 }
 
 // Expected environment variables for each profile
 fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)> {
-
 	match profile_name {
-
 		"debug" => {
-
 			vec![
 				("Debug", "true"),
-
 				("Browser", "true"),
-
 				("Bundle", "true"),
-
 				("Clean", "true"),
-
 				("Compile", "false"),
-
 				("NODE_ENV", "development"),
-
 				("NODE_VERSION", "22"),
-
 				("NODE_OPTIONS", "--max-old-space-size=16384"),
-
 				("RUST_LOG", "debug"),
-
 				("AIR_LOG_JSON", "false"),
-
 				("AIR_LOG_FILE", ""),
-
 				("Dependency", "Microsoft/VSCode"),
-
 				("Level", "silent"),
 			]
 		},
 
 		"production" => {
-
 			vec![
 				("Debug", "false"),
-
 				("Browser", "false"),
-
 				("Bundle", "true"),
-
 				("Clean", "true"),
-
 				("Compile", "true"),
-
 				("NODE_ENV", "production"),
-
 				("NODE_VERSION", "22"),
-
 				("NODE_OPTIONS", "--max-old-space-size=8192"),
-
 				("RUST_LOG", "info"),
-
 				("AIR_LOG_JSON", "false"),
-
 				("Dependency", "Microsoft/VSCode"),
 			]
 		},
 
 		"release" => {
-
 			vec![
 				("Debug", "false"),
-
 				("Browser", "false"),
-
 				("Bundle", "true"),
-
 				("Clean", "true"),
-
 				("Compile", "true"),
-
 				("NODE_ENV", "production"),
-
 				("NODE_VERSION", "22"),
-
 				("NODE_OPTIONS", "--max-old-space-size=8192"),
-
 				("RUST_LOG", "warn"),
-
 				("AIR_LOG_JSON", "false"),
-
 				("Dependency", "Microsoft/VSCode"),
 			]
 		},
@@ -145,13 +104,11 @@ fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)>
 }
 
 fn load_config(workspace_root:&str) -> Result<LandConfig, String> {
-
 	let config_path = Path::new(workspace_root).join(".vscode").join("land-config.json");
 
 	println!("Loading config from: {}", config_path.display());
 
 	if !config_path.exists() {
-
 		return Err(format!("Configuration file not found: {}", config_path.display()));
 	}
 
@@ -163,11 +120,9 @@ fn load_config(workspace_root:&str) -> Result<LandConfig, String> {
 }
 
 fn load_and_compile_script(engine:&Engine, script_path:&str) -> Result<AST, String> {
-
 	println!("  Loading script: {}", script_path);
 
 	if !Path::new(script_path).exists() {
-
 		return Err(format!("Script file not found: {}", script_path));
 	}
 
@@ -183,15 +138,12 @@ fn load_and_compile_script(engine:&Engine, script_path:&str) -> Result<AST, Stri
 }
 
 fn execute_get_env_vars(engine:&Engine, ast:&AST) -> Result<HashMap<String, String>, String> {
-
 	let scope = Scope::new();
 
 	let result = engine.call_fn(scope, ast, "get_env_vars", ());
 
 	match result {
-
 		Ok(dynamic) => {
-
 			let env_map = extract_env_map(dynamic);
 
 			println!("  get_env_vars() executed successfully");
@@ -206,19 +158,14 @@ fn execute_get_env_vars(engine:&Engine, ast:&AST) -> Result<HashMap<String, Stri
 }
 
 fn extract_env_map(dynamic:Dynamic) -> HashMap<String, String> {
-
 	let mut env_map = HashMap::new();
 
 	// Try to convert to a map
 	if let Some(map) = dynamic.try_cast::<rhai::Map>() {
-
 		for (key, value) in map {
-
 			if let Some(str_val) = value.as_str() {
-
 				env_map.insert(key, str_val.to_string());
 			} else {
-
 				env_map.insert(key, value.to_string());
 			}
 		}
@@ -234,22 +181,17 @@ fn validate_expected_vars(
 
 	profile_name:&str,
 ) -> Vec<String> {
-
 	println!("  Validating expected environment variables...");
 
 	let mut issues = Vec::new();
 
 	for (key, expected_val) in expected {
-
 		match actual.get(*key) {
-
 			Some(actual_val) if actual_val == *expected_val => {
-
 				println!("    [OK] {} = \"{}\"", key, actual_val);
 			},
 
 			Some(actual_val) => {
-
 				let msg = format!("  ⚠️  {} = \"{}\" (expected \"{}\")", key, actual_val, expected_val);
 
 				println!("{}", msg);
@@ -258,7 +200,6 @@ fn validate_expected_vars(
 			},
 
 			None => {
-
 				let msg = format!("  ❌ {} is missing (expected \"{}\")", key, expected_val);
 
 				println!("{}", msg);
@@ -270,9 +211,7 @@ fn validate_expected_vars(
 
 	// Check for extra variables
 	for key in actual.keys() {
-
 		if !expected.iter().any(|(k, _)| *k == key.as_str()) {
-
 			let val = actual.get(key).unwrap();
 
 			println!("  [EXTRA] {} = \"{}\" (extra variable)", key, val);
@@ -283,7 +222,6 @@ fn validate_expected_vars(
 }
 
 fn run_tests() {
-
 	println!("╔═════════════════════════════════════════════════════════════════════╗");
 
 	println!("║     RHAI Configuration Test Suite                                    ║");
@@ -296,15 +234,10 @@ fn run_tests() {
 
 	let profiles_to_test = vec![
 		"debug",
-
 		"production",
-
 		"release",
-
 		"bundler-preparation",
-
 		"swc-bundle",
-
 		"oxc-bundle",
 	];
 
@@ -318,9 +251,7 @@ fn run_tests() {
 	println!();
 
 	let config = match load_config(workspace_root) {
-
 		Ok(cfg) => {
-
 			println!("[OK] Configuration loaded successfully");
 
 			println!("   Version: {}", cfg.version);
@@ -333,7 +264,6 @@ fn run_tests() {
 		},
 
 		Err(e) => {
-
 			println!("[ERROR] Failed to load configuration: {}", e);
 
 			println!();
@@ -354,40 +284,31 @@ fn run_tests() {
 	let mut missing_scripts = Vec::new();
 
 	for profile_name in &profiles_to_test {
-
 		println!("Profile: {}", profile_name);
 
 		match config.profiles.get(*profile_name) {
-
 			Some(profile) => {
-
 				println!("  [OK] Profile found");
 
 				if let Some(desc) = &profile.description {
-
 					println!("   Description: {}", desc);
 				}
 
 				if let Some(env) = &profile.env {
-
 					println!("   Static env vars: {}", env.len());
 				}
 
 				if let Some(script_path) = &profile.rhai_script {
-
 					let full_path = Path::new(workspace_root).join(".vscode").join(script_path);
 
 					if full_path.exists() {
-
 						println!("   Script path: {} [OK]", script_path);
 					} else {
-
 						println!("   Script path: {} [ERROR] (not found)", script_path);
 
 						missing_scripts.push(profile_name.to_string());
 					}
 				} else {
-
 					println!("   No Rhai script defined");
 
 					missing_scripts.push(profile_name.to_string());
@@ -395,7 +316,6 @@ fn run_tests() {
 			},
 
 			None => {
-
 				println!("  [ERROR] Profile not found in configuration");
 
 				missing_scripts.push(profile_name.to_string());
@@ -417,11 +337,9 @@ fn run_tests() {
 	let engine = Engine::new();
 
 	for profile_name in &profiles_to_test {
-
 		println!("Testing Profile: {}", profile_name);
 
 		if !config.profiles.contains_key(*profile_name) {
-
 			println!("  Skipping - profile not in config");
 
 			println!();
@@ -432,11 +350,9 @@ fn run_tests() {
 		let profile = config.profiles.get(*profile_name).unwrap();
 
 		if let Some(script_path) = &profile.rhai_script {
-
 			let full_path = Path::new(workspace_root).join(".vscode").join(script_path);
 
 			if !full_path.exists() {
-
 				println!("  Skipping - script file not found at: {}", script_path);
 
 				println!();
@@ -446,48 +362,37 @@ fn run_tests() {
 
 			// Load and compile script
 			match load_and_compile_script(&engine, full_path.to_str().unwrap()) {
-
 				Ok(ast) => {
-
 					// Execute get_env_vars
 					match execute_get_env_vars(&engine, &ast) {
-
 						Ok(env_vars) => {
-
 							// Validate expected variables
 							let expected = get_expected_env_vars(profile_name);
 
 							if !expected.is_empty() {
-
 								let issues = validate_expected_vars(&env_vars, &expected, profile_name);
 
 								if issues.is_empty() {
-
 									println!("  [OK] All expected variables match");
 								} else {
-
 									println!("  [WARN] {} issue(s) found", issues.len());
 								}
 							} else {
-
 								println!("  No validation rules defined for this profile");
 							}
 						},
 
 						Err(e) => {
-
 							println!("  [ERROR] {}", e);
 						},
 					}
 				},
 
 				Err(e) => {
-
 					println!("  [ERROR] {}", e);
 				},
 			}
 		} else {
-
 			println!("  Skipping - no Rhai script defined");
 		}
 
@@ -528,18 +433,15 @@ fn run_tests() {
 	println!("Scripts available: {}/{}", scripts_available.len(), profiles_count);
 
 	for (name, _) in &scripts_available {
-
 		println!("   [OK] {}", name);
 	}
 
 	if missing_scripts.len() > 0 {
-
 		println!();
 
 		println!("[WARN] Profiles with missing scripts:");
 
 		for name in &missing_scripts {
-
 			println!("   [ERROR] {}", name);
 		}
 	}

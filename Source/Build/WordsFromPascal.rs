@@ -141,9 +141,7 @@
 /// This ensures that multi-letter sequences like "Apps" stay together while
 /// properly splitting "HelloWorld" into "hello" and "world".
 pub fn WordsFromPascal(Text:&str) -> Vec<String> {
-
 	if Text.is_empty() {
-
 		return Vec::new();
 	}
 
@@ -154,11 +152,8 @@ pub fn WordsFromPascal(Text:&str) -> Vec<String> {
 	let mut LastCharWasUppercase = false;
 
 	for Char in Text.chars() {
-
 		if Char.is_uppercase() {
-
 			if !CurrentWord.is_empty() && !LastCharWasUppercase {
-
 				Words.push(CurrentWord.to_ascii_lowercase());
 
 				CurrentWord.clear();
@@ -168,7 +163,6 @@ pub fn WordsFromPascal(Text:&str) -> Vec<String> {
 
 			LastCharWasUppercase = true;
 		} else {
-
 			CurrentWord.push(Char);
 
 			LastCharWasUppercase = false;
@@ -176,7 +170,6 @@ pub fn WordsFromPascal(Text:&str) -> Vec<String> {
 	}
 
 	if !CurrentWord.is_empty() {
-
 		Words.push(CurrentWord.to_ascii_lowercase());
 	}
 
@@ -190,7 +183,6 @@ mod tests {
 
 	#[test]
 	fn test_single_word() {
-
 		assert_eq!(WordsFromPascal("Hello"), vec!["hello"]);
 
 		assert_eq!(WordsFromPascal("World"), vec!["world"]);
@@ -198,7 +190,6 @@ mod tests {
 
 	#[test]
 	fn test_two_words() {
-
 		assert_eq!(WordsFromPascal("HelloWorld"), vec!["hello", "world"]);
 
 		assert_eq!(WordsFromPascal("NodeEnvironment"), vec!["node", "environment"]);
@@ -206,7 +197,6 @@ mod tests {
 
 	#[test]
 	fn test_multiple_words() {
-
 		assert_eq!(WordsFromPascal("TauriAppsTauri"), vec!["tauri", "apps", "tauri"]);
 
 		assert_eq!(WordsFromPascal("MyAwesomeAppName"), vec!["my", "awesome", "app", "name"]);
@@ -214,25 +204,21 @@ mod tests {
 
 	#[test]
 	fn test_empty_string() {
-
 		assert_eq!(WordsFromPascal(""), Vec::<String>::new());
 	}
 
 	#[test]
 	fn test_all_lowercase() {
-
 		assert_eq!(WordsFromPascal("hello"), vec!["hello"]);
 	}
 
 	#[test]
 	fn test_all_uppercase() {
-
 		assert_eq!(WordsFromPascal("HELLO"), vec!["hello"]);
 	}
 
 	#[test]
 	fn test_single_character() {
-
 		assert_eq!(WordsFromPascal("A"), vec!["a"]);
 
 		assert_eq!(WordsFromPascal("a"), vec!["a"]);

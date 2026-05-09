@@ -39,7 +39,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use clap::Parser;
-
 use serde::{Deserialize, Serialize};
 
 use crate::Run::Constant::*;
@@ -57,7 +56,6 @@ use crate::Run::Constant::*;
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about = "Development run orchestrator with hot-reload support.")]
 pub struct Argument {
-
 	/// The working directory for the run process.
 	///
 	/// This field specifies the directory where the development server
@@ -156,7 +154,6 @@ pub struct Argument {
 /// settings, and run-specific options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunConfig {
-
 	/// The profile name used for this run.
 	pub profile_name:String,
 
@@ -183,7 +180,6 @@ pub struct RunConfig {
 }
 
 impl RunConfig {
-
 	/// Creates a new RunConfig from an Argument and resolved environment.
 	///
 	/// # Arguments
@@ -195,9 +191,7 @@ impl RunConfig {
 	///
 	/// A new RunConfig instance
 	pub fn new(arg:&Argument, env_vars:HashMap<String, String>) -> Self {
-
 		Self {
-
 			profile_name:arg.Profile.clone(),
 
 			workbench:arg.Workbench.clone(),
@@ -221,7 +215,6 @@ impl RunConfig {
 
 	/// Gets the workbench type from environment or config.
 	pub fn get_workbench(&self) -> Option<String> {
-
 		self.workbench.clone().or_else(|| {
 			if self.env_vars.get(BrowserEnv).map(|s| s == "true").unwrap_or(false) {
 				Some("Browser".to_string())
@@ -248,7 +241,6 @@ impl RunConfig {
 /// including workbench settings, environment variables, and run options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Profile {
-
 	/// Profile name identifier.
 	pub name:String,
 
@@ -272,7 +264,6 @@ pub struct Profile {
 /// Run-specific profile configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunProfileConfig {
-
 	/// Enable hot-reload.
 	#[serde(default = "default_true")]
 	pub hot_reload:bool,
@@ -298,18 +289,13 @@ fn default_reload_port() -> u16 { DefaultLiveReloadPort }
 fn parse_key_val<K, V>(s:&str) -> Result<(K, V), String>
 where
 	K: std::str::FromStr,
-
 	V: std::str::FromStr,
-
 	K::Err: std::fmt::Display,
-
 	V::Err: std::fmt::Display, {
-
 	let pos = s.find('=').ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
 
 	Ok((
 		s[..pos].parse().map_err(|e| format!("key parse error: {e}"))?,
-
 		s[pos + 1..].parse().map_err(|e| format!("value parse error: {e}"))?,
 	))
 }
