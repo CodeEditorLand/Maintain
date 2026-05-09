@@ -49,6 +49,7 @@ use thiserror::Error as ThisError;
 /// information for debugging and error recovery.
 #[derive(Debug, ThisError)]
 pub enum Error {
+
 	/// Error when a configuration file is not found or cannot be read.
 	#[error("Configuration file not found or unreadable: {0}")]
 	ConfigNotFound(PathBuf),

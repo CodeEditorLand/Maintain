@@ -61,7 +61,9 @@
 use std::{env, io::Write};
 
 use colored::*;
+
 use env_logger::Builder;
+
 use log::LevelFilter;
 
 /// ```rust
@@ -171,6 +173,7 @@ use crate::Build::Constant::LogEnv;
 /// The logger is typically called once at program startup, before any other
 /// operations that might generate log messages.
 pub fn Logger() {
+
 	let LevelText = env::var(LogEnv).unwrap_or_else(|_| "info".to_string());
 
 	let LogLevel = LevelText.parse::<LevelFilter>().unwrap_or(LevelFilter::Info);

@@ -80,11 +80,19 @@
 
 // Module declarations - flattened structure
 pub mod CLI;
+
 pub mod Constant;
+
 pub mod Definition;
+
 pub mod Environment;
+
 pub mod Error;
+
 pub mod Fn;
+
 pub mod Logger;
+
 pub mod Process;
+
 pub mod Profile;

@@ -62,7 +62,9 @@
 use std::{fs, path::Path};
 
 use log::{debug, info};
+
 use serde::Serialize;
+
 use serde_json::Value as JsonValue;
 
 /// ```rust
@@ -154,13 +156,16 @@ use crate::Build::Error::Error as BuildError;
 /// )?;
 /// ```
 pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Option<&str>) -> Result<bool, BuildError> {
+
 	debug!(target: "Build::Json", "Attempting to modify JSON file: {}", File.display());
 
 	let Data = fs::read_to_string(File)?;
 
 	let mut Parsed:JsonValue = if File.extension().and_then(|s| s.to_str()) == Some("json5") {
+
 		json5::from_str(&Data)?
 	} else {
+
 		serde_json::from_str(&Data)?
 	};
 
@@ -169,12 +174,14 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 	let Root = Parsed.as_object_mut().ok_or_else(|| {
 		BuildError::Io(std::io::Error::new(
 			std::io::ErrorKind::InvalidData,
+
 			"JSON root is not an object",
 		))
 	})?;
 
 	// Update version
 	if Root.get("version").and_then(JsonValue::as_str) != Some(Version) {
+
 		Root.insert("version".to_string(), JsonValue::String(Version.to_string()));
 
 		Modified = true;
@@ -182,6 +189,7 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 
 	// Update productName
 	if Root.get("productName").and_then(JsonValue::as_str) != Some(Product) {
+
 		Root.insert("productName".to_string(), JsonValue::String(Product.to_string()));
 
 		Modified = true;
@@ -189,6 +197,7 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 
 	// Update identifier
 	if Root.get("identifier").and_then(JsonValue::as_str) != Some(Id) {
+
 		Root.insert("identifier".to_string(), JsonValue::String(Id.to_string()));
 
 		Modified = true;
@@ -196,6 +205,7 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 
 	// Add sidecar path if provided (dedupe: only insert if not already present)
 	if let Some(Path) = SidecarPath {
+
 		let Bundle = Root
 			.entry("bundle")
 			.or_insert_with(|| JsonValue::Object(Default::default()))
@@ -211,6 +221,7 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 		let AlreadyPresent = Bins.iter().any(|Entry| Entry.as_str() == Some(Path));
 
 		if !AlreadyPresent {
+
 			Bins.push(JsonValue::String(Path.to_string()));
 
 			Modified = true;
@@ -221,11 +232,13 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 	// (first occurrence wins). Catches duplicates introduced upstream as
 	// well as anything left over from prior runs.
 	if DedupeJson(&mut Parsed) {
+
 		Modified = true;
 	}
 
 	// Write the file if any changes were made
 	if Modified {
+
 		let mut Buffer = Vec::new();
 
 		let Formatter = serde_json::ser::PrettyFormatter::with_indent(b"\t");
@@ -247,12 +260,17 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 /// `JsonValue`s), order is preserved, first occurrence wins. Object keys are
 /// already unique by JSON semantics, so we only descend into them.
 fn DedupeJson(Value:&mut JsonValue) -> bool {
+
 	match Value {
+
 		JsonValue::Array(Items) => {
+
 			let mut Changed = false;
 
 			for Item in Items.iter_mut() {
+
 				if DedupeJson(Item) {
+
 					Changed = true;
 				}
 			}
@@ -262,11 +280,14 @@ fn DedupeJson(Value:&mut JsonValue) -> bool {
 			let mut Index = 0;
 
 			while Index < Items.len() {
+
 				if Seen.iter().any(|Existing| Existing == &Items[Index]) {
+
 					Items.remove(Index);
 
 					Changed = true;
 				} else {
+
 					Seen.push(Items[Index].clone());
 
 					Index += 1;
@@ -277,10 +298,13 @@ fn DedupeJson(Value:&mut JsonValue) -> bool {
 		},
 
 		JsonValue::Object(Map) => {
+
 			let mut Changed = false;
 
 			for (_Key, Child) in Map.iter_mut() {
+
 				if DedupeJson(Child) {
+
 					Changed = true;
 				}
 			}

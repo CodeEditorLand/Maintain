@@ -79,34 +79,56 @@
 
 // File path constants
 pub const CargoFile:&str = "Cargo.toml";
+
 pub const JsonFile:&str = "tauri.conf.json";
+
 pub const JsonfiveFile:&str = "tauri.conf.json5";
 
 // Default values
 pub const DirectoryDefault:&str = "Element/Mountain";
+
 pub const NameDefault:&str = "Mountain";
+
 pub const PrefixDefault:&str = "land.editor.binary";
 
 // Delimiter constants
 pub const BackupSuffix:&str = ".Backup";
+
 pub const IdDelimiter:&str = ".";
+
 pub const NameDelimiter:&str = "_";
 
 // Environment variable constants
 pub const BrowserEnv:&str = "Browser";
+
 pub const BundleEnv:&str = "Bundle";
+
 pub const CargoFeaturesEnv:&str = "CargoFeatures";
+
 pub const CleanEnv:&str = "Clean";
+
 pub const CocoonEsbuildDefineEnv:&str = "CocoonEsbuildDefine";
+
 pub const CompileEnv:&str = "Compile";
+
 pub const CompilerEnv:&str = "Compiler";
+
 pub const DebugEnv:&str = "Debug";
+
 pub const DependencyEnv:&str = "Dependency";
+
 pub const DirEnv:&str = "MOUNTAIN_DIR";
+
 pub const ElectronEnv:&str = "Electron";
+
 pub const LogEnv:&str = "RUST_LOG";
+
 pub const MountainEnv:&str = "Mountain";
+
 pub const NameEnv:&str = "MOUNTAIN_ORIGINAL_BASE_NAME";
+
 pub const NodeEnv:&str = "NODE_ENV";
+
 pub const NodeVersionEnv:&str = "NODE_VERSION";
+
 pub const PrefixEnv:&str = "MOUNTAIN_BUNDLE_ID_PREFIX";

@@ -70,6 +70,7 @@ use std::{
 };
 
 use log::info;
+
 use toml;
 
 /// ```rust
@@ -90,6 +91,7 @@ use toml;
 // IMPLEMENTATION
 //=============================================================================//
 use crate::Build::Error::Error as BuildError;
+
 use crate::Build::{
 	Constant::{CargoFile, CocoonEsbuildDefineEnv, IdDelimiter, JsonFile, JsonfiveFile, NameDelimiter},
 	Definition::{Argument, Guard, Manifest},
@@ -175,6 +177,7 @@ use crate::Build::{
 /// Process(&argument)?;
 /// ```
 pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
+
 	info!(target: "Build", "Starting build orchestration...");
 
 	log::debug!(target: "Build", "Argument: {:?}", Argument);
@@ -185,28 +188,33 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	// which tier set shipped into the binary without having to replay the
 	// shell environment.
 	if let Some(Features) = Argument.CargoFeatures.as_deref().filter(|v| !v.is_empty()) {
+
 		info!(target: "Build", "Cargo features: {}", Features);
 	}
 
 	if let Some(Defines) = Argument.CocoonEsbuildDefine.as_deref().filter(|v| !v.is_empty()) {
+
 		info!(target: "Build", "Cocoon esbuild defines: {}", Defines);
 	}
 
 	let ProjectDir = PathBuf::from(&Argument.Directory);
 
 	if !ProjectDir.is_dir() {
+
 		return Err(BuildError::Missing(ProjectDir));
 	}
 
 	let CargoPath = ProjectDir.join(CargoFile);
 
 	let ConfigPath = {
+
 		let Jsonfive = ProjectDir.join(JsonfiveFile);
 
 		if Jsonfive.exists() { Jsonfive } else { ProjectDir.join(JsonFile) }
 	};
 
 	if !ConfigPath.exists() {
+
 		return Err(BuildError::Config);
 	}
 
@@ -221,10 +229,13 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 
 	// Include Node.js environment in product name
 	if let Some(NodeValue) = &Argument.Environment {
+
 		if !NodeValue.is_empty() {
+
 			let PascalEnv = Pascalize(NodeValue);
 
 			if !PascalEnv.is_empty() {
+
 				NamePartsForProductName.push(format!("{}NodeEnvironment", PascalEnv));
 
 				NamePartsForId.extend(WordsFromPascal(&PascalEnv));
@@ -238,10 +249,14 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 
 	// Include dependency information in product name
 	if let Some(DependencyValue) = &Argument.Dependency {
+
 		if !DependencyValue.is_empty() {
+
 			let (PascalDepBase, IdDepWords) = if DependencyValue.eq_ignore_ascii_case("true") {
+
 				("Generic".to_string(), vec!["generic".to_string()])
 			} else if let Some((Org, Repo)) = DependencyValue.split_once('/') {
+
 				(format!("{}{}", Pascalize(Org), Pascalize(Repo)), {
 					let mut w = WordsFromPascal(&Pascalize(Org));
 
@@ -250,10 +265,12 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 					w
 				})
 			} else {
+
 				(Pascalize(DependencyValue), WordsFromPascal(&Pascalize(DependencyValue)))
 			};
 
 			if !PascalDepBase.is_empty() {
+
 				NamePartsForProductName.push(format!("{}Dependency", PascalDepBase));
 
 				NamePartsForId.extend(IdDepWords);
@@ -265,7 +282,9 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 
 	// Include Node.js version in product name
 	if let Some(Version) = &Argument.NodeVersion {
+
 		if !Version.is_empty() {
+
 			let PascalVersion = format!("{}NodeVersion", Version);
 
 			NamePartsForProductName.push(PascalVersion.clone());
@@ -278,24 +297,28 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 
 	// Include build flags in product name
 	if Argument.Bundle.as_ref().map_or(false, |v| v == "true") {
+
 		NamePartsForProductName.push("Bundle".to_string());
 
 		NamePartsForId.push("bundle".to_string());
 	}
 
 	if Argument.Clean.as_ref().map_or(false, |v| v == "true") {
+
 		NamePartsForProductName.push("Clean".to_string());
 
 		NamePartsForId.push("clean".to_string());
 	}
 
 	if Argument.Browser.as_ref().map_or(false, |v| v == "true") {
+
 		NamePartsForProductName.push("Browser".to_string());
 
 		NamePartsForId.push("browser".to_string());
 	}
 
 	if Argument.Compile.as_ref().map_or(false, |v| v == "true") {
+
 		NamePartsForProductName.push("Compile".to_string());
 
 		NamePartsForId.push("compile".to_string());
@@ -304,6 +327,7 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	if Argument.Debug.as_ref().map_or(false, |v| v == "true")
 		|| Argument.Command.iter().any(|arg| arg.contains("--debug"))
 	{
+
 		NamePartsForProductName.push("Debug".to_string());
 
 		NamePartsForId.push("debug".to_string());
@@ -316,14 +340,20 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	// profiles couldn't run side-by-side and the bundler would thrash the
 	// same artefacts every rebuild.
 	if Argument.Mountain.as_ref().map_or(false, |v| v == "true") {
+
 		NamePartsForProductName.push("MountainProfile".to_string());
+
 		NamePartsForId.push("mountain".to_string());
+
 		NamePartsForId.push("profile".to_string());
 	}
 
 	if Argument.Electron.as_ref().map_or(false, |v| v == "true") {
+
 		NamePartsForProductName.push("ElectronProfile".to_string());
+
 		NamePartsForId.push("electron".to_string());
+
 		NamePartsForId.push("profile".to_string());
 	}
 
@@ -331,11 +361,17 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	// from the default TypeScript compiler path so two binaries with the
 	// same workbench flavour but different compilers don't collide.
 	if let Some(Variant) = &Argument.Compiler {
+
 		if !Variant.is_empty() {
+
 			let PascalCompiler = Pascalize(Variant);
+
 			if !PascalCompiler.is_empty() {
+
 				NamePartsForProductName.push(format!("{}Compiler", PascalCompiler));
+
 				NamePartsForId.extend(WordsFromPascal(&PascalCompiler));
+
 				NamePartsForId.push("compiler".to_string());
 			}
 		}
@@ -345,8 +381,10 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	let ProductNamePrefix = NamePartsForProductName.join(NameDelimiter);
 
 	let FinalName = if !ProductNamePrefix.is_empty() {
+
 		format!("{}{}{}", ProductNamePrefix, NameDelimiter, Argument.Name)
 	} else {
+
 		Argument.Name.clone()
 	};
 
@@ -367,6 +405,7 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 
 	// Update Cargo.toml if product name changed
 	if FinalName != Argument.Name {
+
 		TomlEdit(&CargoPath, &Argument.Name, &FinalName)?;
 	}
 
@@ -378,9 +417,13 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	// Update Tauri configuration and optionally bundle Node.js sidecar
 	JsonEdit(
 		&ConfigPath,
+
 		&FinalName,
+
 		&FinalId,
+
 		&AppVersion,
+
 		(if let Some(version) = &Argument.NodeVersion {
 			info!(target: "Build", "Selected Node.js version: {}", version);
 
@@ -407,8 +450,11 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 
 			info!(
 				target: "Build",
+
 				"Staging sidecar from {} to {}",
+
 				Executable.display(),
+
 				PathExecutableDestination.display()
 			);
 
@@ -439,6 +485,7 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 
 	// Execute the build command
 	if Argument.Command.is_empty() {
+
 		return Err(BuildError::NoCommand);
 	}
 
@@ -455,28 +502,37 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 		&& CommandArguments[2] == "build";
 
 	if IsTauriBuild {
+
 		if let Some(Features) = Argument.CargoFeatures.as_deref().filter(|v| !v.is_empty()) {
+
 			let AlreadyPresent = CommandArguments.iter().any(|a| a == "--features" || a == "-f");
 
 			if !AlreadyPresent {
+
 				info!(
 					target: "Build",
+
 					"Forwarding Cargo features to `tauri build`: {}",
+
 					Features
 				);
+
 				CommandArguments.push("--features".to_string());
+
 				CommandArguments.push(Features.to_string());
 			}
 		}
 	}
 
 	let mut ShellCommand = if cfg!(target_os = "windows") {
+
 		let mut Command = ProcessCommand::new("cmd");
 
 		Command.arg("/C").args(&CommandArguments);
 
 		Command
 	} else {
+
 		let mut Command = ProcessCommand::new(&CommandArguments[0]);
 
 		Command.args(&CommandArguments[1..]);
@@ -489,6 +545,7 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	// `.env_clear()` on our `ProcessCommand`. `ProcessCommand` inherits the
 	// parent env by default, so without a clear this is belt-and-braces.
 	if let Some(Defines) = Argument.CocoonEsbuildDefine.as_deref().filter(|v| !v.is_empty()) {
+
 		ShellCommand.env(CocoonEsbuildDefineEnv, Defines);
 	}
 
@@ -502,9 +559,11 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 
 	// Handle build failure
 	if !Status.success() {
+
 		let temp_sidecar_dir = ProjectDir.join("bin");
 
 		if temp_sidecar_dir.exists() {
+
 			let _ = fs::remove_dir_all(&temp_sidecar_dir);
 		}
 
@@ -515,6 +574,7 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	let DirectorySideCarTemporary = ProjectDir.join("bin");
 
 	if DirectorySideCarTemporary.exists() {
+
 		fs::remove_dir_all(&DirectorySideCarTemporary)?;
 
 		info!(target: "Build", "Cleaned up temporary sidecar directory.");
@@ -525,6 +585,7 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	// been compiled with the generated product name so restoring the source
 	// files is safe and required for the next build to succeed.
 	drop(CargoGuard);
+
 	drop(ConfigGuard);
 
 	info!(target: "Build", "Build orchestration completed successfully.");

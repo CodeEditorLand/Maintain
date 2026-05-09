@@ -120,6 +120,7 @@
 /// - Single word strings are capitalized
 /// - Words already in PascalCase are not modified (no delimiter detection)
 pub fn Pascalize(Text:&str) -> String {
+
 	Text.split(|c:char| c == '-' || c == '_')
 		.filter(|s| !s.is_empty())
 		.map(|s| {
@@ -133,42 +134,56 @@ pub fn Pascalize(Text:&str) -> String {
 
 #[cfg(test)]
 mod tests {
+
 	use super::*;
 
 	#[test]
 	fn test_kebab_case() {
+
 		assert_eq!(Pascalize("development"), "Development");
+
 		assert_eq!(Pascalize("node-version"), "NodeVersion");
+
 		assert_eq!(Pascalize("tauri-apps"), "TauriApps");
 	}
 
 	#[test]
 	fn test_snake_case() {
+
 		assert_eq!(Pascalize("node_environment"), "NodeEnvironment");
+
 		assert_eq!(Pascalize("my_variable_name"), "MyVariableName");
 	}
 
 	#[test]
 	fn test_mixed_delimiters() {
+
 		assert_eq!(Pascalize("tauri-apps_tauri"), "TauriAppsTauri");
+
 		assert_eq!(Pascalize("my-app_name"), "MyAppName");
 	}
 
 	#[test]
 	fn test_empty_string() {
+
 		assert_eq!(Pascalize(""), "");
 	}
 
 	#[test]
 	fn test_only_delimiters() {
+
 		assert_eq!(Pascalize("---"), "");
+
 		assert_eq!(Pascalize("___"), "");
+
 		assert_eq!(Pascalize("-_-"), "");
 	}
 
 	#[test]
 	fn test_single_word() {
+
 		assert_eq!(Pascalize("hello"), "Hello");
+
 		assert_eq!(Pascalize("WORLD"), "WORLD");
 	}
 }

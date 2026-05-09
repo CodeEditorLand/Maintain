@@ -82,12 +82,16 @@ pub fn ResolveFull(
 
 	preserve_current:bool,
 ) -> HashMap<String, String> {
+
 	let mut resolved = HashMap::new();
 
 	// Start with current environment if requested
 	if preserve_current {
+
 		for (key, value) in std::env::vars_os() {
+
 			if let (Ok(key_str), Ok(value_str)) = (key.into_string(), value.into_string()) {
+
 				resolved.insert(key_str, value_str);
 			}
 		}
@@ -95,26 +99,31 @@ pub fn ResolveFull(
 
 	// Apply template values (lowest priority)
 	for (key, value) in template_env {
+
 		resolved.insert(key, value);
 	}
 
 	// Apply profile values (overriding templates)
 	for (key, value) in profile_env {
+
 		resolved.insert(key, value);
 	}
 
 	// Apply workbench values (overriding profile)
 	for (key, value) in workbench_env {
+
 		resolved.insert(key, value);
 	}
 
 	// Apply feature flag values
 	for (key, value) in feature_env {
+
 		resolved.insert(key, value);
 	}
 
 	// Apply script values (highest priority)
 	for (key, value) in script_env {
+
 		resolved.insert(key, value);
 	}
 
@@ -154,12 +163,18 @@ pub fn Resolve(
 
 	preserve_current:bool,
 ) -> HashMap<String, String> {
+
 	ResolveFull(
 		template_env,
+
 		profile_env,
+
 		HashMap::new(),
+
 		HashMap::new(),
+
 		script_env,
+
 		preserve_current,
 	)
 }
@@ -183,11 +198,14 @@ pub fn Resolve(
 /// EnvironmentResolver::apply(&env);
 /// ```
 pub fn Apply(env_vars:&HashMap<String, String>) {
+
 	for (key, value) in env_vars {
+
 		// Safety: set_var is now unsafe in recent Rust versions
 		// Setting environment variables during build orchestration is acceptable
 		// as it doesn't violate memory safety.
 		unsafe {
+
 			std::env::set_var(key, value);
 		}
 	}
@@ -203,6 +221,7 @@ pub fn Apply(env_vars:&HashMap<String, String>) {
 ///
 /// Formatted string representation
 pub fn format_env(env_vars:&HashMap<String, String>) -> String {
+
 	let mut entries:Vec<_> = env_vars.iter().collect();
 
 	entries.sort_by_key(|(k, _)| *k);
@@ -225,6 +244,7 @@ pub fn format_env(env_vars:&HashMap<String, String>) -> String {
 ///
 /// Result indicating success or list of missing variables
 pub fn validate_required(env_vars:&HashMap<String, String>, required:&[&str]) -> Result<(), Vec<String>> {
+
 	let missing:Vec<String> = required
 		.iter()
 		.filter(|var| !env_vars.contains_key(&var.to_string()))
@@ -244,6 +264,7 @@ pub fn validate_required(env_vars:&HashMap<String, String>, required:&[&str]) ->
 ///
 /// HashMap of workbench environment variables
 pub fn generate_workbench_env(workbench_type:&str) -> HashMap<String, String> {
+
 	let mut env = HashMap::new();
 
 	// Set the workbench type as an environment variable
@@ -265,6 +286,7 @@ pub fn generate_workbench_env(workbench_type:&str) -> HashMap<String, String> {
 ///
 /// HashMap of FEATURE_* environment variables
 pub fn generate_feature_env(features:&HashMap<String, bool>) -> HashMap<String, String> {
+
 	features
 		.iter()
 		.map(|(name, value)| {
@@ -281,11 +303,15 @@ pub fn generate_feature_env(features:&HashMap<String, bool>) -> HashMap<String, 
 
 /// Applies environment variable prefixes per crate.
 fn ApplyPrefixes(_env_vars:&mut HashMap<String, String>) {
+
 	// Define known crate prefixes
 	let Prefixes = [
 		("air", "AIR_"),
+
 		("cocoon", "MOUNTAIN_"),
+
 		("grove", "VSCODE_"),
+
 		("maintain", "LAND_"),
 	];
 
@@ -298,32 +324,39 @@ fn ApplyPrefixes(_env_vars:&mut HashMap<String, String>) {
 ///
 /// Supports ${VAR} syntax for variable expansion.
 fn ExpandVariables(env_vars:&mut HashMap<String, String>) {
+
 	// Collect all current values for reference
 	let Original:HashMap<String, String> = env_vars.clone();
 
 	// Expand ${VAR} references in each value
 	for Value in env_vars.values_mut() {
+
 		// Simple expansion - replace ${VAR} with the value from Original
 		let mut Expanded = Value.clone();
 
 		let mut Start = 0;
 
 		while let Some(Open) = Expanded[Start..].find("${") {
+
 			let AbsOpen = Start + Open;
 
 			if let Some(Close) = Expanded[AbsOpen..].find('}') {
+
 				let VarName = &Expanded[AbsOpen + 2..AbsOpen + Close];
 
 				if let Some(Replacement) = Original.get(VarName) {
+
 					Expanded.replace_range(AbsOpen..AbsOpen + Close + 1, Replacement);
 
 					// Continue from after the replacement
 					Start = AbsOpen + Replacement.len();
 				} else {
+
 					// Variable not found, skip past this reference
 					Start = AbsOpen + Close + 1;
 				}
 			} else {
+
 				break;
 			}
 		}
@@ -340,8 +373,10 @@ fn ExpandVariables(env_vars:&mut HashMap<String, String>) {
 mod tests {
 
 	use super::*;
+
 	#[test]
 	fn test_resolve() {
+
 		let template = HashMap::from([(String::from("A"), "1".to_string()), (String::from("B"), "2".to_string())]);
 
 		let profile = HashMap::from([(String::from("B"), "3".to_string()), (String::from("C"), "4".to_string())]);
@@ -356,8 +391,10 @@ mod tests {
 
 		assert_eq!(result.get("C"), Some(&"5".to_string())); // Script overrides profile
 	}
+
 	#[test]
 	fn test_generate_workbench_env() {
+
 		let env = generate_workbench_env("Mountain");
 
 		assert_eq!(env.get("Mountain"), Some(&"true".to_string()));
@@ -367,6 +404,7 @@ mod tests {
 
 	#[test]
 	fn test_generate_feature_env() {
+
 		let mut features = HashMap::new();
 
 		features.insert("tauri-ipc".to_string(), true);
@@ -382,6 +420,7 @@ mod tests {
 
 	#[test]
 	fn test_validate_required() {
+
 		let env = HashMap::from([("A".to_string(), "1".to_string()), ("B".to_string(), "2".to_string())]);
 
 		assert!(validate_required(&env, &["A", "B"]).is_ok());
@@ -391,6 +430,7 @@ mod tests {
 
 	#[test]
 	fn test_expand_variables() {
+
 		let mut env = HashMap::new();
 
 		env.insert("BASE".to_string(), "/path/to/base".to_string());

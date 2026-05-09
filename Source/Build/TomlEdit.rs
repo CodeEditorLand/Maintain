@@ -61,6 +61,7 @@
 use std::{fs, path::Path};
 
 use log::{debug, info, warn};
+
 use toml_edit::{DocumentMut as TomlDocument, Item as TomlItem, Value as TomlValue};
 
 /// ```rust
@@ -133,16 +134,22 @@ use crate::Build::Error::Error as BuildError;
 /// }
 /// ```
 pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, BuildError> {
+
 	debug!(target: "Build::Toml", "Attempting to modify TOML file: {}", File.display());
 
 	let Data = fs::read_to_string(File)?;
 
 	if Old == Current {
+
 		info!(
 			target: "Build::Toml",
+
 			"Old name '{}' is the same as current name '{}'. No changes needed for {}.",
+
 			Old,
+
 			Current,
+
 			File.display()
 		);
 
@@ -163,8 +170,11 @@ pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, BuildError> 
 
 	// Update package.name
 	if let Some(PackageTable) = Parsed.get_mut("package").and_then(|Item| Item.as_table_mut()) {
+
 		if let Some(NameItem) = PackageTable.get_mut("name") {
+
 			if NameItem.as_str() == Some(Old) {
+
 				*NameItem = TomlItem::Value(TomlValue::String(toml_edit::Formatted::new(Current.to_string())));
 
 				PackageChange = true;
@@ -175,7 +185,9 @@ pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, BuildError> 
 
 		// Update package.default-run
 		if let Some(RunItem) = PackageTable.get_mut("default-run") {
+
 			if RunItem.as_str() == Some(Old) {
+
 				*RunItem = TomlItem::Value(TomlValue::String(toml_edit::Formatted::new(Current.to_string())));
 
 				DefaultChange = true;
@@ -187,8 +199,11 @@ pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, BuildError> 
 
 	// Update lib.name
 	if let Some(LibraryTable) = Parsed.get_mut("lib").and_then(|Item| Item.as_table_mut()) {
+
 		if let Some(NameItem) = LibraryTable.get_mut("name") {
+
 			if NameItem.as_str() == Some(Old) {
+
 				*NameItem = TomlItem::Value(TomlValue::String(toml_edit::Formatted::new(Current.to_string())));
 
 				LibraryChange = true;
@@ -200,9 +215,13 @@ pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, BuildError> 
 
 	// Update bin.name (first occurrence)
 	if let Some(BinArray) = Parsed.get_mut("bin").and_then(|Item| Item.as_array_of_tables_mut()) {
+
 		for Table in BinArray.iter_mut() {
+
 			if let Some(NameItem) = Table.get_mut("name") {
+
 				if NameItem.as_str() == Some(Old) {
+
 					*NameItem = TomlItem::Value(TomlValue::String(toml_edit::Formatted::new(Current.to_string())));
 
 					BinaryChange = true;
@@ -217,6 +236,7 @@ pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, BuildError> 
 
 	// Write the file if any changes were made
 	if PackageChange || LibraryChange || BinaryChange || DefaultChange {
+
 		let Output = Parsed.to_string();
 
 		fs::write(File, Output)?;
@@ -224,35 +244,47 @@ pub fn TomlEdit(File:&Path, Old:&str, Current:&str) -> Result<bool, BuildError> 
 		let mut ModifiedItems = Vec::new();
 
 		if PackageChange {
+
 			ModifiedItems.push("package.name");
 		}
 
 		if DefaultChange {
+
 			ModifiedItems.push("package.default-run");
 		}
 
 		if LibraryChange {
+
 			ModifiedItems.push("lib.name");
 		}
 
 		if BinaryChange {
+
 			ModifiedItems.push("bin.name");
 		}
 
 		info!(
 			target: "Build::Toml",
+
 			"Temporarily changed {} in {} to: {}",
+
 			ModifiedItems.join(", "),
+
 			File.display(),
+
 			Current
 		);
 
 		Ok(true)
 	} else {
+
 		warn!(
 			target: "Build::Toml",
+
 			"Name '{}' not found in relevant sections of {}. No changes made to file.",
+
 			Old,
+
 			File.display()
 		);
 

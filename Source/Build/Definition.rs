@@ -64,7 +64,9 @@ use std::{
 };
 
 use clap::Parser;
+
 use serde::Deserialize;
+
 use log::{error, info};
 
 /// ```rust
@@ -126,10 +128,13 @@ use crate::Build::Constant::*;
 #[derive(Parser, Debug, Clone)]
 #[clap(
 	author,
+
 	version,
+
 	about = "Prepares, builds, and restores project configurations."
 )]
 pub struct Argument {
+
 	/// The main directory of the project.
 	///
 	/// This field specifies the project directory that contains the
@@ -312,6 +317,7 @@ pub struct Argument {
 /// - **Active**: Whether a backup was created
 /// - **Note**: A descriptive note for logging purposes
 pub struct Guard {
+
 	/// The path to the original file that will be modified.
 	Path:PathBuf,
 
@@ -333,6 +339,7 @@ pub struct Guard {
 }
 
 impl Guard {
+
 	/// Creates a new Guard that backs up the specified file.
 	///
 	/// This constructor creates a backup of the original file if it exists,
@@ -368,13 +375,17 @@ impl Guard {
 	/// The Guard ensures that the original file is restored even in the
 	/// presence of panics, providing exception safety.
 	pub fn New(OriginalPath:PathBuf, Description:String) -> Result<Self, crate::Build::Error::Error> {
+
 		let BackupPath = OriginalPath.with_extension(format!(
 			"{}{}",
+
 			OriginalPath.extension().unwrap_or_default().to_str().unwrap_or(""),
+
 			BackupSuffix
 		));
 
 		if BackupPath.exists() {
+
 			error!("Backup file {} already exists.", BackupPath.display());
 
 			return Err(crate::Build::Error::Error::Exists(BackupPath));
@@ -383,12 +394,16 @@ impl Guard {
 		let mut BackupMade = false;
 
 		if OriginalPath.exists() {
+
 			fs::copy(&OriginalPath, &BackupPath)?;
 
 			info!(
 				target: "Build::Guard",
+
 				"Backed {} to {}",
+
 				OriginalPath.display(),
+
 				BackupPath.display()
 			);
 
@@ -443,8 +458,11 @@ impl Guard {
 	/// Disarms the guard, preventing restoration of the original file,
 	/// and deletes the backup so the next build is not blocked.
 	pub fn disarm(&mut self) {
+
 		self.Armed = false;
+
 		if self.Active && self.Store.exists() {
+
 			let _ = fs::remove_file(&self.Store);
 		}
 	}
@@ -470,32 +488,47 @@ impl Guard {
 /// If the restoration fails, it logs an error but does not panic, ensuring
 /// that cleanup failures don't cause secondary failures.
 impl Drop for Guard {
+
 	fn drop(&mut self) {
+
 		// Only restore if armed (build failed) and backup is active
 		if self.Armed && self.Active && self.Store.exists() {
+
 			info!(
 				target: "Build::Guard",
+
 				"Restoring {} from {}...",
+
 				self.Path.display(),
+
 				self.Store.display()
 			);
 
 			if let Ok(_) = fs::copy(&self.Store, &self.Path) {
+
 				info!(target: "Build::Guard", "Restore successful.");
 
 				if let Err(e) = fs::remove_file(&self.Store) {
+
 					error!(
 						target: "Build::Guard",
+
 						"Failed to delete backup {}: {}",
+
 						self.Store.display(),
+
 						e
 					);
 				}
 			} else if let Err(e) = fs::copy(&self.Store, &self.Path) {
+
 				error!(
 					target: "Build::Guard",
+
 					"Restore FAILED: {}. {} is now inconsistent.",
+
 					e,
+
 					self.Path.display()
 				);
 			}
@@ -532,6 +565,7 @@ impl Drop for Guard {
 /// - **package**: Contains the metadata extracted from the package section
 #[derive(Deserialize, Debug)]
 pub struct Manifest {
+
 	/// Represents metadata within the `package` section of `Cargo.toml`.
 	///
 	/// This nested struct contains the individual metadata fields from the
@@ -540,6 +574,7 @@ pub struct Manifest {
 }
 
 impl Manifest {
+
 	/// Retrieves the version string from the manifest.
 	///
 	/// This method provides access to the version field, which is stored
@@ -570,6 +605,7 @@ impl Manifest {
 /// parent `Manifest` struct.
 #[derive(Deserialize, Debug)]
 struct Meta {
+
 	/// The version string from the package metadata.
 	///
 	/// This field contains the version identifier as specified in the

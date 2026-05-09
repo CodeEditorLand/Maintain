@@ -40,6 +40,7 @@
 use std::io::Write;
 
 use env_logger::Builder;
+
 use log::LevelFilter;
 
 use crate::Run::Constant::LogEnv;
@@ -66,6 +67,7 @@ use crate::Run::Constant::LogEnv;
 /// Logger();
 /// ```
 pub fn Logger() {
+
 	Builder::from_env(LogEnv)
 		.format(|buf, record| {
 			use colored::Colorize;
@@ -95,13 +97,17 @@ pub fn Logger() {
 /// * `profile` - The profile name
 /// * `workbench` - The workbench type
 pub fn LogRunHeader(Profile:&str, Workbench:Option<&str>) {
+
 	use log::info;
 
 	info!("========================================");
+
 	info!("Land Run: {}", Profile);
+
 	info!("========================================");
 
 	if let Some(Wb) = Workbench {
+
 		info!("Workbench: {}", Wb);
 	}
 }
@@ -112,11 +118,15 @@ pub fn LogRunHeader(Profile:&str, Workbench:Option<&str>) {
 ///
 /// * `env` - The resolved environment variables
 pub fn LogEnvironment(Env:&std::collections::HashMap<String, String>) {
+
 	use log::debug;
 
 	debug!("Resolved environment variables:");
+
 	for (Key, Value) in Env {
+
 		let DisplayValue = if Value.is_empty() { "(empty)" } else { Value.as_str() };
+
 		debug!(" {} = {}", Key, DisplayValue);
 	}
 }
@@ -127,7 +137,9 @@ pub fn LogEnvironment(Env:&std::collections::HashMap<String, String>) {
 ///
 /// * `message` - The success message
 pub fn LogSuccess(Message:&str) {
+
 	use log::info;
+
 	use colored::Colorize;
 
 	info!("{}", Message.green());
@@ -139,7 +151,9 @@ pub fn LogSuccess(Message:&str) {
 ///
 /// * `message` - The error message
 pub fn LogError(Message:&str) {
+
 	use log::error;
+
 	use colored::Colorize;
 
 	error!("{}", Message.red());
@@ -151,7 +165,9 @@ pub fn LogError(Message:&str) {
 ///
 /// * `message` - The warning message
 pub fn LogWarning(Message:&str) {
+
 	use log::warn;
+
 	use colored::Colorize;
 
 	warn!("{}", Message.yellow());
@@ -163,6 +179,7 @@ pub fn LogWarning(Message:&str) {
 ///
 /// * `command` - The command being executed
 pub fn LogRunStart(Command:&str) {
+
 	use log::info;
 
 	info!("Starting run: {}", Command);
@@ -174,12 +191,16 @@ pub fn LogRunStart(Command:&str) {
 ///
 /// * `success` - Whether the run completed successfully
 pub fn LogRunComplete(Success:bool) {
+
 	use log::info;
+
 	use colored::Colorize;
 
 	if Success {
+
 		info!("{}", "Run completed successfully".green());
 	} else {
+
 		info!("{}", "Run completed with errors".red());
 	}
 }
@@ -191,12 +212,16 @@ pub fn LogRunComplete(Success:bool) {
 /// * `enabled` - Whether hot-reload is enabled
 /// * `port` - The live-reload port
 pub fn LogHotReloadStatus(Enabled:bool, Port:u16) {
+
 	use log::info;
+
 	use colored::Colorize;
 
 	if Enabled {
+
 		info!("Hot-reload enabled on port {}", Port.to_string().cyan());
 	} else {
+
 		info!("Hot-reload disabled");
 	}
 }
@@ -207,12 +232,16 @@ pub fn LogHotReloadStatus(Enabled:bool, Port:u16) {
 ///
 /// * `enabled` - Whether watch mode is enabled
 pub fn LogWatchStatus(Enabled:bool) {
+
 	use log::info;
+
 	use colored::Colorize;
 
 	if Enabled {
+
 		info!("Watch mode {}", "enabled".green());
 	} else {
+
 		info!("Watch mode disabled");
 	}
 }

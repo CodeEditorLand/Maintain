@@ -98,15 +98,27 @@
 
 // Module declarations - flattened structure
 pub mod CLI;
+
 pub mod Constant;
+
 pub mod Definition;
+
 pub mod Error;
+
 pub mod Fn;
+
 pub mod GetTauriTargetTriple;
+
 pub mod JsonEdit;
+
 pub mod Logger;
+
 pub mod Pascalize;
+
 pub mod Process;
+
 pub mod Rhai;
+
 pub mod TomlEdit;
+
 pub mod WordsFromPascal;
