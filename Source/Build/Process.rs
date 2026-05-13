@@ -63,6 +63,7 @@
 //
 // Example 1: Basic build orchestration
 use std::{
+	collections::BTreeMap,
 	env,
 	fs,
 	path::PathBuf,
@@ -91,11 +92,24 @@ use toml;
 //=============================================================================//
 use crate::Build::Error::Error as BuildError;
 use crate::Build::{
-	Constant::{CargoFile, CocoonEsbuildDefineEnv, IdDelimiter, JsonFile, JsonfiveFile, NameDelimiter},
+	Constant::{
+		CargoFile,
+		CocoonEsbuildDefineEnv,
+		IdDelimiter,
+		JsonFile,
+		JsonfiveFile,
+		LandDisableEnv,
+		LandInspectEnv,
+		LandRecordEnv,
+		LandTraceEnv,
+		NameDelimiter,
+		PlistFile,
+	},
 	Definition::{Argument, Guard, Manifest},
 	GetTauriTargetTriple::GetTauriTargetTriple,
 	JsonEdit::JsonEdit,
 	Pascalize::Pascalize,
+	PlistEdit::PlistEdit,
 	TomlEdit::TomlEdit,
 	WordsFromPascal::WordsFromPascal,
 };
@@ -447,6 +461,29 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 		.as_deref(),
 	)?;
 
+	// On macOS, inject dev-control environment variables into Info.plist.
+	// Tauri uses the project Info.plist as a template; when the .app is
+	// launched via LaunchServices (Finder double-click, open, Spotlight),
+	// keys under LSEnvironment are injected into the process environment.
+	// We only do this if an Info.plist exists in the project directory and
+	// we're running on macOS. Skip on Linux/Windows.
+	#[cfg(target_os = "macos")]
+	{
+		let PlistPath = ProjectDir.join(PlistFile);
+
+		if PlistPath.exists() {
+			let PlistEnvVars = BuildPlistEnvironment();
+
+			if !PlistEnvVars.is_empty() {
+				let mut PlistGuard = Guard::New(PlistPath.clone(), "Info.plist".to_string())?;
+
+				let _ = PlistEdit(&PlistPath, &PlistEnvVars);
+
+				PlistGuard.disarm();
+			}
+		}
+	}
+
 	// Execute the build command
 	if Argument.Command.is_empty() {
 		return Err(BuildError::NoCommand);
@@ -545,4 +582,71 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	info!(target: "Build", "Build orchestration completed successfully.");
 
 	Ok(())
+}
+
+/// Collects environment variables from `.env.Land` for injection into
+/// Info.plist LSEnvironment so the bundled .app works standalone.
+///
+/// Sources from the `.env.Land` file in the repo root (where Maintain
+/// runs from). This ensures every runtime-relevant variable -- Product*,
+/// Tier*, Network*, Trace, Record, Inspect, Disable, etc. -- is
+/// available when the .app is launched via LaunchServices.
+///
+/// Build-time-only flags (CargoFeatures, CocoonEsbuildDefine, NODE_ENV)
+/// are excluded because they have no meaning at runtime inside the .app.
+fn BuildPlistEnvironment() -> BTreeMap<String, String> {
+	let mut EnvVars = BTreeMap::new();
+
+	// Build-time / Maintain-control keys that should NOT leak into the
+	// bundled .app's LSEnvironment.
+	let SkipKeys = ["CargoFeatures", "CocoonEsbuildDefine", "NODE_ENV"];
+
+	// Primary source: the .env.Land file at the repo root (Maintain's
+	// working directory).
+	for Source in [".env.Land", ".env.Land.Sample"] {
+		let Path = PathBuf::from(Source);
+
+		if Path.exists() {
+			if let Ok(Content) = fs::read_to_string(&Path) {
+				info!(target: "Build::Plist", "Loading LSEnvironment vars from {}", Source);
+
+				for Line in Content.lines() {
+					let Trimmed = Line.trim();
+
+					if Trimmed.is_empty() || Trimmed.starts_with('#') {
+						continue;
+					}
+
+					if let Some((Key, Value)) = Trimmed.split_once('=') {
+						let CleanKey = Key.trim();
+
+						let CleanValue = Value.trim().trim_matches('"').trim_matches('\'');
+
+						// Skip build-time-only keys.
+						if SkipKeys.contains(&CleanKey) {
+							continue;
+						}
+
+						EnvVars.insert(CleanKey.to_string(), CleanValue.to_string());
+					}
+				}
+			}
+
+			break;
+		}
+	}
+
+	// Supplement from the current process environment for dev-control
+	// knobs that live outside .env.Land (Trace, Record, Inspect, Disable).
+	// These may have been overridden by the user before invoking Maintain.
+	// Only add if not already populated from .env.Land.
+	for Key in [LandTraceEnv, LandRecordEnv, LandInspectEnv, LandDisableEnv] {
+		if !EnvVars.contains_key(Key) {
+			if let Ok(Value) = env::var(Key) {
+				EnvVars.insert(Key.to_string(), Value);
+			}
+		}
+	}
+
+	EnvVars
 }

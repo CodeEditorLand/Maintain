@@ -84,6 +84,8 @@ pub const JsonFile:&str = "tauri.conf.json";
 
 pub const JsonfiveFile:&str = "tauri.conf.json5";
 
+pub const PlistFile:&str = "Info.plist";
+
 // Default values
 pub const DirectoryDefault:&str = "Element/Mountain";
 
@@ -132,3 +134,13 @@ pub const NodeEnv:&str = "NODE_ENV";
 pub const NodeVersionEnv:&str = "NODE_VERSION";
 
 pub const PrefixEnv:&str = "MOUNTAIN_BUNDLE_ID_PREFIX";
+
+// Dev-control environment variables injected into Info.plist LSEnvironment
+// so the .app works when double-clicked (no wrapper script needed).
+pub const LandTraceEnv:&str = "Trace";
+
+pub const LandRecordEnv:&str = "Record";
+
+pub const LandInspectEnv:&str = "Inspect";
+
+pub const LandDisableEnv:&str = "Disable";

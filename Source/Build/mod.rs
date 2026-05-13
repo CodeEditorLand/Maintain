@@ -115,6 +115,8 @@ pub mod Logger;
 
 pub mod Pascalize;
 
+pub mod PlistEdit;
+
 pub mod Process;
 
 pub mod Rhai;
