@@ -187,6 +187,13 @@ pub enum Error {
 	#[error("UTF-8 Conversion: {0}")]
 	Utf(#[from] std::string::FromUtf8Error),
 
+	/// Plist parsing/serialization error.
+	///
+	/// This variant wraps errors that occur when parsing or serializing
+	/// Apple Property List (plist) files using the `plist` crate.
+	#[error("Plist: {0}")]
+	Plist(#[from] plist::Error),
+
 	/// Missing environment variable error.
 	///
 	/// This variant is used when a required environment variable is not

@@ -26,7 +26,7 @@
 // - Apple Property List editing functionality
 //
 // Dependencies (What this module requires):
-// - External crates: std (fs, log), log::info
+// - External crates: std (fs, log), plist, serde, log::info
 // - Internal modules: Error::BuildError
 // - Traits implemented: None
 //
@@ -37,11 +37,12 @@
 // =======================
 //
 // Design Patterns:
+// - Builder pattern (via plist serde deserialization)
 // - Functional pattern
 //
 // Performance Considerations:
 // - Complexity: O(n) - parsing and writing based on file size
-// - Memory usage patterns: In-memory string manipulation
+// - Memory usage patterns: In-memory plist tree
 // - Hot path optimizations: None needed
 //
 // Thread Safety:
@@ -50,23 +51,18 @@
 // - Interior mutability considerations: None
 //
 // Error Handling:
-// - Error types returned: BuildError (Io type)
+// - Error types returned: BuildError (Plist, Io types)
 // - Recovery strategies: Propagate error up; Guard restores original file
 //
-// WHY NOT A FULL PLIST PARSER:
-// ==============================
+// WHY THE plist CRATE:
+// ====================
 //
-// The Info.plist template in Element/Mountain is a small, hand-maintained
-// document. Using serde_plist or libplist would add a workspace dependency
-// and is unnecessary -- we only ever need to insert/replace a single
-// <key>LSEnvironment</key><dict>...</dict> block. The implementation below
-// uses a targeted string-replacement approach, identical in spirit to how
-// JsonEdit works at the value level.
-//
-// The block is written as well-formed XML with tab indentation to match the
-// document style. If the file already contains an LSEnvironment key the
-// existing block is replaced in full; if it does not, the block is inserted
-// before the closing </dict>.
+// The plist crate provides a proper parse-modify-serialize pipeline, the same
+// pattern JsonEdit uses via serde_json. The output is canonically formatted
+// XML with consistent indentation and sorted keys, so the file written to
+// disk is deterministic -- identical content produces identical bytes.
+// This avoids the string-manipulation pitfalls of the prior implementation
+// (nested-dict counting, whitespace drift, duplicate LSEnvironment blocks).
 //
 //=============================================================================//
 // IMPLEMENTATION
@@ -74,6 +70,7 @@
 use std::{collections::BTreeMap, fs, path::Path};
 
 use log::{debug, info};
+use plist::{Dictionary, Value};
 
 use crate::Build::Error::Error as BuildError;
 
@@ -102,14 +99,14 @@ use crate::Build::Error::Error as BuildError;
 /// # Errors
 ///
 /// * `BuildError::Io` - If the file cannot be read or written
+/// * `BuildError::Plist` - If the plist cannot be parsed or serialized
 ///
 /// # Behavior
 ///
-/// - If the file already contains an LSEnvironment key, the existing block
-///   (from <key>LSEnvironment</key> through the matching </dict>) is replaced
-///   with the new dictionary.
-/// - If no LSEnvironment key exists, the dictionary is inserted before the
-///   root-level </dict>.
+/// - Parses the plist into an in-memory tree.
+/// - Inserts or replaces the LSEnvironment dictionary with the given env vars.
+/// - Serialises back to XML with tab indentation.
+/// - Only writes the file if the content changed.
 ///
 /// # Example
 ///
@@ -123,143 +120,79 @@ use crate::Build::Error::Error as BuildError;
 pub fn PlistEdit(File:&Path, EnvVars:&BTreeMap<String, String>) -> Result<bool, BuildError> {
 	debug!(target: "Build::Plist", "Attempting to modify plist: {}", File.display());
 
-	let Data = fs::read_to_string(File)?;
+	let Data = fs::read(File)?;
 
-	// Build the <dict> content for LSEnvironment.
-	let mut DictContent = String::new();
+	let mut Root = plist::from_bytes(&Data)?;
 
-	for (Key, Value) in EnvVars {
-		let Escaped = EscapeXml(Value);
+	let Dict = Root.as_dictionary_mut().ok_or_else(|| {
+		BuildError::Io(std::io::Error::new(
+			std::io::ErrorKind::InvalidData,
+			"Root plist is not a dictionary",
+		))
+	})?;
 
-		// Tab-indented plist key/value pair to match hand-written style.
-		DictContent.push_str(&format!("\t\t<key>{}</key>\n\t\t<string>{}</string>\n", Key, Escaped,));
+	// Build the new LSEnvironment dictionary as a plist Value.
+	let EnvDict = Value::Dictionary(build_env_dict(EnvVars));
+
+	// Check whether the existing value already matches exactly.
+	if let Some(Existing) = Dict.get("LSEnvironment") {
+		if *Existing == EnvDict {
+			debug!(target: "Build::Plist", "LSEnvironment already up-to-date in {}", File.display());
+
+			return Ok(false);
+		}
 	}
 
-	let Block = format!("\t<key>LSEnvironment</key>\n\t<dict>\n{}</dict>\n", DictContent);
+	// Insert or replace.
+	Dict.insert("LSEnvironment".to_string(), EnvDict);
 
-	// If LSEnvironment already exists, replace the existing block.
-	if let Some(Start) = Data.find("<key>LSEnvironment</key>") {
-		// Find the end: advance past the key line, then find the matching
-		// </dict>. We need the first </dict> after the key that closes the
-		// LSEnvironment dict (the root </dict> is the last one in the file).
-		let AfterKey = Start + "<key>LSEnvironment</key>".len();
+	let Written = write_plist(File, &Root)?;
 
-		// The content after <key>LSEnvironment</key> begins with
-		// "<dict>...</dict>". Find the </dict> that closes this dict.
-		let AfterDictOpen = match Data[AfterKey..].find("<dict>") {
-			Some(off) => AfterKey + off + "<dict>".len(),
-			None => {
-				return Err(BuildError::Io(std::io::Error::new(
-					std::io::ErrorKind::InvalidData,
-					"<dict> not found after LSEnvironment key",
-				)));
-			},
-		};
+	if Written {
+		info!(target: "Build::Plist", "Updated LSEnvironment in {}", File.display());
+	}
 
-		// Count nesting to find the correct closing </dict>.
-		let AfterDictText = &Data[AfterDictOpen..];
+	Ok(Written)
+}
 
-		let DictClose = find_closing_dict(AfterDictText)
-			.map(|pos| AfterDictOpen + pos + "</dict>".len())
-			.ok_or_else(|| {
-				BuildError::Io(std::io::Error::new(
-					std::io::ErrorKind::InvalidData,
-					"Could not find matching </dict> for LSEnvironment",
-				))
-			})?;
+/// Constructs a plist Dictionary from environment variable key-value pairs.
+fn build_env_dict(EnvVars:&BTreeMap<String, String>) -> Dictionary {
+	let mut Dict = Dictionary::new();
 
-		// Reconstruct with new block, preserving surrounding content.
-		let Before = &Data[..Start];
+	for (Key, Value) in EnvVars {
+		Dict.insert(Key.clone(), Value::String(Value.clone()));
+	}
 
-		let After = &Data[DictClose..];
+	Dict
+}
 
-		let Output = format!("{}{}{}", Before, Block, After);
+/// Serialises an in-memory plist tree to XML and writes it to `File`.
+///
+/// Returns `true` if the file content changed, `false` if the serialisation
+/// happens to match what is already on disk (e.g. no-op after a prior write).
+fn write_plist(File:&Path, Root:&Value) -> Result<bool, BuildError> {
+	// Use XmlFormat with tab indentation to match the hand-written style.
+	// Line endings: LF (unix), indent: single tab.
+	let Format = plist::XmlFormat::new().indent_string("\t");
 
-		// Only write if content changed.
-		if Output != Data {
-			fs::write(File, &Output)?;
+	let mut Buffer = Vec::new();
 
-			info!(target: "Build::Plist", "Replaced LSEnvironment in {}", File.display());
+	// Serialise with the formatter.
+	Root.to_writer_xml_with_format(&mut Buffer, &Format)?;
 
-			return Ok(true);
-		}
+	// Ensure a trailing newline (plist::XmlFormat does not add one).
+	if !Buffer.ends_with(b"\n") {
+		Buffer.push(b'\n');
+	}
 
+	// Read the existing file and compare bytes before writing.
+	let Existing = fs::read(File).ok();
+
+	if Existing.as_ref() == Some(&Buffer) {
 		return Ok(false);
 	}
 
-	// No LSEnvironment key present -- insert before the root-level </dict>.
-	// The root </dict> is the last occurrence of </dict> before </plist>.
-	let ClosePlistPos = Data.rfind("</plist>").ok_or_else(|| {
-		BuildError::Io(std::io::Error::new(
-			std::io::ErrorKind::InvalidData,
-			"</plist> not found in Info.plist",
-		))
-	})?;
-
-	let RootDictClose = Data[..ClosePlistPos].rfind("</dict>").ok_or_else(|| {
-		BuildError::Io(std::io::Error::new(
-			std::io::ErrorKind::InvalidData,
-			"Root </dict> not found in Info.plist",
-		))
-	})?;
-
-	let Before = &Data[..RootDictClose];
-
-	let After = &Data[RootDictClose..];
-
-	let Output = format!("{}{}\n{}", Before, Block, After);
-
-	fs::write(File, &Output)?;
-
-	info!(target: "Build::Plist", "Inserted LSEnvironment into {}", File.display());
+	fs::write(File, &Buffer)?;
 
 	Ok(true)
-}
-
-/// Finds the position of the closing </dict> tag accounting for nesting.
-///
-/// Returns the byte offset (relative to the start of `Text`) at which the
-/// closing </dict> begins, or None if no matching close is found.
-fn find_closing_dict(Text:&str) -> Option<usize> {
-	let mut Depth = 1;
-
-	let mut pos = 0;
-
-	while pos < Text.len() {
-		if Text[pos..].starts_with("<dict>") {
-			pos += "<dict>".len();
-
-			Depth += 1;
-		} else if Text[pos..].starts_with("</dict>") {
-			Depth -= 1;
-
-			if Depth == 0 {
-				return Some(pos);
-			}
-
-			pos += "</dict>".len();
-		} else {
-			pos += 1;
-		}
-	}
-
-	None
-}
-
-/// Escapes the five XML-special characters in a string value.
-fn EscapeXml(Value:&str) -> String {
-	let mut Out = String::with_capacity(Value.len());
-
-	for ch in Value.chars() {
-		match ch {
-			'&' => Out.push_str("&amp;"),
-			'<' => Out.push_str("&lt;"),
-			'>' => Out.push_str("&gt;"),
-			'"' => Out.push_str("&quot;"),
-			'\'' => Out.push_str("&apos;"),
-			_ => Out.push(ch),
-		}
-	}
-
-	Out
 }
