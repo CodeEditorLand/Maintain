@@ -26,7 +26,7 @@
 // - Apple Property List editing functionality
 //
 // Dependencies (What this module requires):
-// - External crates: std (fs, log), plist, serde, log::info
+// - External crates: std (fs, log), plist, log::info
 // - Internal modules: Error::BuildError
 // - Traits implemented: None
 //
@@ -70,7 +70,7 @@
 use std::{collections::BTreeMap, fs, path::Path};
 
 use log::{debug, info};
-use plist::{Dictionary, Value};
+use plist::{Dictionary, Value, XmlWriteOptions};
 
 use crate::Build::Error::Error as BuildError;
 
@@ -122,7 +122,7 @@ pub fn PlistEdit(File:&Path, EnvVars:&BTreeMap<String, String>) -> Result<bool, 
 
 	let Data = fs::read(File)?;
 
-	let mut Root = plist::from_bytes(&Data)?;
+	let mut Root:Value = plist::from_bytes(&Data)?;
 
 	let Dict = Root.as_dictionary_mut().ok_or_else(|| {
 		BuildError::Io(std::io::Error::new(
@@ -171,16 +171,15 @@ fn build_env_dict(EnvVars:&BTreeMap<String, String>) -> Dictionary {
 /// Returns `true` if the file content changed, `false` if the serialisation
 /// happens to match what is already on disk (e.g. no-op after a prior write).
 fn write_plist(File:&Path, Root:&Value) -> Result<bool, BuildError> {
-	// Use XmlFormat with tab indentation to match the hand-written style.
-	// Line endings: LF (unix), indent: single tab.
-	let Format = plist::XmlFormat::new().indent_string("\t");
+	// Use XmlWriteOptions with tab indentation to match the hand-written style.
+	let Options = XmlWriteOptions::default().indent(b'\t', 1);
 
 	let mut Buffer = Vec::new();
 
 	// Serialise with the formatter.
-	Root.to_writer_xml_with_format(&mut Buffer, &Format)?;
+	plist::to_writer_xml_with_options(&mut Buffer, &Root, &Options)?;
 
-	// Ensure a trailing newline (plist::XmlFormat does not add one).
+	// Ensure a trailing newline (plist::XmlWriteOptions does not add one).
 	if !Buffer.ends_with(b"\n") {
 		Buffer.push(b'\n');
 	}
