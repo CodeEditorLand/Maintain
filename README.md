@@ -5,7 +5,7 @@
 </td>
 <td align="left" valign="middle">
 <h3 align="left">
-💪🏻
+&#x2001;💪🏻
 </h3>
 </td>
 <td align="left" valign="middle">
@@ -31,7 +31,7 @@ Land
 </td>
 <td align="left" valign="middle">
 <h3 align="left">
-🏞️
+&#x2001;🏞️
 </h3>
 </td>
 </tr>
@@ -41,7 +41,7 @@ Land
 
 # **Maintain**&#x2001;💪🏻
 
-The Build System & CI/CD Toolkit for Land 🏞️
+The Build System & CI/CD Toolkit for Land &#x2001;🏞️
 
 > **Build pipelines that change behavior based on environment variables,
 > implicit tool versions, or undeclared dependencies make debugging production
@@ -55,7 +55,7 @@ _"Deterministic builds. Same commit, same output, guaranteed."_
 [<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/)&#x2001;[![Rust Version](https://img.shields.io/badge/Rust-1.75+-orange.svg)](https://www.rust-lang.org/)
 [![Rhai Version](https://img.shields.io/badge/Rhai-latest-blue.svg)](https://rhai.rs/)
 
-📖
+&#x2001;📖
 **[Rust API Documentation](https://Rust.Documentation.Editor.Land/Maintain/)**
 
 Welcome to **Maintain**, the Rust-based build system and CI/CD toolkit for the
@@ -102,7 +102,7 @@ TOML and JSON5 files.
 
 ---
 
-## `Maintain` in the Land Ecosystem&#x2001;💪🏻 + 🏞️
+## `Maintain` in the Land Ecosystem&#x2001;💪🏻 + &#x2001;🏞️
 
 | Component                 | Role & Key Responsibilities                                  |
 | :------------------------ | :----------------------------------------------------------- |
@@ -123,7 +123,7 @@ classDef maintain fill:#f9f,stroke:#333,stroke-width:2px;
 classDef script fill:#9cf,stroke:#333,stroke-width:1px;
 classDef config fill:#ffc,stroke:#333,stroke-width:1px;
 
-subgraph "Maintain 💪🏻 (Build System)"
+subgraph "Maintain (Build System)&#x2001;💪🏻"
 CLI["CLI Interface"]:::maintain
 RhaiEngine["Rhai Script Engine"]:::maintain
 ConfigEditor["Config Editor (TOML/JSON5)"]:::maintain

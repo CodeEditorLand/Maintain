@@ -1,4 +1,4 @@
-# Maintain — Deep Dive
+# Maintain: Deep Dive
 
 This document provides the technical foundation for the Maintain build system
 and CI/CD toolkit within the Land ecosystem. **Maintain** orchestrates builds
@@ -16,7 +16,7 @@ modifications to project configuration files.
 
 ```mermaid
 graph TB
-    subgraph "Maintain — Build System"
+    subgraph "Maintain Build System"
         LibraryRS["Source/Library.rs\nEntry point"]
         CLI["Source/Build/CLI.rs\nCommand-line interface (clap)"]
         Constant["Source/Build/Constant.rs\nBuild constants"]
