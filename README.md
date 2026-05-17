@@ -13,7 +13,7 @@
 </td>
 <td align="left" valign="middle">
 <h3 align="left">
-<a href="https://Editor.Land" target="_blank">
+<a href="https://Land.PlayForm.Cloud" target="_blank">
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="https://PlayForm.Cloud/Dark/Image/GitHub/Land.svg">
 <source media="(prefers-color-scheme: light)" srcset="https://PlayForm.Cloud/Image/GitHub/Land.svg">
@@ -24,7 +24,7 @@
 </td>
 <td align="left" valign="middle">
 <h3 align="left">
-<a href="https://Editor.Land" target="_blank">
+<a href="https://Land.PlayForm.Cloud" target="_blank">
 Land
 </a>
 </h3>
@@ -51,12 +51,12 @@ The Build System & CI/CD Toolkit for Land &#x2001;🏞️
 _"Deterministic builds. Same commit, same output, guaranteed."_
 
 [![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](https://github.com/CodeEditorLand/Maintain/tree/Current/LICENSE)
-[<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/)&#x2001;[![Crates.io](https://img.shields.io/crates/v/Maintain.svg)](https://crates.io/crates/Maintain)
-[<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/)&#x2001;[![Rust Version](https://img.shields.io/badge/Rust-1.75+-orange.svg)](https://www.rust-lang.org/)
+[<img src="https://land.playform.cloud/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/)&#x2001;[![Crates.io](https://img.shields.io/crates/v/Maintain.svg)](https://crates.io/crates/Maintain)
+[<img src="https://land.playform.cloud/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/)&#x2001;[![Rust Version](https://img.shields.io/badge/Rust-1.75+-orange.svg)](https://www.rust-lang.org/)
 [![Rhai Version](https://img.shields.io/badge/Rhai-latest-blue.svg)](https://rhai.rs/)
 
 &#x2001;📖
-**[Rust API Documentation](https://Rust.Documentation.Editor.Land/Maintain/)**
+**[Rust API Documentation](https://Rust.Documentation.Land.PlayForm.Cloud/Maintain/)**
 
 Welcome to **Maintain**, the Rust-based build system and CI/CD toolkit for the
 **Land Code Editor** ecosystem. Maintain provides comprehensive build
@@ -268,9 +268,9 @@ Build.execute()?;
 
 ## See Also
 
-- [Maintain Documentation](https://editor.land/Doc/maintain)
-- [Architecture Overview](https://editor.land/Doc/architecture)
-- [Why Rust](https://editor.land/Doc/why-rust)
+- [Maintain Documentation](https://land.playform.cloud/Doc/maintain)
+- [Architecture Overview](https://land.playform.cloud/Doc/architecture)
+- [Why Rust](https://land.playform.cloud/Doc/why-rust)
 - [Mountain](https://github.com/CodeEditorLand/Mountain)
 - [Rest](https://github.com/CodeEditorLand/Rest)
 - [Output](https://github.com/CodeEditorLand/Output)
@@ -320,7 +320,7 @@ Commons Fund grant.
 	<tbody>
 		<tr>
 			<td align="left" valign="middle">
-				<a href="https://Editor.Land">
+				<a href="https://Land.PlayForm.Cloud">
 					<img width="60" src="https://raw.githubusercontent.com/CodeEditorLand/Asset/refs/heads/Current/Logo/Land.svg" alt="Land">
 				</a>
 			</td>
@@ -346,7 +346,7 @@ Commons Fund grant.
 ---
 
 **Project Maintainers**: Source Open
-([Source/Open@Editor.Land](mailto:Source/Open@Editor.Land)) |
+([Source/Open@Land.PlayForm.Cloud](mailto:Source/Open@Land.PlayForm.Cloud)) |
 [GitHub Repository](https://github.com/CodeEditorLand/Maintain) |
 [Report an Issue](https://github.com/CodeEditorLand/Maintain/issues) |
 [Security Policy](https://github.com/CodeEditorLand/Maintain/security/policy)
