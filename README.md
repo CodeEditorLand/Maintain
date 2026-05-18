@@ -295,7 +295,7 @@ history of changes specific to **Maintain**.
 
 ---
 
-## Funding \& Acknowledgements&#x2001;🙏🏻
+## Funding & Acknowledgements&#x2001;🙏🏻
 
 **Maintain** is a core element of the **Land** ecosystem. This project is funded
 through [NGI0 Commons Fund](https://NLnet.NL/commonsfund), a fund established by

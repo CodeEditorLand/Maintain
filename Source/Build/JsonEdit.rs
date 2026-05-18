@@ -228,7 +228,7 @@ pub fn JsonEdit(File:&Path, Product:&str, Id:&str, Version:&str, SidecarPath:Opt
 	if Modified {
 		let mut Buffer = Vec::new();
 
-		let Formatter = serde_json::ser::PrettyFormatter::with_indent(b"\t");
+		let Formatter = serde_json::ser::PrettyFormatter::with_indent(b"	");
 
 		let mut Serializer = serde_json::Serializer::with_formatter(&mut Buffer, Formatter);
 
