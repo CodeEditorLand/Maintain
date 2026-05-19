@@ -172,7 +172,7 @@ fn build_env_dict(EnvVars:&BTreeMap<String, String>) -> Dictionary {
 /// happens to match what is already on disk (e.g. no-op after a prior write).
 fn write_plist(File:&Path, Root:&Value) -> Result<bool, BuildError> {
 	// Use XmlWriteOptions with tab indentation to match the hand-written style.
-	let Options = XmlWriteOptions::default().indent(b'	', 1);
+	let Options = XmlWriteOptions::default().indent(b'\t', 1);
 
 	let mut Buffer = Vec::new();
 

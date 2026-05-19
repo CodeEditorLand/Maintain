@@ -119,38 +119,66 @@ This diagram illustrates `Maintain`'s build orchestration architecture.
 
 ```mermaid
 graph LR
-classDef maintain fill:#f9f,stroke:#333,stroke-width:2px;
-classDef script fill:#9cf,stroke:#333,stroke-width:1px;
-classDef config fill:#ffc,stroke:#333,stroke-width:1px;
+    classDef maintain fill:#fce8ff,stroke:#9b59b6,stroke-width:2px,color:#2c0050;
+    classDef script   fill:#cce8ff,stroke:#2980b9,stroke-width:1px,color:#003050;
+    classDef config   fill:#fff3c0,stroke:#f39c12,stroke-width:1px,color:#5a3e00;
+    classDef artifact fill:#d4f5d4,stroke:#27ae60,stroke-width:1px,color:#0a3a0a;
 
-subgraph "Maintain (Build System)&#x2001;💪🏻"
-CLI["CLI Interface"]:::maintain
-RhaiEngine["Rhai Script Engine"]:::maintain
-ConfigEditor["Config Editor (TOML/JSON5)"]:::maintain
-EnvResolver["Environment Resolver"]:::maintain
+    subgraph MAINTAIN["Maintain 💪🏻 - Rust Build System + CI/CD Toolkit"]
+        direction TB
+        subgraph BUILD["Source/Build/ - Core Logic"]
+            CLI["Build/CLI.rs\n(clap - subcommands:\nbuild · debug · release · profile)"]:::maintain
+            Fn["Build/Fn.rs\n(build functions)"]:::maintain
+            Consts["Build/Constant.rs + Definition.rs"]:::maintain
+            JsonEdit["Build/JsonEdit.rs\n(JSON5 editing)"]:::maintain
+            TomlEdit["Build/TomlEdit.rs\n(Cargo.toml editing)"]:::maintain
+            PlistEdit["Build/PlistEdit.rs\n(Info.plist editing)"]:::maintain
+            Pascalize["Build/Pascalize.rs\nWordsFromPascal.rs"]:::maintain
+            GetTriple["Build/GetTauriTargetTriple.rs"]:::maintain
+        end
+        subgraph RHAI["Build/Rhai/ - Embedded Scripting"]
+            RhaiEngine["Rhai script interpreter"]:::maintain
+            ConfigLoader["Rhai/ConfigLoader.rs\nloads config files"]:::maintain
+            EnvResolver["Rhai/EnvironmentResolver.rs\ndynamic env var resolution"]:::maintain
+            ScriptRunner["Rhai/ScriptRunner.rs\nexecutes .rhai scripts"]:::maintain
+            RhaiEngine --> ConfigLoader
+            RhaiEngine --> EnvResolver
+            RhaiEngine --> ScriptRunner
+        end
+        subgraph RUN["Source/Run/ - Run-mode Logic"]
+            RunCLI["Run/CLI.rs + Process.rs\n(dev server, hot reload)"]:::maintain
+            Profile["Run/Profile.rs\n(perf profiling)"]:::maintain
+        end
 
-CLI --> RhaiEngine
-CLI --> ConfigEditor
-RhaiEngine --> EnvResolver
-end
+        CLI --> Fn
+        CLI --> RHAI
+        CLI --> RUN
+        Fn --> TomlEdit
+        Fn --> JsonEdit
+        Fn --> PlistEdit
+    end
 
-subgraph "Scripts"
-DebugSh["Debug.sh"]:::script
-DevMountain["Dev-Mountain.sh"]:::script
-ReleaseSh["Release.sh"]:::script
-end
+    subgraph SCRIPTS["Shell Scripts - Entrypoints"]
+        DebugBuild["Debug/Build.sh\n(cargo build --profile debug-electron\n+ SignBundle.sh)"]:::script
+        DebugRun["Debug/Run.sh\n(launch binary)"]:::script
+        ReleaseBuild["Release/Build.sh\n(cargo build --release\n+ SignBundle.sh)"]:::script
+        SignBundle["Script/SignBundle.sh\n(ad-hoc codesign + entitlements)"]:::script
+        BrotliPrebake["Build/Brotli/PreBake.ts\n(post-bundle .br siblings)"]:::script
+    end
 
-CLI -.-> DebugSh
-CLI -.-> DevMountain
-CLI -.-> ReleaseSh
+    subgraph TARGETS["Build Artifacts"]
+        MountainBin["Mountain binary\n(.app bundle)"]:::artifact
+        CargoTOML["Cargo.toml\n(workspace config)"]:::config
+        PlistFile["Entitlements.plist\n+ Info.plist"]:::config
+    end
 
-subgraph "Configuration"
-CargoTOML["Cargo.toml"]:::config
-JSON5Config["*.json5"]:::config
-end
-
-ConfigEditor --> CargoTOML
-ConfigEditor --> JSON5Config
+    CLI -.invokes.-> DebugBuild
+    CLI -.invokes.-> ReleaseBuild
+    DebugBuild --> SignBundle
+    ReleaseBuild --> SignBundle
+    SignBundle --> MountainBin
+    TomlEdit --> CargoTOML
+    PlistEdit --> PlistFile
 ```
 
 ---
