@@ -225,6 +225,7 @@ impl Cli {
 		match command {
 			Commands::Run { profile, hot_reload, dry_run } => {
 				let _ = hot_reload; // Use hot_reload for run-specific logic
+
 				self.execute_run(profile, config, *dry_run)
 			},
 

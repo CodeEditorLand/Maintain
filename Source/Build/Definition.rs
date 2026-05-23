@@ -328,7 +328,6 @@ pub struct Guard {
 	Armed:bool,
 
 	/// A descriptive note for logging and debugging purposes.
-	#[allow(dead_code)]
 	Note:String,
 }
 

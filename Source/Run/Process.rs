@@ -225,7 +225,6 @@ fn ExecuteRun(Command:&[String], EnvVars:&std::collections::HashMap<String, Stri
 /// # Returns
 ///
 /// Result indicating success or failure
-#[allow(dead_code)]
 fn start_hot_reload_watcher(watch_dirs:&[String], _callback:impl Fn() + Send + 'static) -> Result<()> {
 	// Placeholder for hot-reload watcher implementation
 	// In a full implementation, this would use the `notify` crate
