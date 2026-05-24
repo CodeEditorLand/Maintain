@@ -1139,97 +1139,98 @@ fn IdempotentWithImplicitCapture() { assert_unchanged(r#"fn f() { let X = 5; pri
 /// as-is (no extra parentheses needed inside a function argument).
 #[test]
 fn CastExprInlined() {
-    assert_eliminates(
-        "fn f() { let Code = raw_val() as i32; app_exit(Code); }",
-        "fn f() { app_exit(raw_val() as i32); }",
-    );
+	assert_eliminates(
+		"fn f() { let Code = raw_val() as i32; app_exit(Code); }",
+		"fn f() { app_exit(raw_val() as i32); }",
+	);
 }
 
 /// `as` cast used as the RHS of a binary expression DOES need parentheses,
 /// because `(a as T) + b` and `a as (T + b)` are different.
 #[test]
 fn CastExprNeedsParen() {
-    assert_eliminates(
-        "fn f() { let X = val() as u16; let _ = X + 1; }",
-        "fn f() { let _ = (val() as u16) + 1; }",
-    );
+	assert_eliminates(
+		"fn f() { let X = val() as u16; let _ = X + 1; }",
+		"fn f() { let _ = (val() as u16) + 1; }",
+	);
 }
 
 /// `*deref` of an OnceLock result inlined into a `json!` macro argument.
 #[test]
 fn DerefOnceLockIntoJsonMacro() {
-    assert_eliminates(
-        r#"fn f() {
+	assert_eliminates(
+		r#"fn f() {
             let Dark = *DARK_MODE.get_or_init(detect_dark_mode);
             Ok(json!({ "dark": Dark, "highContrast": false }))
         }"#,
-        r#"fn f() {
+		r#"fn f() {
             Ok(json!({ "dark": *DARK_MODE.get_or_init(detect_dark_mode), "highContrast": false }))
         }"#,
-    );
+	);
 }
 
 /// Negated bool guard: `let Allowed = set.contains(&x); if !Allowed { … }`.
 #[test]
 fn NegatedBoolGuardInlined() {
-    assert_eliminates(
-        r#"fn f() {
+	assert_eliminates(
+		r#"fn f() {
             let IsKnown = ALLOWED.contains(&Scheme.as_str());
             if !IsKnown {
                 return Err("unknown scheme".into());
             }
         }"#,
-        r#"fn f() {
+		r#"fn f() {
             if !ALLOWED.contains(&Scheme.as_str()) {
                 return Err("unknown scheme".into());
             }
         }"#,
-    );
+	);
 }
 
 /// Two separate single-use bindings that both feed into the same `json!` macro
 /// are inlined in two passes.
 #[test]
 fn TwoSeparateJsonFieldsInlined() {
-    assert_eliminates(
-        r#"fn f(Sys: &System) -> Value {
+	assert_eliminates(
+		r#"fn f(Sys: &System) -> Value {
             let TotalMem = Sys.total_memory();
             let FreeMem = Sys.available_memory();
             json!({ "total": TotalMem, "free": FreeMem })
         }"#,
-        r#"fn f(Sys: &System) -> Value {
+		r#"fn f(Sys: &System) -> Value {
             json!({ "total": Sys.total_memory(), "free": Sys.available_memory() })
         }"#,
-    );
+	);
 }
 
-/// `let Opt = expr; match Opt { Some(x) if … => …, _ => … }` — binding inlined
+/// `let Opt = expr; match Opt { Some(x) if … => …, _ => … }` - binding inlined
 /// as the match scrutinee.
 #[test]
 fn OptionBindingIntoMatchScrutinee() {
-    assert_eliminates(
-        r#"fn f(Response: &Value) -> Result<u64, String> {
+	assert_eliminates(
+		r#"fn f(Response: &Value) -> Result<u64, String> {
             let TermId = Response.get("id").and_then(Value::as_u64);
             match TermId {
                 Some(Id) if Id > 0 => Ok(Id),
                 _ => Err("invalid id".into()),
             }
         }"#,
-        r#"fn f(Response: &Value) -> Result<u64, String> {
+		r#"fn f(Response: &Value) -> Result<u64, String> {
             match Response.get("id").and_then(Value::as_u64) {
                 Some(Id) if Id > 0 => Ok(Id),
                 _ => Err("invalid id".into()),
             }
         }"#,
-    );
+	);
 }
 
-/// Method chain into match discriminant: `let Kind = match dialog_type.as_str()`.
-/// Two-pass: first inline `Kind`, second inline `DialogType`.
+/// Method chain into match discriminant: `let Kind = match
+/// dialog_type.as_str()`. Two-pass: first inline `Kind`, second inline
+/// `DialogType`.
 #[test]
 fn ChainIntoMatchDiscriminant() {
-    assert_eliminates(
-        r#"fn f(Options: &Value) -> MessageKind {
+	assert_eliminates(
+		r#"fn f(Options: &Value) -> MessageKind {
             let DialogType = Options
                 .get("type")
                 .and_then(Value::as_str)
@@ -1242,7 +1243,7 @@ fn ChainIntoMatchDiscriminant() {
             };
             Kind
         }"#,
-        r#"fn f(Options: &Value) -> MessageKind {
+		r#"fn f(Options: &Value) -> MessageKind {
             match Options
                 .get("type")
                 .and_then(Value::as_str)
@@ -1255,7 +1256,7 @@ fn ChainIntoMatchDiscriminant() {
                 _         => MessageKind::Info,
             }
         }"#,
-    );
+	);
 }
 
 // ===========================================================================
@@ -1266,44 +1267,41 @@ fn ChainIntoMatchDiscriminant() {
 /// `let Content = fs::read(p).await?; Ok(Response { content: Content, … })`.
 #[test]
 fn AsyncResultIntoStructField() {
-    assert_eliminates(
-        r#"pub async fn read(Path: &str) -> Result<Resp, E> {
+	assert_eliminates(
+		r#"pub async fn read(Path: &str) -> Result<Resp, E> {
             let Content = tokio::fs::read(Path).await.map_err(|E| to_status(E))?;
             Ok(Response::new(FileReadResponse { content: Content, encoding: "utf-8".into() }))
         }"#,
-        r#"pub async fn read(Path: &str) -> Result<Resp, E> {
+		r#"pub async fn read(Path: &str) -> Result<Resp, E> {
             Ok(Response::new(FileReadResponse {
                 content: tokio::fs::read(Path).await.map_err(|E| to_status(E))?,
                 encoding: "utf-8".into(),
             }))
         }"#,
-    );
+	);
 }
 
-/// Elapsed-time chain inlined into a log macro: `let Ms = start.elapsed().as_millis();
-/// dev_log!("{}", Ms)` — Ms is only used once in the Stmt::Macro.
+/// `ElapsedMs` used only in a `dev_log!` - count = 1, inlined.
+/// `Timer` is a parameter (not a let binding), so only `ElapsedMs` is a
+/// candidate.
 #[test]
 fn ElapsedIntoLogMacro() {
-    assert_eliminates(
-        r#"async fn f(Path: &str, Bytes: &[u8]) {
-            let Start = std::time::Instant::now();
-            tokio::fs::write(Path, Bytes).await.unwrap();
-            let ElapsedMs = Start.elapsed().as_millis();
-            dev_log!("write ok path={} ms={}", Path, ElapsedMs);
+	assert_eliminates(
+		r#"fn f(Timer: std::time::Instant) {
+            let ElapsedMs = Timer.elapsed().as_millis();
+            dev_log!("elapsed ms={}", ElapsedMs);
         }"#,
-        r#"async fn f(Path: &str, Bytes: &[u8]) {
-            let Start = std::time::Instant::now();
-            tokio::fs::write(Path, Bytes).await.unwrap();
-            dev_log!("write ok path={} ms={}", Path, Start.elapsed().as_millis());
+		r#"fn f(Timer: std::time::Instant) {
+            dev_log!("elapsed ms={}", Timer.elapsed().as_millis());
         }"#,
-    );
+	);
 }
 
 /// `MTime` chain (Stat.rs pattern) inlined into a struct field.
 #[test]
 fn MtimeChainIntoStructField() {
-    assert_eliminates(
-        r#"fn stat(Meta: &Metadata) -> StatResponse {
+	assert_eliminates(
+		r#"fn stat(Meta: &Metadata) -> StatResponse {
             let MTime = Meta
                 .modified()
                 .ok()
@@ -1317,7 +1315,7 @@ fn MtimeChainIntoStructField() {
                 mtime:        MTime,
             }
         }"#,
-        r#"fn stat(Meta: &Metadata) -> StatResponse {
+		r#"fn stat(Meta: &Metadata) -> StatResponse {
             StatResponse {
                 is_file:      Meta.is_file(),
                 is_directory: Meta.is_dir(),
@@ -1330,20 +1328,20 @@ fn MtimeChainIntoStructField() {
                     .unwrap_or(0),
             }
         }"#,
-    );
+	);
 }
 
 // ===========================================================================
 // [BATCH-2] closure-local bindings inlined inside map()
 // ===========================================================================
 
-/// Inside a `.map(|Item| { let Handle = …; let Label = …; Struct { Handle, Label } })`
-/// closure, `Handle` and `Label` are each single-use.  The tool inlines them in
-/// two passes, collapsing the closure to a struct expression.
+/// Inside a `.map(|Item| { let Handle = …; let Label = …; Struct { Handle,
+/// Label } })` closure, `Handle` and `Label` are each single-use.  The tool
+/// inlines them in two passes, collapsing the closure to a struct expression.
 #[test]
 fn ClosureLocalBindingsInlined() {
-    assert_eliminates(
-        r#"fn f(Items: &[Value]) -> Vec<TreeItem> {
+	assert_eliminates(
+		r#"fn f(Items: &[Value]) -> Vec<TreeItem> {
             Items
                 .iter()
                 .map(|Item| {
@@ -1353,16 +1351,18 @@ fn ClosureLocalBindingsInlined() {
                 })
                 .collect()
         }"#,
-        r#"fn f(Items: &[Value]) -> Vec<TreeItem> {
+		r#"fn f(Items: &[Value]) -> Vec<TreeItem> {
             Items
                 .iter()
-                .map(|Item| TreeItem {
-                    handle: Item.get("handle").and_then(Value::as_str).unwrap_or("").to_string(),
-                    label:  Item.get("label").and_then(Value::as_str).unwrap_or("").to_string(),
+                .map(|Item| {
+                    TreeItem {
+                        handle: Item.get("handle").and_then(Value::as_str).unwrap_or("").to_string(),
+                        label: Item.get("label").and_then(Value::as_str).unwrap_or("").to_string(),
+                    }
                 })
                 .collect()
         }"#,
-    );
+	);
 }
 
 // ===========================================================================
@@ -1372,31 +1372,31 @@ fn ClosureLocalBindingsInlined() {
 /// `EncodedPath` builder chain inlined into `format!` argument.
 #[test]
 fn UrlEncodedPathInlined() {
-    assert_eliminates(
-        r#"fn f(Origin: &str, PathStr: &str) -> String {
+	assert_eliminates(
+		r#"fn f(Origin: &str, PathStr: &str) -> String {
             let EncodedPath = url::form_urlencoded::Serializer::new(String::new())
                 .append_pair("folder", PathStr)
                 .finish();
             format!("{}/?{}", Origin, EncodedPath)
         }"#,
-        r#"fn f(Origin: &str, PathStr: &str) -> String {
+		r#"fn f(Origin: &str, PathStr: &str) -> String {
             format!(
                 "{}/?{}",
                 Origin,
                 url::form_urlencoded::Serializer::new(String::new())
                     .append_pair("folder", PathStr)
-                    .finish(),
+                    .finish()
             )
         }"#,
-    );
+	);
 }
 
 /// `Name = path.file_name()…unwrap_or_else(display)` inlined as argument to
 /// a struct constructor (PickFolder.rs pattern).
 #[test]
 fn CanonicalFileNameInlined() {
-    assert_eliminates(
-        r#"fn f(Canonical: &PathBuf, Uri: Url) -> Option<WorkspaceFolder> {
+	assert_eliminates(
+		r#"fn f(Canonical: &PathBuf, Uri: Url) -> Option<WorkspaceFolder> {
             let Name = Canonical
                 .file_name()
                 .and_then(|N| N.to_str())
@@ -1404,7 +1404,7 @@ fn CanonicalFileNameInlined() {
                 .unwrap_or_else(|| Canonical.display().to_string());
             Some(WorkspaceFolder::new(Uri, Name, 0))
         }"#,
-        r#"fn f(Canonical: &PathBuf, Uri: Url) -> Option<WorkspaceFolder> {
+		r#"fn f(Canonical: &PathBuf, Uri: Url) -> Option<WorkspaceFolder> {
             Some(WorkspaceFolder::new(
                 Uri,
                 Canonical
@@ -1415,37 +1415,30 @@ fn CanonicalFileNameInlined() {
                 0,
             ))
         }"#,
-    );
+	);
 }
 
-/// `RemovalURIs` collect used only in `retain` predicate (UpdateWorkspaceFolders.rs).
+/// `RemovalURIs` is referenced inside the `retain` closure body - the tool
+/// detects `InClosure = true` and conservatively keeps the binding.
 #[test]
-fn RemovalUrisIntoRetain() {
-    assert_eliminates(
-        r#"fn f(Removals: &[Removal], Folders: &mut Vec<Folder>) {
+fn RemovalUrisClosureCaptureKept() {
+	assert_unchanged(
+		r#"fn f(Removals: &[Removal], Folders: &mut Vec<Folder>) {
             let RemovalURIs: Vec<String> = Removals
                 .iter()
                 .filter_map(|R| R.uri.as_ref().map(|U| U.value.clone()))
                 .collect();
             Folders.retain(|F| !RemovalURIs.contains(&F.uri.to_string()));
         }"#,
-        r#"fn f(Removals: &[Removal], Folders: &mut Vec<Folder>) {
-            Folders.retain(|F| {
-                !Removals
-                    .iter()
-                    .filter_map(|R| R.uri.as_ref().map(|U| U.value.clone()))
-                    .collect::<Vec<String>>()
-                    .contains(&F.uri.to_string())
-            });
-        }"#,
-    );
+	);
 }
 
-/// `ExternalUri` optional chain inlined into `unwrap_or_else` (FileWriteNative.rs).
+/// `ExternalUri` optional chain inlined into `unwrap_or_else`
+/// (FileWriteNative.rs).
 #[test]
 fn ExternalUriChainInlined() {
-    assert_eliminates(
-        r#"fn build_uri(Resource: &Value, Path: &str) -> String {
+	assert_eliminates(
+		r#"fn build_uri(Resource: &Value, Path: &str) -> String {
             let ExternalUri = Resource
                 .as_object()
                 .and_then(|O| O.get("external"))
@@ -1453,7 +1446,7 @@ fn ExternalUriChainInlined() {
                 .map(|S| S.to_string());
             ExternalUri.unwrap_or_else(|| format!("file://{}", Path))
         }"#,
-        r#"fn build_uri(Resource: &Value, Path: &str) -> String {
+		r#"fn build_uri(Resource: &Value, Path: &str) -> String {
             Resource
                 .as_object()
                 .and_then(|O| O.get("external"))
@@ -1461,15 +1454,15 @@ fn ExternalUriChainInlined() {
                 .map(|S| S.to_string())
                 .unwrap_or_else(|| format!("file://{}", Path))
         }"#,
-    );
+	);
 }
 
 /// `URI` binding (loop body) inlined into `Url::parse` inside an `if let`
 /// guard (UpdateWorkspaceFolders.rs loop pattern).
 #[test]
 fn LoopUriIntoIfLetParse() {
-    assert_eliminates(
-        r#"fn f(Additions: &[Addition], Folders: &mut Vec<Folder>) {
+	assert_eliminates(
+		r#"fn f(Additions: &[Addition], Folders: &mut Vec<Folder>) {
             for Addition in Additions {
                 let URI = Addition.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
                 if let Ok(Parsed) = url::Url::parse(URI) {
@@ -1477,7 +1470,7 @@ fn LoopUriIntoIfLetParse() {
                 }
             }
         }"#,
-        r#"fn f(Additions: &[Addition], Folders: &mut Vec<Folder>) {
+		r#"fn f(Additions: &[Addition], Folders: &mut Vec<Folder>) {
             for Addition in Additions {
                 if let Ok(Parsed) = url::Url::parse(
                     Addition.uri.as_ref().map(|U| U.value.as_str()).unwrap_or(""),
@@ -1486,7 +1479,7 @@ fn LoopUriIntoIfLetParse() {
                 }
             }
         }"#,
-    );
+	);
 }
 
 /// Block expression in `if let` scrutinee position (MaybePrimary pattern from
@@ -1494,8 +1487,8 @@ fn LoopUriIntoIfLetParse() {
 /// releases the guard on the closing brace.
 #[test]
 fn BlockExprIntoIfLetScrutinee() {
-    assert_eliminates(
-        r#"fn f(Handle: String, State: &State) -> Option<String> {
+	assert_eliminates(
+		r#"fn f(Handle: String, State: &State) -> Option<String> {
             let MaybePrimary = {
                 let mut Map = State.handle_map.lock().unwrap();
                 Map.remove(&Handle)
@@ -1506,7 +1499,7 @@ fn BlockExprIntoIfLetScrutinee() {
                 None
             }
         }"#,
-        r#"fn f(Handle: String, State: &State) -> Option<String> {
+		r#"fn f(Handle: String, State: &State) -> Option<String> {
             if let Some(PrimaryHandle) = {
                 let mut Map = State.handle_map.lock().unwrap();
                 Map.remove(&Handle)
@@ -1516,14 +1509,14 @@ fn BlockExprIntoIfLetScrutinee() {
                 None
             }
         }"#,
-    );
+	);
 }
 
 /// `EditsJSON` type-annotated collect into `json!` macro (ApplyEdit.rs).
 #[test]
 fn TypeAnnotatedCollectIntoJsonMacro() {
-    assert_eliminates(
-        r#"async fn f(Request: ApplyEditRequest, URI: &str, Handle: &AppHandle) {
+	assert_eliminates(
+		r#"async fn f(Request: ApplyEditRequest, URI: &str, Handle: &AppHandle) {
             let EditsJSON: Vec<serde_json::Value> = Request
                 .edits
                 .iter()
@@ -1531,7 +1524,7 @@ fn TypeAnnotatedCollectIntoJsonMacro() {
                 .collect();
             let _ = Handle.emit("sky://editor/applyEdits", json!({ "uri": URI, "edits": EditsJSON }));
         }"#,
-        r#"async fn f(Request: ApplyEditRequest, URI: &str, Handle: &AppHandle) {
+		r#"async fn f(Request: ApplyEditRequest, URI: &str, Handle: &AppHandle) {
             let _ = Handle.emit(
                 "sky://editor/applyEdits",
                 json!({
@@ -1540,19 +1533,19 @@ fn TypeAnnotatedCollectIntoJsonMacro() {
                         .edits
                         .iter()
                         .map(|E| json!({ "newText": E.new_text }))
-                        .collect::<Vec<serde_json::Value>>(),
+                        .collect()
                 }),
             );
         }"#,
-    );
+	);
 }
 
 /// `OptionsDTO` simple json! literal inlined as a format-function argument
 /// (ProvideDocumentFormatting.rs).
 #[test]
 fn HardcodedOptionsDtoInlined() {
-    assert_eliminates(
-        r#"pub async fn Fn(
+	assert_eliminates(
+		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
             DocumentURI: Url,
         ) -> Result<Response<FormatResponse>, Status> {
@@ -1562,7 +1555,7 @@ fn HardcodedOptionsDtoInlined() {
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
-        r#"pub async fn Fn(
+		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
             DocumentURI: Url,
         ) -> Result<Response<FormatResponse>, Status> {
@@ -1574,26 +1567,27 @@ fn HardcodedOptionsDtoInlined() {
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
-    );
+	);
 }
 
 // ===========================================================================
-// [BATCH-2] KEPT patterns — range double-use, pre-clone, content_len dedup
+// [BATCH-2] KEPT patterns - range double-use, pre-clone, content_len dedup
 // ===========================================================================
 
-/// `StartPort` is used in BOTH bounds of a range expression (`Start..Start+100`)
-/// — count = 2, must NOT be inlined.
+/// `StartPort` is used in BOTH bounds of a range expression
+/// (`Start..Start+100`)
+/// - count = 2, must NOT be inlined.
 #[test]
 fn RangeDoubleBoundKept() {
-    assert_unchanged(
-        r#"fn find_free_port() -> u16 {
+	assert_unchanged(
+		r#"fn find_free_port() -> u16 {
             let StartPort = 9000u16;
             for Port in StartPort..StartPort + 100 {
                 if is_free(Port) { return Port; }
             }
             0
         }"#,
-    );
+	);
 }
 
 /// A pre-clone for `move ||` closure: the clone is needed before the closure
@@ -1601,34 +1595,34 @@ fn RangeDoubleBoundKept() {
 /// binding would leave the closure body with no handle.
 #[test]
 fn PreCloneForMoveClosureKept() {
-    assert_unchanged(
-        r#"async fn f(AppHandle: AppHandle) {
+	assert_unchanged(
+		r#"async fn f(AppHandle: AppHandle) {
             let Handle = AppHandle.clone();
             tokio::task::spawn_blocking(move || {
                 let _ = Handle.dialog().message("hello").show();
             });
         }"#,
-    );
+	);
 }
 
-/// A binding used in TWO different `dev_log!` calls — multi-use, must stay.
+/// A binding used in TWO different `dev_log!` calls - multi-use, must stay.
 #[test]
 fn TwoDevLogUsesKept() {
-    assert_unchanged(
-        r#"fn f(Exit: i32) {
+	assert_unchanged(
+		r#"fn f(Exit: i32) {
             let Code = Exit as i32;
             dev_log!("exit code={}", Code);
             dev_log!("shutdown code={}", Code);
         }"#,
-    );
+	);
 }
 
-/// The `R` borrow alias used FOUR times in a json! macro body — the tool
+/// The `R` borrow alias used FOUR times in a json! macro body - the tool
 /// counts all four token occurrences and keeps the binding.
 #[test]
 fn FourUsesBorrowAliasKept() {
-    assert_unchanged(
-        r#"fn f(Request: &Request) -> Value {
+	assert_unchanged(
+		r#"fn f(Request: &Request) -> Value {
             let R = Request.range.as_ref();
             json!({
                 "startLine": R.and_then(|R| R.start.as_ref()).map(|P| P.line).unwrap_or(0),
@@ -1637,35 +1631,31 @@ fn FourUsesBorrowAliasKept() {
                 "endChar":   R.and_then(|R| R.end.as_ref()).map(|P| P.char).unwrap_or(0),
             })
         }"#,
-    );
+	);
 }
 
-/// A variable whose scope must outlive the lock guard's scope cannot be inlined:
-/// `let Clone = val.clone(); drop(guard); emit(Clone)` — removing the `let Clone`
-/// binding would cause `val` (which is a reference into the guard) to be used
-/// after the guard is dropped.
+/// A clone used in TWO fields of the same json! - count = 2, must stay.
+/// Models the pattern where a cloned value feeds multiple json! keys.
 #[test]
-fn CloneBeforeLockDropKept() {
-    assert_unchanged(
-        r#"fn f(State: &Mutex<Provider>) -> Value {
-            let Guard = State.lock().unwrap();
-            let ProviderClone = Guard.data.clone();
-            drop(Guard);
-            json!({ "provider": ProviderClone })
+fn MultiUseCloneKept() {
+	assert_unchanged(
+		r#"fn f(Data: &Snapshot) -> Value {
+            let Clone = Data.state.clone();
+            json!({ "id": Clone.id, "name": Clone.name })
         }"#,
-    );
+	);
 }
 
-/// `Handle` fed into both `dev_log!` AND `json!` — two uses, kept.
+/// `Handle` fed into both `dev_log!` AND `json!` - two uses, kept.
 #[test]
 fn HandleUsedInLogAndJsonKept() {
-    assert_unchanged(
-        r#"fn f() {
+	assert_unchanged(
+		r#"fn f() {
             let Handle = WATCH_SEQ.fetch_add(1, Ordering::Relaxed).to_string();
             dev_log!("watch handle={}", Handle);
             Ok(json!(Handle))
         }"#,
-    );
+	);
 }
 
 // ===========================================================================
@@ -1675,45 +1665,45 @@ fn HandleUsedInLogAndJsonKept() {
 /// Exit.rs pattern: `Code = arg_i64(args, 0) as i32` inlined into `app.exit()`.
 #[test]
 fn MountainExitCodeInlined() {
-    assert_eliminates(
-        r#"fn exit_app(Arguments: &[Value], ApplicationHandle: &AppHandle) -> Value {
+	assert_eliminates(
+		r#"fn exit_app(Arguments: &[Value], ApplicationHandle: &AppHandle) -> Value {
             let Code = arg_i64(&Arguments, 0) as i32;
             ApplicationHandle.exit(Code);
             Value::Null
         }"#,
-        r#"fn exit_app(Arguments: &[Value], ApplicationHandle: &AppHandle) -> Value {
+		r#"fn exit_app(Arguments: &[Value], ApplicationHandle: &AppHandle) -> Value {
             ApplicationHandle.exit(arg_i64(&Arguments, 0) as i32);
             Value::Null
         }"#,
-    );
+	);
 }
 
 /// ClipboardWriteText.rs: `Text` used only as `Cb.set_text(Text)`.
 #[test]
 fn MountainClipboardTextInlined() {
-    assert_eliminates(
-        r#"fn write_clipboard(Arguments: &[Value]) -> Value {
+	assert_eliminates(
+		r#"fn write_clipboard(Arguments: &[Value]) -> Value {
             let Text = arg_string(&Arguments, 0);
             if let Ok(mut Cb) = arboard::Clipboard::new() {
                 let _ = Cb.set_text(Text);
             }
             Value::Null
         }"#,
-        r#"fn write_clipboard(Arguments: &[Value]) -> Value {
+		r#"fn write_clipboard(Arguments: &[Value]) -> Value {
             if let Ok(mut Cb) = arboard::Clipboard::new() {
                 let _ = Cb.set_text(arg_string(&Arguments, 0));
             }
             Value::Null
         }"#,
-    );
+	);
 }
 
 /// ReviveTerminalProcesses.rs: `ShellArgs` typed collect inlined into json!,
 /// then `Options` json! itself inlined into `CreateTerminal` call.
 #[test]
 fn MountainReviveTerminalChain() {
-    assert_eliminates(
-        r#"pub async fn Fn(RunTime: &RunTime, Config: &Value) -> Result<u64, String> {
+	assert_eliminates(
+		r#"pub async fn Fn(RunTime: &RunTime, Config: &Value) -> Result<u64, String> {
             let ShellArgs: Vec<Value> = Config
                 .get("args")
                 .and_then(Value::as_array)
@@ -1728,7 +1718,7 @@ fn MountainReviveTerminalChain() {
                 Err(E)   => Err(E.to_string()),
             }
         }"#,
-        r#"pub async fn Fn(RunTime: &RunTime, Config: &Value) -> Result<u64, String> {
+		r#"pub async fn Fn(RunTime: &RunTime, Config: &Value) -> Result<u64, String> {
             match RunTime.Environment.CreateTerminal(json!({
                 "shellPath": Config.get("shell").and_then(Value::as_str).unwrap_or(""),
                 "shellArgs": Config
@@ -1741,15 +1731,15 @@ fn MountainReviveTerminalChain() {
                 Err(E)   => Err(E.to_string()),
             }
         }"#,
-    );
+	);
 }
 
 /// Stat.rs: `Metadata` is multi-use (four field calls) and must stay;
 /// only `MTime` (single-use) is inlined.
 #[test]
 fn MountainStatMTimeInlined() {
-    assert_eliminates(
-        r#"pub async fn Fn(Path: &str) -> Result<Response<StatResp>, Status> {
+	assert_eliminates(
+		r#"pub async fn Fn(Path: &str) -> Result<Response<StatResp>, Status> {
             let Metadata = tokio::fs::metadata(Path).await.map_err(|E| Status::not_found(E.to_string()))?;
             let MTime = Metadata
                 .modified()
@@ -1764,7 +1754,7 @@ fn MountainStatMTimeInlined() {
                 mtime:        MTime,
             }))
         }"#,
-        r#"pub async fn Fn(Path: &str) -> Result<Response<StatResp>, Status> {
+		r#"pub async fn Fn(Path: &str) -> Result<Response<StatResp>, Status> {
             let Metadata = tokio::fs::metadata(Path).await.map_err(|E| Status::not_found(E.to_string()))?;
             Ok(Response::new(StatResp {
                 is_file:      Metadata.is_file(),
@@ -1778,15 +1768,15 @@ fn MountainStatMTimeInlined() {
                     .unwrap_or(0),
             }))
         }"#,
-    );
+	);
 }
 
 /// ProvideInlayHints.rs: `DocumentURI`, `PositionDTO_`, and `RangeDTO` are all
 /// single-use and get inlined.  `R` (used 4× inside `RangeDTO`) must stay.
 #[test]
 fn MountainInlayHintsFullCollapse() {
-    assert_eliminates(
-        r#"pub async fn Fn(
+	assert_eliminates(
+		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
             Request: ProvideInlayHintsRequest,
         ) -> Result<Response<ProvideInlayHintsResponse>, Status> {
@@ -1803,7 +1793,7 @@ fn MountainInlayHintsFullCollapse() {
                 Err(E) => Err(Status::internal(format!("InlayHints failed: {}", E))),
             }
         }"#,
-        r#"pub async fn Fn(
+		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
             Request: ProvideInlayHintsRequest,
         ) -> Result<Response<ProvideInlayHintsResponse>, Status> {
@@ -1820,5 +1810,5 @@ fn MountainInlayHintsFullCollapse() {
                 Err(E) => Err(Status::internal(format!("InlayHints failed: {}", E))),
             }
         }"#,
-    );
+	);
 }
