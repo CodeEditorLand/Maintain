@@ -27,32 +27,28 @@ use Maintain::Eliminate::{Definition::Options, Transform};
 
 /// Run the elimination transform and return the output (or the pretty-printed
 /// original if nothing changed).
-fn transform(Src: &str) -> String {
-	transform_with(Src, Options::default())
-}
+fn transform(Src:&str) -> String { transform_with(Src, Options::default()) }
 
-fn transform_with(Src: &str, Opts: Options) -> String {
-	Transform::Run(Src, &Opts)
-		.expect("transform failed")
-		.unwrap_or_else(|| {
-			let Ast: syn::File = syn::parse_str(Src).unwrap();
+fn transform_with(Src:&str, Opts:Options) -> String {
+	Transform::Run(Src, &Opts).expect("transform failed").unwrap_or_else(|| {
+		let Ast:syn::File = syn::parse_str(Src).unwrap();
 
-			prettyplease::unparse(&Ast)
-		})
+		prettyplease::unparse(&Ast)
+	})
 }
 
 /// Normalise `Src` through prettyplease so whitespace differences are ignored.
-fn norm(Src: &str) -> String {
-	let Ast: syn::File = syn::parse_str(Src).unwrap();
+fn norm(Src:&str) -> String {
+	let Ast:syn::File = syn::parse_str(Src).unwrap();
 
 	prettyplease::unparse(&Ast)
 }
 
-fn assert_eliminates(Input: &str, Expected: &str) {
+fn assert_eliminates(Input:&str, Expected:&str) {
 	assert_eq!(transform(Input), norm(Expected));
 }
 
-fn assert_unchanged(Input: &str) {
+fn assert_unchanged(Input:&str) {
 	let Opts = Options::default();
 
 	let Result = Transform::Run(Input, &Opts).expect("transform");
@@ -75,40 +71,24 @@ fn SimpleInline() {
 
 /// (2) Chained single-use bindings collapse over two passes.
 #[test]
-fn ChainInline() {
-	assert_eliminates(
-		"fn f() { let A = 1; let B = A + 1; g(B); }",
-		"fn f() { g(1 + 1); }",
-	);
-}
+fn ChainInline() { assert_eliminates("fn f() { let A = 1; let B = A + 1; g(B); }", "fn f() { g(1 + 1); }"); }
 
 /// (7) Shadow: first binding used once before the shadow; second used once
 ///     after.  Both should be inlined independently.
 #[test]
 fn ShadowFirstThenInline() {
-	assert_eliminates(
-		"fn f() { let X = 1; f(X); let X = 2; g(X); }",
-		"fn f() { f(1); g(2); }",
-	);
+	assert_eliminates("fn f() { let X = 1; f(X); let X = 2; g(X); }", "fn f() { f(1); g(2); }");
 }
 
 /// (9) Binary expression gets parentheses when placed as a binary operand.
 #[test]
 fn BinaryExprParens() {
-	assert_eliminates(
-		"fn f() { let X = A + B; let _ = Y * X; }",
-		"fn f() { let _ = Y * (A + B); }",
-	);
+	assert_eliminates("fn f() { let X = A + B; let _ = Y * X; }", "fn f() { let _ = Y * (A + B); }");
 }
 
 /// Function-argument position does NOT get extra parentheses.
 #[test]
-fn BinaryExprNoParensInFnArg() {
-	assert_eliminates(
-		"fn f() { let X = A + B; foo(X); }",
-		"fn f() { foo(A + B); }",
-	);
-}
+fn BinaryExprNoParensInFnArg() { assert_eliminates("fn f() { let X = A + B; foo(X); }", "fn f() { foo(A + B); }"); }
 
 /// (10) The `?` operator in the initialiser is safely inlined.
 #[test]
@@ -192,22 +172,12 @@ fn MatchExprInlined() {
 
 /// (15) Block expression initialiser is inlined.
 #[test]
-fn BlockExprInlined() {
-	assert_eliminates(
-		"fn f() { let V = { compute() }; g(V); }",
-		"fn f() { g({ compute() }); }",
-	);
-}
+fn BlockExprInlined() { assert_eliminates("fn f() { let V = { compute() }; g(V); }", "fn f() { g({ compute() }); }"); }
 
 /// (16) Type annotation on the let binding is dropped when inlined (the
 ///      compiler infers the type at the use site).
 #[test]
-fn TypeAnnotationDropped() {
-	assert_eliminates(
-		"fn f() { let X: i32 = 5; g(X); }",
-		"fn f() { g(5); }",
-	);
-}
+fn TypeAnnotationDropped() { assert_eliminates("fn f() { let X: i32 = 5; g(X); }", "fn f() { g(5); }"); }
 
 /// (19) Both inner and outer single-use bindings are eliminated: Inner in the
 ///      nested block, Outer in the outer scope.
@@ -231,12 +201,7 @@ fn NestedScopeInlined() {
 
 /// (20) Borrow (`&expr`) initialiser is inlined.
 #[test]
-fn BorrowInlined() {
-	assert_eliminates(
-		"fn f() { let X = &foo; bar(X); }",
-		"fn f() { bar(&foo); }",
-	);
-}
+fn BorrowInlined() { assert_eliminates("fn f() { let X = &foo; bar(X); }", "fn f() { bar(&foo); }"); }
 
 /// (21) Both `DocURI` and `PositionDTO_` are single-use - both are eliminated.
 #[test]
@@ -261,21 +226,15 @@ fn PositionDtoInlined() {
 
 /// (3) Multi-use binding is kept.
 #[test]
-fn MultiUseKept() {
-	assert_unchanged("fn f() { let X = foo(); bar(X); baz(X); }");
-}
+fn MultiUseKept() { assert_unchanged("fn f() { let X = foo(); bar(X); baz(X); }"); }
 
 /// (4) Mutable binding is kept.
 #[test]
-fn MutKept() {
-	assert_unchanged("fn f() { let mut X = 5; X += 1; g(X); }");
-}
+fn MutKept() { assert_unchanged("fn f() { let mut X = 5; X += 1; g(X); }"); }
 
 /// (5) Destructuring pattern is kept.
 #[test]
-fn DestructuringKept() {
-	assert_unchanged("fn f() { let (A, B) = pair; g(A); }");
-}
+fn DestructuringKept() { assert_unchanged("fn f() { let (A, B) = pair; g(A); }"); }
 
 /// (6) Identifier referenced inside a macro at a second site is kept.
 #[test]
@@ -303,10 +262,9 @@ fn ClosureCaptureKept() {
 #[test]
 fn SizeThresholdKept() {
 	// Build a source with a very large initialiser (> 5 nodes) and MaxSize=5.
-	let Input =
-		"fn f() { let X = a + b + c + d + e + f + g + h + i + j; use_x(X); }";
+	let Input = "fn f() { let X = a + b + c + d + e + f + g + h + i + j; use_x(X); }";
 
-	let Opts = Options { MaxSize: 5, ..Options::default() };
+	let Opts = Options { MaxSize:5, ..Options::default() };
 
 	let Result = Transform::Run(Input, &Opts).expect("transform");
 
@@ -315,9 +273,7 @@ fn SizeThresholdKept() {
 
 /// (23) Binding whose initialiser is `unsafe { … }` is kept.
 #[test]
-fn UnsafeNotInlined() {
-	assert_unchanged("fn f() { let X = unsafe { *ptr }; g(X); }");
-}
+fn UnsafeNotInlined() { assert_unchanged("fn f() { let X = unsafe { *ptr }; g(X); }"); }
 
 /// (24) `let … = … else { … }` (diverging let) is kept.
 #[test]
@@ -348,9 +304,7 @@ fn AlreadyMinimalReturnsNone() {
 
 /// (18) Empty function body does not panic.
 #[test]
-fn EmptyFnNoCrash() {
-	assert_unchanged("fn foo() {}");
-}
+fn EmptyFnNoCrash() { assert_unchanged("fn foo() {}"); }
 
 /// (25) Applying the transform twice produces the same output (idempotent).
 #[test]
@@ -359,9 +313,7 @@ fn Idempotent() {
 
 	let Src = r#"fn f() { let X = 5; println!("{}", X); }"#;
 
-	let First = Transform::Run(Src, &Opts)
-		.unwrap()
-		.expect("first pass should change");
+	let First = Transform::Run(Src, &Opts).unwrap().expect("first pass should change");
 
 	let Second = Transform::Run(&First, &Opts).unwrap();
 
@@ -379,7 +331,7 @@ fn AttributedLetInlinedWhenOptIn() {
 
 	let Expected = "fn f() { g(5); }";
 
-	let Opts = Options { InlineComments: true, ..Options::default() };
+	let Opts = Options { InlineComments:true, ..Options::default() };
 
 	assert_eq!(transform_with(Input, Opts), norm(Expected));
 }
@@ -551,7 +503,8 @@ fn MountainUnboundKeyInlined() {
 	);
 }
 
-/// Decrypt.rs: `NonceBytes` array inlined directly into `Nonce::assume_unique_for_key`.
+/// Decrypt.rs: `NonceBytes` array inlined directly into
+/// `Nonce::assume_unique_for_key`.
 #[test]
 fn MountainNonceBytesInlined() {
 	assert_eliminates(
@@ -761,3 +714,404 @@ fn MountainContextDtoWithKeptRangeDto() {
         }"#,
 	);
 }
+
+// ===========================================================================
+// [EDGE-CASES] — format-string implicit captures, loop bodies, branch inits
+// ===========================================================================
+
+/// `format!("{X}")` — X is used only via implicit capture.  The binding must
+/// NOT be inlined because the substitution engine operates on token trees, not
+/// string-literal content; removing the let would leave {X} undefined.
+#[test]
+fn ImplicitFormatCaptureKept() {
+	// X appears only in a format-string literal (no bare Ident token).
+	// Count = 1 (found by format-literal scanner), but SubstituteRef finds no
+	// TokenTree::Ident(X) to replace, so Substituted = false and the let stays.
+	assert_unchanged(r#"fn f() { let X = 5; println!("{X}"); }"#);
+}
+
+/// Mixed old-style + implicit: `println!("{}", X); println!("{X}")` — count =
+/// 2, must NOT be inlined.  Without the format-literal scanner this was a
+/// correctness bug where count came back as 1 and the binding was removed.
+#[test]
+fn MixedImplicitAndExplicitKept() {
+	assert_unchanged(
+		r#"fn f() {
+            let X = 5;
+            println!("{}", X);
+            println!("{X}");
+        }"#,
+	);
+}
+
+/// Two explicit uses in different `println!` calls — multi-use, kept.
+#[test]
+fn TwoMacroUsesKept() {
+	assert_unchanged(
+		r#"fn f() {
+            let X = 5;
+            println!("{}", X);
+            println!("{}", X);
+        }"#,
+	);
+}
+
+/// Two uses of X as arguments to the same function call: `bar(X, X)` — count =
+/// 2, kept.
+#[test]
+fn TwoUsesInSameCallKept() { assert_unchanged("fn f() { let X = foo(); bar(X, X); }"); }
+
+/// `let mut X = 5; g(X)` — mut binding, conservatively kept even though X is
+/// never actually mutated.
+#[test]
+fn MutNeverMutatedKept() { assert_unchanged("fn f() { let mut X = 5; g(X); }"); }
+
+/// A `for` loop iteration variable is not a `let` binding — the loop body is
+/// unchanged regardless of how often the var appears.
+#[test]
+fn ForLoopVarUntouched() {
+	assert_unchanged(
+		r#"fn f() {
+            for X in items {
+                println!("{}", X);
+            }
+        }"#,
+	);
+}
+
+/// An `if let Some(X) = foo()` binding is not a plain `let` — unchanged.
+#[test]
+fn IfLetBindingUntouched() {
+	assert_unchanged(
+		r#"fn f() {
+            if let Some(X) = foo() {
+                bar(X);
+            }
+        }"#,
+	);
+}
+
+/// A `let X` used inside a `for` loop body: count = 1 (tool has no loop
+/// awareness — it counts textual occurrences, not execution frequency).
+/// For cheap/Copy initialisers this is semantically safe; the test documents
+/// the current behavior.
+#[test]
+fn LoopBodySingleUseInlined() {
+	assert_eliminates(
+		r#"fn f(v: &[i32]) {
+            let Label = "item";
+            for _ in v {
+                println!("{}", Label);
+            }
+        }"#,
+		r#"fn f(v: &[i32]) {
+            for _ in v {
+                println!("{}", "item");
+            }
+        }"#,
+	);
+}
+
+// ===========================================================================
+// [EDGE-CASES] — chain inlining depths, block / if expressions as initialisers
+// ===========================================================================
+
+/// Chain of three bindings: A→B→C — inlined in three iterative passes.
+#[test]
+fn ChainOfThreeInlined() {
+	assert_eliminates(
+		"fn f() { let A = 1; let B = A + 1; let C = B * 2; use_it(C); }",
+		"fn f() { use_it((1 + 1) * 2); }",
+	);
+}
+
+/// Block expression as initialiser: `let X = { foo() }; use(X)`.
+#[test]
+fn BlockExprAsInitInlined() {
+	assert_eliminates(
+		"fn f() { let X = { compute() }; consume(X); }",
+		"fn f() { consume({ compute() }); }",
+	);
+}
+
+/// `if` expression as initialiser: `let X = if cond { A } else { B }; use(X)`.
+#[test]
+fn IfExprAsInitInlined() {
+	assert_eliminates(
+		"fn f() { let X = if ready { 1 } else { 0 }; set(X); }",
+		"fn f() { set(if ready { 1 } else { 0 }); }",
+	);
+}
+
+/// Match expression as initialiser: `let R = match x { … }; consume(R)`.
+#[test]
+fn MatchExprAsInitInlined() {
+	assert_eliminates(
+		r#"fn f() {
+            let R = match x {
+                0 => "zero",
+                _ => "other",
+            };
+            println!("{}", R);
+        }"#,
+		r#"fn f() {
+            println!("{}", match x {
+                0 => "zero",
+                _ => "other",
+            });
+        }"#,
+	);
+}
+
+/// Match arm containing an early `return` — the return is valid inside a
+/// sub-expression once the binding is inlined (Decrypt.rs `UnboundK` pattern).
+#[test]
+fn MatchArmWithEarlyReturnInlined() {
+	assert_eliminates(
+		r#"fn decrypt() -> Result<(), String> {
+            let Key = match derive_key() {
+                Ok(K) => K,
+                Err(_) => return Ok(()),
+            };
+            use_key(Key);
+            Ok(())
+        }"#,
+		r#"fn decrypt() -> Result<(), String> {
+            use_key(match derive_key() {
+                Ok(K) => K,
+                Err(_) => return Ok(()),
+            });
+            Ok(())
+        }"#,
+	);
+}
+
+// ===========================================================================
+// [EDGE-CASES] — borrow of inline temporary expressions
+// ===========================================================================
+
+/// `&inline_expr` — borrow of an expression that becomes a temporary.
+/// In Rust, the temporary lives to the end of the enclosing statement, which
+/// is long enough for the function call to complete.
+#[test]
+fn BorrowOfInlineExprInlined() {
+	assert_eliminates(
+		r#"pub fn Fn(Base: &PathBuf) -> std::io::Result<()> {
+            let Dir = Base.join("window1");
+            std::fs::create_dir_all(&Dir)?;
+            Ok(())
+        }"#,
+		r#"pub fn Fn(Base: &PathBuf) -> std::io::Result<()> {
+            std::fs::create_dir_all(&Base.join("window1"))?;
+            Ok(())
+        }"#,
+	);
+}
+
+/// `.as_bytes()` call on an inline `format!` result — the temporary `String`
+/// lives for the statement duration, so the borrow is valid.
+#[test]
+fn AsMethodOnInlineTemporaryInlined() {
+	assert_eliminates(
+		r#"fn f() -> Vec<u8> {
+            let Input = format!("prefix-{}", id);
+            digest(Input.as_bytes())
+        }"#,
+		r#"fn f() -> Vec<u8> {
+            digest(format!("prefix-{}", id).as_bytes())
+        }"#,
+	);
+}
+
+// ===========================================================================
+// [EDGE-CASES] — ? and .await in inline position
+// ===========================================================================
+
+/// `let Status = cmd.status()?; if Status.success() { … }` — inlined into the
+/// `if` condition.
+#[test]
+fn InlineIntoIfGuard() {
+	assert_eliminates(
+		r#"async fn f() -> Result<(), E> {
+            let Status = cmd().status().await.map_err(|e| e)?;
+            if Status.success() {
+                Ok(())
+            } else {
+                Err(e)
+            }
+        }"#,
+		r#"async fn f() -> Result<(), E> {
+            if cmd().status().await.map_err(|e| e)?.success() {
+                Ok(())
+            } else {
+                Err(e)
+            }
+        }"#,
+	);
+}
+
+// ===========================================================================
+// [MOUNTAIN] — additional patterns from Key.rs / TerminalProvider.rs
+// ===========================================================================
+
+/// Key.rs pattern: `Input = format!(…)` → inlined into
+/// `digest(Input.as_bytes())`, then `Hash` → inlined into
+/// `Key.copy_from_slice(Hash.as_ref())`.
+#[test]
+fn MountainKeyDerivationChain() {
+	assert_eliminates(
+		r#"fn derive_key(MachineId: &str) -> [u8; 32] {
+            let Input = format!("Land-Encryption-v1{}", MachineId);
+            let Hash = digest(&SHA256, Input.as_bytes());
+            let mut Key = [0u8; 32];
+            Key.copy_from_slice(Hash.as_ref());
+            Key
+        }"#,
+		r#"fn derive_key(MachineId: &str) -> [u8; 32] {
+            let mut Key = [0u8; 32];
+            Key.copy_from_slice(
+                digest(&SHA256, format!("Land-Encryption-v1{}", MachineId).as_bytes()).as_ref(),
+            );
+            Key
+        }"#,
+	);
+}
+
+/// TerminalProvider.rs: `Payload = json!([Term, Data.clone()])` — single-use
+/// json! array literal inlined into a function call.
+#[test]
+fn MountainJsonArrayPayloadInlined() {
+	assert_eliminates(
+		r#"async fn f(Term: u32, Data: String) -> Result<(), E> {
+            let Payload = json!([Term, Data.clone()]);
+            SendNotification("main", "$accept", Payload).await?;
+            Ok(())
+        }"#,
+		r#"async fn f(Term: u32, Data: String) -> Result<(), E> {
+            SendNotification("main", "$accept", json!([Term, Data.clone()])).await?;
+            Ok(())
+        }"#,
+	);
+}
+
+/// ProvideDocumentSymbols chain: `URI` and `DocumentURI` both single-use,
+/// inlined in two passes.
+#[test]
+fn MountainDocumentSymbolsChain() {
+	assert_eliminates(
+		r#"pub async fn Fn(
+            Service: &CocoonServiceImpl,
+            Request: ProvideDocumentSymbolsRequest,
+        ) -> Result<Response<ProvideDocumentSymbolsResponse>, Status> {
+            let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+            let DocumentURI = Url::parse(URI)
+                .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?;
+            match Service.environment.ProvideDocumentSymbols(DocumentURI).await {
+                Ok(_) => Ok(Response::new(ProvideDocumentSymbolsResponse::default())),
+                Err(E) => Err(Status::internal(format!("Symbols failed: {}", E))),
+            }
+        }"#,
+		r#"pub async fn Fn(
+            Service: &CocoonServiceImpl,
+            Request: ProvideDocumentSymbolsRequest,
+        ) -> Result<Response<ProvideDocumentSymbolsResponse>, Status> {
+            match Service.environment.ProvideDocumentSymbols(
+                Url::parse(Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or(""))
+                    .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?,
+            ).await {
+                Ok(_) => Ok(Response::new(ProvideDocumentSymbolsResponse::default())),
+                Err(E) => Err(Status::internal(format!("Symbols failed: {}", E))),
+            }
+        }"#,
+	);
+}
+
+/// ProvideSignatureHelp.rs: `ContextDTO = json!({…})` inlined alongside
+/// `DocumentURI` and `PositionDTO_`.
+#[test]
+fn MountainSignatureHelpContextDto() {
+	assert_eliminates(
+		r#"pub async fn Fn(
+            Service: &CocoonServiceImpl,
+            Request: ProvideSignatureHelpRequest,
+        ) -> Result<Response<ProvideSignatureHelpResponse>, Status> {
+            let DocumentURI = parse_uri(&Request)?;
+            let PositionDTO_ = build_position(&Request);
+            let ContextDTO = json!({ "triggerKind": 1, "isRetrigger": false });
+            match Service.environment.ProvideSignatureHelp(DocumentURI, PositionDTO_, ContextDTO).await {
+                Ok(_) => Ok(Response::new(ProvideSignatureHelpResponse::default())),
+                Err(E) => Err(Status::internal(E.to_string())),
+            }
+        }"#,
+		r#"pub async fn Fn(
+            Service: &CocoonServiceImpl,
+            Request: ProvideSignatureHelpRequest,
+        ) -> Result<Response<ProvideSignatureHelpResponse>, Status> {
+            match Service.environment.ProvideSignatureHelp(
+                parse_uri(&Request)?,
+                build_position(&Request),
+                json!({ "triggerKind": 1, "isRetrigger": false }),
+            ).await {
+                Ok(_) => Ok(Response::new(ProvideSignatureHelpResponse::default())),
+                Err(E) => Err(Status::internal(E.to_string())),
+            }
+        }"#,
+	);
+}
+
+/// ProvideHover.rs: `URI` used in `dev_log!` AND `Url::parse` = 2 uses.
+/// `Line` and `Character` each used in the struct AND in a hypothetical debug
+/// path = 2 uses.  Only `PositionDTO_` is single-use.
+#[test]
+fn MountainUriAndLineMultiUseKept() {
+	assert_unchanged(
+		r#"pub async fn Fn(
+            Service: &CocoonServiceImpl,
+            Request: ProvideHoverRequest,
+        ) -> Result<Response<ProvideHoverResponse>, Status> {
+            let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+            let Line = Request.position.as_ref().map(|P| P.line).unwrap_or(0);
+            let Character = Request.position.as_ref().map(|P| P.character).unwrap_or(0);
+            dev_log!("hover pos={}:{} uri={}", Line, Character, URI);
+            let DocumentURI = Url::parse(URI)
+                .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?;
+            let PositionDTO_ = PositionDTO { LineNumber: Line, Column: Character };
+            match Service.environment.ProvideHover(DocumentURI, PositionDTO_).await {
+                Ok(_) => Ok(Response::new(ProvideHoverResponse::default())),
+                Err(E) => Err(Status::internal(E.to_string())),
+            }
+        }"#,
+	);
+}
+
+/// Decrypt.rs pattern: `UnboundK = match { Ok(K) => K, Err(_) => return … }` is
+/// single-use, inlined directly into `LessSafeKey::new(…)`.
+#[test]
+fn MountainDecryptUnboundKeyMatchReturn() {
+	assert_eliminates(
+		r#"fn decrypt(KeyBytes: &[u8]) -> Result<Vec<u8>, String> {
+            let UnboundK = match UnboundKey::new(&AES_256_GCM, KeyBytes) {
+                Ok(K) => K,
+                Err(_) => return Ok(vec![]),
+            };
+            let Key = LessSafeKey::new(UnboundK);
+            Ok(Key.open())
+        }"#,
+		r#"fn decrypt(KeyBytes: &[u8]) -> Result<Vec<u8>, String> {
+            let Key = LessSafeKey::new(match UnboundKey::new(&AES_256_GCM, KeyBytes) {
+                Ok(K) => K,
+                Err(_) => return Ok(vec![]),
+            });
+            Ok(Key.open())
+        }"#,
+	);
+}
+
+// ===========================================================================
+// [EDGE-CASES] — idempotency of format-string-aware transform
+// ===========================================================================
+
+/// Re-running on already-minimal code containing `{X}` format strings must
+/// return None (no change).
+#[test]
+fn IdempotentWithImplicitCapture() { assert_unchanged(r#"fn f() { let X = 5; println!("{X}"); }"#); }

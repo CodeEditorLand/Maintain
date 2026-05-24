@@ -149,6 +149,13 @@ impl<'ast> Visit<'ast> for ExprCounter<'ast> {
 /// Recursively count occurrences of `Target` as an `Ident` token inside a
 /// raw `TokenStream`.  This covers macro arguments that are otherwise opaque
 /// to syn's AST visitor.
+///
+/// Also handles Rust 1.58+ implicit format-string captures: in
+/// `format!("{Target}")` the identifier does NOT appear as a separate
+/// `TokenTree::Ident` - it is embedded in the string literal `"{Target}"`.
+/// Scanning the literal prevents the mixed-usage bug where
+/// `let X = 5; println!("{}", X); println!("{X}")` would be counted as
+/// single-use (X as a bare token once) and incorrectly inlined.
 pub fn CountIdentsInTokenStream(Tokens:&TokenStream, Target:&str) -> usize {
 	let mut Count = 0;
 
@@ -161,8 +168,71 @@ pub fn CountIdentsInTokenStream(Tokens:&TokenStream, Target:&str) -> usize {
 
 			TokenTree::Group(G) => Count += CountIdentsInTokenStream(&G.stream(), Target),
 
+			// Scan string literals for `{Target}` / `{Target:…}` implicit
+			// format-string captures.  These appear as a single Literal token
+			// rather than a separate Ident token, so the arm above misses them.
+			TokenTree::Literal(Lit) => Count += CountIdentInFormatLiteral(&Lit.to_string(), Target),
+
 			_ => {},
 		}
+	}
+
+	Count
+}
+
+/// Scan a string-literal token (including its surrounding quote characters)
+/// for Rust 1.58+ implicit-capture patterns such as `{Target}` or `{Target:…}`.
+///
+/// Only processes double-quoted string literals; returns 0 for char literals,
+/// integer/float literals, and similar non-string tokens.
+pub fn CountIdentInFormatLiteral(Lit:&str, Target:&str) -> usize {
+	// Double-quoted string literals start with '"'.
+	// Raw strings start with 'r' (e.g. `r"..."` or `r#"..."#`).
+	// Char literals start with '\'' - skip those.
+	// All other literal kinds (numbers) are irrelevant.
+	if !Lit.starts_with('"') && !Lit.starts_with('r') {
+		return 0;
+	}
+
+	// Strip the outermost quotes/hashes to get the inner content.
+	let Inner:&str = if Lit.starts_with('"') {
+		// Normal string: strip leading `"` and trailing `"`.
+		&Lit[1..Lit.len().saturating_sub(1)]
+	} else {
+		// Raw string r"..." or r#"..."# - just scan the whole token;
+		// the literal braces won't be mistaken for format specifiers.
+		Lit
+	};
+
+	// Pattern: `{Target` immediately followed by `}`, `:`, or `!`.
+	// Examples that match: `{X}`, `{X:.2f}`, `{X!r:}`.
+	// Examples that don't match (false captures in double `{{`):
+	//   `{{X}}` - the leading `{{` would produce `{X` at position 1, but
+	//   the preceding char is `{` not a word boundary; we guard against
+	//   this by checking that the character *before* our match is not `{`.
+	let SearchFor = format!("{{{Target}");
+
+	let mut Count = 0;
+	let Bytes = Inner.as_bytes();
+	let PatBytes = SearchFor.as_bytes();
+
+	let mut Pos = 0usize;
+
+	while Pos + PatBytes.len() <= Bytes.len() {
+		if Bytes[Pos..].starts_with(PatBytes) {
+			// Guard: the `{` we matched must not itself be an escaped `{{`.
+			let IsEscaped = Pos > 0 && Bytes[Pos - 1] == b'{';
+
+			if !IsEscaped {
+				let After = &Bytes[Pos + PatBytes.len()..];
+
+				if After.first().map_or(false, |&B| B == b'}' || B == b':' || B == b'!') {
+					Count += 1;
+				}
+			}
+		}
+
+		Pos += 1;
 	}
 
 	Count
@@ -330,5 +400,152 @@ mod Tests {
 		assert_eq!(Count, 0);
 
 		assert!(!InClosure);
+	}
+
+	// -------------------------------------------------------------------------
+	// CountIdentInFormatLiteral unit tests
+	// -------------------------------------------------------------------------
+
+	/// `{X}` in a format string is one implicit capture of X.
+	#[test]
+	fn FormatLiteralBasicCapture() {
+		assert_eq!(CountIdentInFormatLiteral("\"{X}\"", "X"), 1);
+	}
+
+	/// `{X:.2}` - capture with a format specifier.
+	#[test]
+	fn FormatLiteralWithSpec() {
+		assert_eq!(CountIdentInFormatLiteral("\"{X:.2}\"", "X"), 1);
+	}
+
+	/// `{X!r:}` - debug alternate.
+	#[test]
+	fn FormatLiteralWithAlt() {
+		assert_eq!(CountIdentInFormatLiteral("\"{X!r:}\"", "X"), 1);
+	}
+
+	/// Two `{X}` in one string = count 2.
+	#[test]
+	fn FormatLiteralTwoCaptures() {
+		assert_eq!(CountIdentInFormatLiteral("\"{X} and {X}\"", "X"), 2);
+	}
+
+	/// `{{X}}` - double braces escape; the inner X is not a capture.
+	#[test]
+	fn FormatLiteralEscapedBraceNotCounted() {
+		assert_eq!(CountIdentInFormatLiteral("\"{{X}}\"", "X"), 0);
+	}
+
+	/// A numeric literal has no captures.
+	#[test]
+	fn FormatLiteralNumericNotCounted() {
+		assert_eq!(CountIdentInFormatLiteral("42", "X"), 0);
+	}
+
+	/// Substring match: `{XY}` should NOT count as a use of `X`.
+	#[test]
+	fn FormatLiteralSubstringNotCounted() {
+		assert_eq!(CountIdentInFormatLiteral("\"{XY}\"", "X"), 0);
+	}
+
+	// -------------------------------------------------------------------------
+	// Implicit-capture integration with CountReferences
+	// -------------------------------------------------------------------------
+
+	/// `println!("{X}")` - X used only via implicit capture, counted as 1.
+	#[test]
+	fn ImplicitCaptureSingleUse() {
+		let S = Stmts(r#"fn f() { let X = 5; println!("{X}"); }"#);
+
+		let (Count, _) = CountReferences("X", &S[1..]);
+
+		assert_eq!(Count, 1, "implicit capture {{X}} must count as one use");
+	}
+
+	/// `println!("{}", X); println!("{X}")` - mixed old-style + implicit = 2
+	/// uses.  Without this fix, the second use is missed and the binding is
+	/// incorrectly inlined, leaving an undefined variable.
+	#[test]
+	fn MixedImplicitAndExplicitCounts() {
+		let S = Stmts(
+			r#"fn f() {
+                let X = 5;
+                println!("{}", X);
+                println!("{X}");
+            }"#,
+		);
+
+		let (Count, _) = CountReferences("X", &S[1..]);
+
+		assert_eq!(Count, 2, "old-style + implicit capture must count as 2");
+	}
+
+	/// Two implicit captures in different macros = 2.
+	#[test]
+	fn TwoImplicitCaptures() {
+		let S = Stmts(
+			r#"fn f() {
+                let X = 5;
+                log!("{X}");
+                log!("{X}");
+            }"#,
+		);
+
+		let (Count, _) = CountReferences("X", &S[1..]);
+
+		assert_eq!(Count, 2);
+	}
+
+	/// A binding used both as a direct identifier AND in an implicit format
+	/// capture: multi-use, must not be inlined.
+	#[test]
+	fn ImplicitCaptureWithPlainUseIsMulti() {
+		let S = Stmts(
+			r#"fn f() {
+                let URI = compute_uri();
+                log!("{URI}");
+                Url::parse(URI);
+            }"#,
+		);
+
+		let (Count, _) = CountReferences("URI", &S[1..]);
+
+		assert_eq!(Count, 2);
+	}
+
+	/// A binding used only in a loop body: count = 1 (we do not model loops).
+	#[test]
+	fn LoopBodyCountedAsOne() {
+		let S = Stmts(
+			r#"fn f() {
+                let X = 5;
+                for _ in &v { println!("{}", X); }
+            }"#,
+		);
+
+		let (Count, _) = CountReferences("X", &S[1..]);
+
+		// Tool sees one textual reference; it has no loop-awareness.
+		assert_eq!(Count, 1);
+	}
+
+	/// A binding used in two separate statements in the same block: 2.
+	#[test]
+	fn TwoSeparateStmtsMultiUse() {
+		let S = Stmts("fn f() { let X = foo(); bar(X); baz(X); }");
+
+		let (Count, _) = CountReferences("X", &S[1..]);
+
+		assert_eq!(Count, 2);
+	}
+
+	/// A binding used twice as arguments in a single call: count = 2.
+	#[test]
+	fn TwoUsesInSameCall() {
+		let S = Stmts("fn f() { let X = foo(); bar(X, X); }");
+
+		let (Count, _) = CountReferences("X", &S[1..]);
+
+		assert_eq!(Count, 2);
 	}
 }
