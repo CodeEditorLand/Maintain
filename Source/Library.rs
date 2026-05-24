@@ -132,7 +132,7 @@ pub fn main() {
 	];
 
 	// Check if first arg is a build CLI flag
-	let is_build_cli_mode = if !is_run_mode && !is_legacy_mode && !is_build_subcommand {
+	let is_build_cli_mode = if !is_run_mode && !is_legacy_mode && !is_build_subcommand && !is_eliminate_mode {
 		build_cli_flags
 			.iter()
 			.any(|flag| first_arg == *flag || first_arg.starts_with(&format!("{}=", flag)))

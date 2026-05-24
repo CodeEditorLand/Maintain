@@ -20,11 +20,8 @@ use super::{Definition, Error};
 ///
 /// Returns `Ok(None)` when no bindings were eliminated (caller can skip the
 /// write-back).
-pub fn Run(Source: &str, Options: &Definition::Options) -> Error::Result<Option<String>> {
-	let mut Ast: syn::File = syn::parse_str(Source).map_err(|E| Error::Error::Parse {
-		Path: String::new(),
-		Source: E,
-	})?;
+pub fn Run(Source:&str, Options:&Definition::Options) -> Error::Result<Option<String>> {
+	let mut Ast:syn::File = syn::parse_str(Source).map_err(|E| Error::Error::Parse { Path:String::new(), Source:E })?;
 
 	let mut AnyChanged = false;
 

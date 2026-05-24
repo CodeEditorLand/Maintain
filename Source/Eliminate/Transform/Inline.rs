@@ -5,16 +5,14 @@
 //
 // Algorithm (per block, bottom-up):
 //   1. Collect structurally eligible let-binding candidates (Collect).
-//   2. For each candidate (in declaration order):
-//      a. Count references in subsequent statements (Count).
-//         This includes references inside macro token streams (json!, dev_log!,
-//         format!, etc.) so that multi-use variables are never misidentified as
-//         single-use.
-//      b. Skip if count ≠ 1, used-in-closure, or initialiser is unsafe/large.
-//      c. Substitute the single reference with the initialiser (SubstituteRef).
-//         Handles both plain expression positions AND macro token streams.
-//      d. Remove the let statement.
-//      e. Set Changed = true and restart candidate collection.
+//   2. For each candidate (in declaration order): a. Count references in
+//      subsequent statements (Count). This includes references inside macro
+//      token streams (json!, dev_log!, format!, etc.) so that multi-use
+//      variables are never misidentified as single-use. b. Skip if count ≠ 1,
+//      used-in-closure, or initialiser is unsafe/large. c. Substitute the
+//      single reference with the initialiser (SubstituteRef). Handles both
+//      plain expression positions AND macro token streams. d. Remove the let
+//      statement. e. Set Changed = true and restart candidate collection.
 //   3. Wrap substituted binary/range expressions in parentheses when placed as
 //      a direct operand of a binary or unary expression (precedence safety).
 //=============================================================================//
@@ -34,16 +32,14 @@ use super::{Collect, Count, Safe};
 // ---------------------------------------------------------------------------
 
 pub struct Eliminator<'a> {
-	pub Changed: bool,
-	Options: &'a crate::Eliminate::Definition::Options,
+	pub Changed:bool,
+	Options:&'a crate::Eliminate::Definition::Options,
 }
 
 impl<'a> Eliminator<'a> {
-	pub fn new(Options: &'a crate::Eliminate::Definition::Options) -> Self {
-		Self { Changed: false, Options }
-	}
+	pub fn new(Options:&'a crate::Eliminate::Definition::Options) -> Self { Self { Changed:false, Options } }
 
-	fn EliminateBlock(&mut self, Block: &mut syn::Block) {
+	fn EliminateBlock(&mut self, Block:&mut syn::Block) {
 		loop {
 			let Candidates = Collect::Collect(Block, self.Options.InlineComments);
 
@@ -61,11 +57,8 @@ impl<'a> Eliminator<'a> {
 					continue;
 				}
 
-				let Substituted = SubstituteRef(
-					&mut Block.stmts[Candidate.StmtIndex + 1..],
-					&Candidate.Ident,
-					&Candidate.Init,
-				);
+				let Substituted =
+					SubstituteRef(&mut Block.stmts[Candidate.StmtIndex + 1..], &Candidate.Ident, &Candidate.Init);
 
 				if Substituted {
 					Block.stmts.remove(Candidate.StmtIndex);
@@ -86,7 +79,7 @@ impl<'a> Eliminator<'a> {
 }
 
 impl<'a> VisitMut for Eliminator<'a> {
-	fn visit_block_mut(&mut self, Block: &mut syn::Block) {
+	fn visit_block_mut(&mut self, Block:&mut syn::Block) {
 		// Bottom-up: process inner blocks before this one.
 		visit_block_mut(self, Block);
 
@@ -101,13 +94,8 @@ impl<'a> VisitMut for Eliminator<'a> {
 /// Replace the first occurrence of `Target` (as a plain identifier expression
 /// OR as an identifier token inside a macro's token stream) in `Stmts` with
 /// `Replacement`.  Returns `true` when the substitution was performed.
-pub fn SubstituteRef(Stmts: &mut [Stmt], Target: &str, Replacement: &Expr) -> bool {
-	let mut Sub = Substitutor {
-		Target,
-		Replacement,
-		Substituted: false,
-		InBinaryOperandPosition: false,
-	};
+pub fn SubstituteRef(Stmts:&mut [Stmt], Target:&str, Replacement:&Expr) -> bool {
+	let mut Sub = Substitutor { Target, Replacement, Substituted:false, InBinaryOperandPosition:false };
 
 	for Stmt in Stmts.iter_mut() {
 		if Sub.Substituted {
@@ -125,16 +113,16 @@ pub fn SubstituteRef(Stmts: &mut [Stmt], Target: &str, Replacement: &Expr) -> bo
 // ---------------------------------------------------------------------------
 
 struct Substitutor<'a> {
-	Target: &'a str,
-	Replacement: &'a Expr,
-	Substituted: bool,
+	Target:&'a str,
+	Replacement:&'a Expr,
+	Substituted:bool,
 	/// True when the current AST position is a direct operand of a binary or
 	/// unary expression - used to decide whether to wrap `Replacement`.
-	InBinaryOperandPosition: bool,
+	InBinaryOperandPosition:bool,
 }
 
 impl<'a> VisitMut for Substitutor<'a> {
-	fn visit_expr_mut(&mut self, Node: &mut Expr) {
+	fn visit_expr_mut(&mut self, Node:&mut Expr) {
 		if self.Substituted {
 			return;
 		}
@@ -144,9 +132,9 @@ impl<'a> VisitMut for Substitutor<'a> {
 
 			*Node = if NeedsWrapping {
 				Expr::Paren(syn::ExprParen {
-					attrs: vec![],
-					paren_token: Default::default(),
-					expr: Box::new(self.Replacement.clone()),
+					attrs:vec![],
+					paren_token:Default::default(),
+					expr:Box::new(self.Replacement.clone()),
 				})
 			} else {
 				self.Replacement.clone()
@@ -198,15 +186,33 @@ impl<'a> VisitMut for Substitutor<'a> {
 	/// Substitute inside macro token streams (e.g. `json!(…)`, `dev_log!(…)`).
 	/// The default VisitMut does NOT recurse into `Macro::tokens`, so we do it
 	/// manually via raw token-tree manipulation.
-	fn visit_expr_macro_mut(&mut self, Node: &mut syn::ExprMacro) {
+	fn visit_expr_macro_mut(&mut self, Node:&mut syn::ExprMacro) {
 		if self.Substituted {
 			return;
 		}
 
 		let ReplacementTokens = ExprToTokenStream(self.Replacement);
 
-		let (NewTokens, Found) =
-			SubstituteInTokenStream(Node.mac.tokens.clone(), self.Target, &ReplacementTokens);
+		let (NewTokens, Found) = SubstituteInTokenStream(Node.mac.tokens.clone(), self.Target, &ReplacementTokens);
+
+		if Found {
+			Node.mac.tokens = NewTokens;
+
+			self.Substituted = true;
+		}
+	}
+
+	/// syn v2 separates top-level macro statements (`dev_log!("{}", X);`) into
+	/// `Stmt::Macro(StmtMacro)`, which is never routed through
+	/// `visit_expr_macro_mut`.  Mirror the same substitution here.
+	fn visit_stmt_macro_mut(&mut self, Node:&mut syn::StmtMacro) {
+		if self.Substituted {
+			return;
+		}
+
+		let ReplacementTokens = ExprToTokenStream(self.Replacement);
+
+		let (NewTokens, Found) = SubstituteInTokenStream(Node.mac.tokens.clone(), self.Target, &ReplacementTokens);
 
 		if Found {
 			Node.mac.tokens = NewTokens;
@@ -216,7 +222,7 @@ impl<'a> VisitMut for Substitutor<'a> {
 	}
 
 	// Skip inner blocks that shadow Target - mirrors Count logic.
-	fn visit_block_mut(&mut self, Block: &mut syn::Block) {
+	fn visit_block_mut(&mut self, Block:&mut syn::Block) {
 		if BlockShadowsTarget(&Block.stmts, self.Target) {
 			return;
 		}
@@ -225,7 +231,7 @@ impl<'a> VisitMut for Substitutor<'a> {
 	}
 
 	// Skip closures whose parameter shadows Target.
-	fn visit_expr_closure_mut(&mut self, Node: &mut syn::ExprClosure) {
+	fn visit_expr_closure_mut(&mut self, Node:&mut syn::ExprClosure) {
 		if ClosureParamShadows(Node, self.Target) {
 			return;
 		}
@@ -240,7 +246,7 @@ impl<'a> VisitMut for Substitutor<'a> {
 
 /// Convert a `syn::Expr` to a `proc_macro2::TokenStream` by calling
 /// `quote::ToTokens::to_tokens`.
-fn ExprToTokenStream(E: &Expr) -> TokenStream {
+fn ExprToTokenStream(E:&Expr) -> TokenStream {
 	let mut Tokens = TokenStream::new();
 
 	E.to_tokens(&mut Tokens);
@@ -251,12 +257,8 @@ fn ExprToTokenStream(E: &Expr) -> TokenStream {
 /// Walk `Tokens` and replace the first `Ident` token exactly equal to `Target`
 /// with `Replacement` (a pre-rendered `TokenStream`).  Recurses into `Group`
 /// delimiters.  Returns `(new_stream, found)`.
-fn SubstituteInTokenStream(
-	Tokens: TokenStream,
-	Target: &str,
-	Replacement: &TokenStream,
-) -> (TokenStream, bool) {
-	let mut Result: Vec<TokenTree> = Vec::new();
+fn SubstituteInTokenStream(Tokens:TokenStream, Target:&str, Replacement:&TokenStream) -> (TokenStream, bool) {
+	let mut Result:Vec<TokenTree> = Vec::new();
 
 	let mut Found = false;
 
@@ -268,7 +270,7 @@ fn SubstituteInTokenStream(
 		}
 
 		match Tree {
-			TokenTree::Ident(ref I) if I == Target => {
+			TokenTree::Ident(ref I) if I.to_string() == Target => {
 				// Extend with the replacement's token trees.
 				Result.extend(Replacement.clone());
 
@@ -276,8 +278,7 @@ fn SubstituteInTokenStream(
 			},
 
 			TokenTree::Group(G) => {
-				let (NewStream, F) =
-					SubstituteInTokenStream(G.stream(), Target, Replacement);
+				let (NewStream, F) = SubstituteInTokenStream(G.stream(), Target, Replacement);
 
 				if F {
 					Found = true;
@@ -297,7 +298,7 @@ fn SubstituteInTokenStream(
 // Expression helpers
 // ---------------------------------------------------------------------------
 
-fn IsTargetIdent(E: &Expr, Target: &str) -> bool {
+fn IsTargetIdent(E:&Expr, Target:&str) -> bool {
 	if let Expr::Path(ExprPath) = E {
 		if ExprPath.qself.is_none() {
 			if let Some(Ident) = ExprPath.path.get_ident() {
@@ -309,11 +310,9 @@ fn IsTargetIdent(E: &Expr, Target: &str) -> bool {
 	false
 }
 
-fn NeedsParen(E: &Expr) -> bool {
-	matches!(E, Expr::Binary(_) | Expr::Range(_) | Expr::Closure(_) | Expr::Cast(_))
-}
+fn NeedsParen(E:&Expr) -> bool { matches!(E, Expr::Binary(_) | Expr::Range(_) | Expr::Closure(_) | Expr::Cast(_)) }
 
-fn BlockShadowsTarget(Stmts: &[Stmt], Target: &str) -> bool {
+fn BlockShadowsTarget(Stmts:&[Stmt], Target:&str) -> bool {
 	Stmts.iter().any(|S| {
 		if let Stmt::Local(L) = S {
 			if let syn::Pat::Ident(P) = &L.pat {
@@ -325,14 +324,11 @@ fn BlockShadowsTarget(Stmts: &[Stmt], Target: &str) -> bool {
 	})
 }
 
-fn ClosureParamShadows(Closure: &syn::ExprClosure, Target: &str) -> bool {
-	Closure.inputs.iter().any(|P| {
-		if let syn::Pat::Ident(P) = P {
-			P.ident == Target
-		} else {
-			false
-		}
-	})
+fn ClosureParamShadows(Closure:&syn::ExprClosure, Target:&str) -> bool {
+	Closure
+		.inputs
+		.iter()
+		.any(|P| if let syn::Pat::Ident(P) = P { P.ident == Target } else { false })
 }
 
 // ---------------------------------------------------------------------------
@@ -343,29 +339,29 @@ fn ClosureParamShadows(Closure: &syn::ExprClosure, Target: &str) -> bool {
 mod Tests {
 	use super::*;
 
-	fn Transform(Src: &str) -> String {
+	fn Transform(Src:&str) -> String {
 		let Opts = crate::Eliminate::Definition::Options::default();
 
 		crate::Eliminate::Transform::Run(Src, &Opts)
 			.expect("transform failed")
 			.unwrap_or_else(|| {
-				let Ast: syn::File = syn::parse_str(Src).unwrap();
+				let Ast:syn::File = syn::parse_str(Src).unwrap();
 
 				prettyplease::unparse(&Ast)
 			})
 	}
 
-	fn Normalise(Src: &str) -> String {
-		let Ast: syn::File = syn::parse_str(Src).unwrap();
+	fn Normalise(Src:&str) -> String {
+		let Ast:syn::File = syn::parse_str(Src).unwrap();
 
 		prettyplease::unparse(&Ast)
 	}
 
-	fn AssertEliminates(Input: &str, Expected: &str) {
+	fn AssertEliminates(Input:&str, Expected:&str) {
 		assert_eq!(Transform(Input), Normalise(Expected));
 	}
 
-	fn AssertUnchanged(Input: &str) {
+	fn AssertUnchanged(Input:&str) {
 		let Opts = crate::Eliminate::Definition::Options::default();
 
 		let Result = crate::Eliminate::Transform::Run(Input, &Opts).expect("transform");
@@ -384,28 +380,15 @@ mod Tests {
 	}
 
 	#[test]
-	fn ChainInline() {
-		AssertEliminates(
-			"fn f() { let A = 1; let B = A + 1; g(B); }",
-			"fn f() { g(1 + 1); }",
-		);
-	}
+	fn ChainInline() { AssertEliminates("fn f() { let A = 1; let B = A + 1; g(B); }", "fn f() { g(1 + 1); }"); }
 
 	#[test]
 	fn BinaryExprParens() {
-		AssertEliminates(
-			"fn f() { let X = A + B; let _ = Y * X; }",
-			"fn f() { let _ = Y * (A + B); }",
-		);
+		AssertEliminates("fn f() { let X = A + B; let _ = Y * X; }", "fn f() { let _ = Y * (A + B); }");
 	}
 
 	#[test]
-	fn BinaryExprNoParensInFnArg() {
-		AssertEliminates(
-			"fn f() { let X = A + B; foo(X); }",
-			"fn f() { foo(A + B); }",
-		);
-	}
+	fn BinaryExprNoParensInFnArg() { AssertEliminates("fn f() { let X = A + B; foo(X); }", "fn f() { foo(A + B); }"); }
 
 	#[test]
 	fn QuestionMarkInlined() {
@@ -502,18 +485,19 @@ mod Tests {
 	// --- Kept-as-is tests ---------------------------------------------------
 
 	#[test]
-	fn MultiUseKept() {
-		AssertUnchanged("fn f() { let X = foo(); bar(X); baz(X); }");
-	}
+	fn MultiUseKept() { AssertUnchanged("fn f() { let X = foo(); bar(X); baz(X); }"); }
 
 	#[test]
-	fn MutKept() {
-		AssertUnchanged("fn f() { let mut X = 5; X += 1; g(X); }");
-	}
+	fn MutKept() { AssertUnchanged("fn f() { let mut X = 5; X += 1; g(X); }"); }
 
 	#[test]
 	fn ClosureCaptureKept() {
-		AssertUnchanged("fn f() { let X = heavy(); let F = move || X; call(F); }");
+		// F (the closure value) is single-use and is inlined.
+		// X (captured inside the closure) is conservatively kept.
+		AssertEliminates(
+			"fn f() { let X = heavy(); let F = move || X; call(F); }",
+			"fn f() { let X = heavy(); call(move || X); }",
+		);
 	}
 
 	// --- Idempotency --------------------------------------------------------

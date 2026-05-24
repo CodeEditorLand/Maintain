@@ -14,15 +14,15 @@ use syn::{Block, Pat, Stmt};
 #[derive(Debug, Clone)]
 pub struct Candidate {
 	/// The identifier name (e.g. `"URI"`).
-	pub Ident: String,
+	pub Ident:String,
 
 	/// Index of this `Stmt::Local` within `block.stmts`.
-	pub StmtIndex: usize,
+	pub StmtIndex:usize,
 
 	/// Cloned copy of the initialiser expression.
 	/// Stored here so that we can borrow the expression independently while
 	/// mutating `block.stmts`.
-	pub Init: syn::Expr,
+	pub Init:syn::Expr,
 }
 
 /// Collect all structurally eligible `let` bindings in `Block`.
@@ -36,7 +36,7 @@ pub struct Candidate {
 /// - The let statement carries attributes AND `InlineComments` is `false`.
 /// - The binding is the last statement in the block (nothing to substitute
 ///   into).
-pub fn Collect(Block: &Block, InlineComments: bool) -> Vec<Candidate> {
+pub fn Collect(Block:&Block, InlineComments:bool) -> Vec<Candidate> {
 	let Len = Block.stmts.len();
 
 	Block
@@ -66,10 +66,21 @@ pub fn Collect(Block: &Block, InlineComments: bool) -> Vec<Candidate> {
 				return None;
 			}
 
-			// Pattern must be a plain identifier - no destructuring, no `mut`,
-			// no `ref`, no `@ subpat`.
-			let Pat::Ident(PatIdent) = &Local.pat else {
-				return None;
+			// Pattern must be a plain identifier (optionally with a type
+			// annotation).  `let X: i32 = 5` has Pat::Type(Pat::Ident).
+			// No destructuring, no `mut`, no `ref`, no `@ subpat`.
+			let PatIdent = match &Local.pat {
+				Pat::Ident(P) => P,
+
+				Pat::Type(syn::PatType { pat, .. }) => {
+					if let Pat::Ident(P) = pat.as_ref() {
+						P
+					} else {
+						return None;
+					}
+				},
+
+				_ => return None,
 			};
 
 			if PatIdent.by_ref.is_some()
@@ -96,8 +107,8 @@ pub fn Collect(Block: &Block, InlineComments: bool) -> Vec<Candidate> {
 mod Tests {
 	use super::*;
 
-	fn CollectFrom(Src: &str) -> Vec<Candidate> {
-		let File: syn::File = syn::parse_str(Src).expect("parse");
+	fn CollectFrom(Src:&str) -> Vec<Candidate> {
+		let File:syn::File = syn::parse_str(Src).expect("parse");
 
 		// Grab the first function body.
 		for Item in &File.items {
@@ -191,7 +202,7 @@ mod Tests {
 
 	#[test]
 	fn AttributedLetIncludedWhenOptIn() {
-		let File: syn::File = syn::parse_str(
+		let File:syn::File = syn::parse_str(
 			r#"fn f() {
                 #[allow(unused)]
                 let X = 5;

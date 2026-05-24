@@ -23,38 +23,38 @@ use super::{Constant, Definition, Error, Process};
 pub struct Cli {
 	/// File or directory to process.
 	#[clap(long, short = 'p', default_value = ".")]
-	pub Path: PathBuf,
+	pub Path:PathBuf,
 
 	/// Glob pattern relative to Path for selecting files.
 	#[clap(long, short = 'g', default_value = Constant::DefaultGlob)]
-	pub Glob: String,
+	pub Glob:String,
 
 	/// Preview changes without writing any files.
 	#[clap(long, short = 'd')]
-	pub DryRun: bool,
+	pub DryRun:bool,
 
 	/// Maximum AST node count for an inlinable initialiser.
 	/// Expressions with more nodes are left as-is.
 	#[clap(long, default_value_t = Constant::DefaultMaxSize)]
-	pub MaxSize: usize,
+	pub MaxSize:usize,
 
 	/// Also inline bindings that carry leading doc-comments or attributes.
 	/// Default: skip commented bindings.
 	#[clap(long)]
-	pub InlineComments: bool,
+	pub InlineComments:bool,
 
 	/// Print a line for every binding that is inlined.
 	#[clap(long, short = 'v')]
-	pub Verbose: bool,
+	pub Verbose:bool,
 }
 
 impl Cli {
 	pub fn execute(&self) -> Error::Result<()> {
 		let Options = Definition::Options {
-			MaxSize: self.MaxSize,
-			InlineComments: self.InlineComments,
-			DryRun: self.DryRun,
-			Verbose: self.Verbose,
+			MaxSize:self.MaxSize,
+			InlineComments:self.InlineComments,
+			DryRun:self.DryRun,
+			Verbose:self.Verbose,
 		};
 
 		let Stats = Process::Process(&self.Path, &self.Glob, &Options)?;

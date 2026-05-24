@@ -11,7 +11,7 @@ pub enum Error {
 	Io(#[from] std::io::Error),
 
 	#[error("Parse error in {Path}: {Source}")]
-	Parse { Path: String, Source: syn::Error },
+	Parse { Path:String, Source:syn::Error },
 
 	#[error("Glob pattern error: {0}")]
 	GlobPattern(#[from] globset::Error),

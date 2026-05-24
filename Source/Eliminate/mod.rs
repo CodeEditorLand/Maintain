@@ -6,8 +6,9 @@
 // Brief Description:
 //   Analyses Rust source files and inlines `let` bindings that are used exactly
 //   once, are non-mutated, and have no closure capture semantics. Equivalent to
-//   the TypeScript Eliminate project at ~/Developer/Application/PlayForm/NPM/Eliminate
-//   but targeting Rust ASTs via `syn` + `prettyplease`.
+//   the TypeScript Eliminate project at
+// ~/Developer/Application/PlayForm/NPM/Eliminate   but targeting Rust ASTs via
+// `syn` + `prettyplease`.
 //
 // RESPONSIBILITIES:
 // ================

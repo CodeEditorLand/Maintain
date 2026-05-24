@@ -209,7 +209,8 @@ fn TypeAnnotationDropped() {
 	);
 }
 
-/// (19) Inner-scope binding is inlined without touching outer scope.
+/// (19) Both inner and outer single-use bindings are eliminated: Inner in the
+///      nested block, Outer in the outer scope.
 #[test]
 fn NestedScopeInlined() {
 	assert_eliminates(
@@ -222,9 +223,8 @@ fn NestedScopeInlined() {
             use_outer(Outer);
         }"#,
 		r#"fn f() {
-            let Outer = outer_val();
             { use_inner(42); }
-            use_outer(Outer);
+            use_outer(outer_val());
         }"#,
 	);
 }
@@ -238,7 +238,7 @@ fn BorrowInlined() {
 	);
 }
 
-/// (21) `PositionDTO_` struct construction inlined into async method call.
+/// (21) Both `DocURI` and `PositionDTO_` are single-use - both are eliminated.
 #[test]
 fn PositionDtoInlined() {
 	assert_eliminates(
@@ -249,8 +249,7 @@ fn PositionDtoInlined() {
             Ok(())
         }"#,
 		r#"async fn f() -> Result<(), E> {
-            let DocURI = parse_uri()?;
-            env.ProvideHover(DocURI, PositionDTO { LineNumber: 0, Column: 0 }).await?;
+            env.ProvideHover(parse_uri()?, PositionDTO { LineNumber: 0, Column: 0 }).await?;
             Ok(())
         }"#,
 	);
@@ -290,11 +289,14 @@ fn MacroDoubleReferenceKept() {
 	);
 }
 
-/// (8) Binding used inside a closure body is kept (conservative: move
-///     semantics may change).
+/// (8) `F` (the closure itself, single-use) is inlined; `X` (captured inside
+///     the closure body) is conservatively kept.
 #[test]
 fn ClosureCaptureKept() {
-	assert_unchanged("fn f() { let X = heavy(); let F = move || X; call(F); }");
+	assert_eliminates(
+		"fn f() { let X = heavy(); let F = move || X; call(F); }",
+		"fn f() { let X = heavy(); call(move || X); }",
+	);
 }
 
 /// (22) Initialiser exceeding `MaxSize` is kept.
@@ -431,8 +433,8 @@ fn MountainDataStringIntoJsonMacro() {
 	);
 }
 
-/// ProvideReferences.rs: `ContextDTO = json!({…})` used exactly once as a
-/// function argument - inlined directly at the call site.
+/// ProvideReferences.rs: all three single-use bindings inlined - `DocumentURI`,
+/// `PositionDTO_`, `ContextDTO`.
 #[test]
 fn MountainContextDtoIntoFnArg() {
 	assert_eliminates(
@@ -452,9 +454,11 @@ fn MountainContextDtoIntoFnArg() {
             Service: &CocoonServiceImpl,
             Request: ProvideReferencesRequest,
         ) -> Result<Response<ProvideReferencesResponse>, Status> {
-            let DocumentURI = parse_uri(&Request)?;
-            let PositionDTO_ = build_position(&Request);
-            match Service.environment.ProvideReferences(DocumentURI, PositionDTO_, json!({ "includeDeclaration": true })).await {
+            match Service.environment.ProvideReferences(
+                parse_uri(&Request)?,
+                build_position(&Request),
+                json!({ "includeDeclaration": true }),
+            ).await {
                 Ok(_) => Ok(Response::new(ProvideReferencesResponse::default())),
                 Err(E) => Err(Status::internal(E.to_string())),
             }
@@ -465,6 +469,8 @@ fn MountainContextDtoIntoFnArg() {
 /// ProvideDefinition.rs: `PositionDTO_` struct literal used exactly once.
 #[test]
 fn MountainPositionDtoInlined() {
+	// All single-use bindings inlined: DocumentURI + PositionDTO_.  Position_
+	// is multi-use (two field reads) so it stays.
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
@@ -486,11 +492,13 @@ fn MountainPositionDtoInlined() {
             Request: ProvideDefinitionRequest,
         ) -> Result<Response<ProvideDefinitionResponse>, Status> {
             let Position_ = Request.position.as_ref();
-            let DocumentURI = parse_uri(&Request)?;
-            match Service.environment.ProvideDefinition(DocumentURI, PositionDTO {
-                LineNumber: Position_.map(|P| P.line).unwrap_or(0),
-                Column: Position_.map(|P| P.character).unwrap_or(0),
-            }).await {
+            match Service.environment.ProvideDefinition(
+                parse_uri(&Request)?,
+                PositionDTO {
+                    LineNumber: Position_.map(|P| P.line).unwrap_or(0),
+                    Column: Position_.map(|P| P.character).unwrap_or(0),
+                },
+            ).await {
                 Ok(_) => Ok(Response::new(ProvideDefinitionResponse::default())),
                 Err(E) => Err(Status::internal(E.to_string())),
             }
@@ -604,18 +612,18 @@ fn MountainResourceStatesIntoJsonMacro() {
                     .resource_states
                     .iter()
                     .map(|RS| json!({ "uri": RS.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("") }))
-                    .collect::<Vec<serde_json::Value>>() }),
+                    .collect() }),
             );
             Ok(Response::new(UpdateScmGroupResponse {}))
         }"#,
 	);
 }
 
-/// ProvideHover.rs: `URI` used in BOTH `dev_log!` and `Url::parse` - multi-use,
-/// must NOT be inlined (correctness regression guard).
+/// ProvideHover.rs: `URI` is multi-use (dev_log! + Url::parse), so it stays.
+/// `DocumentURI` is single-use and is inlined into `drop(...)`.
 #[test]
 fn MountainUriDoubleUseKept() {
-	assert_unchanged(
+	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
             Request: ProvideHoverRequest,
@@ -627,6 +635,15 @@ fn MountainUriDoubleUseKept() {
             drop(DocumentURI);
             Ok(Response::new(ProvideHoverResponse::default()))
         }"#,
+		r#"pub async fn Fn(
+            Service: &CocoonServiceImpl,
+            Request: ProvideHoverRequest,
+        ) -> Result<Response<ProvideHoverResponse>, Status> {
+            let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+            dev_log!("hover URI={}", URI);
+            drop(Url::parse(URI).map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?);
+            Ok(Response::new(ProvideHoverResponse::default()))
+        }"#,
 	);
 }
 
@@ -634,6 +651,8 @@ fn MountainUriDoubleUseKept() {
 /// directly into the `ShowQuickPickResponse` struct literal.
 #[test]
 fn MountainSelectedIndicesInlined() {
+	// All single-use bindings inlined: SelectedIndices into the response,
+	// then Selected (which itself appears only once in the inlined chain).
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
@@ -656,9 +675,8 @@ fn MountainSelectedIndicesInlined() {
             Service: &CocoonServiceImpl,
             Request: ShowQuickPickRequest,
         ) -> Result<Response<ShowQuickPickResponse>, Status> {
-            let Selected = vec!["option_a".to_string()];
             Ok(Response::new(ShowQuickPickResponse {
-                selected_indices: Selected
+                selected_indices: vec!["option_a".to_string()]
                     .iter()
                     .filter_map(|Label| {
                         Request
@@ -677,6 +695,8 @@ fn MountainSelectedIndicesInlined() {
 /// to `SendRequest`.
 #[test]
 fn MountainParametersIntoSendRequest() {
+	// Handle inlined into json!, then Parameters inlined into SendRequest,
+	// then Reply inlined into Ok(...).
 	assert_eliminates(
 		r#"pub async fn Fn() -> Result<String, String> {
             let Handle = get_handle();
@@ -689,13 +709,16 @@ fn MountainParametersIntoSendRequest() {
             Ok(Reply)
         }"#,
 		r#"pub async fn Fn() -> Result<String, String> {
-            let Handle = get_handle();
-            let Reply = SendRequest("cocoon-main", "$provideTreeChildren".to_string(), json!({
-                "viewId": "explorer",
-                "treeItemHandle": "item_1",
-                "handle": Handle,
-            }), 5000).await?;
-            Ok(Reply)
+            Ok(SendRequest(
+                "cocoon-main",
+                "$provideTreeChildren".to_string(),
+                json!({
+                    "viewId": "explorer",
+                    "treeItemHandle": "item_1",
+                    "handle": get_handle(),
+                }),
+                5000,
+            ).await?)
         }"#,
 	);
 }
@@ -725,11 +748,13 @@ fn MountainContextDtoWithKeptRangeDto() {
             Request: ProvideCodeActionsRequest,
         ) -> Result<Response<ProvideCodeActionsResponse>, Status> {
             let R = Request.range.as_ref();
-            let RangeDTO = json!({
-                "startLine": R.and_then(|R| R.start.as_ref()).map(|P| P.line).unwrap_or(0),
-                "endLine": R.and_then(|R| R.end.as_ref()).map(|P| P.line).unwrap_or(0),
-            });
-            match Service.environment.ProvideCodeActions(RangeDTO, json!({ "diagnostics": [], "only": null })).await {
+            match Service.environment.ProvideCodeActions(
+                json!({
+                    "startLine": R.and_then(|R| R.start.as_ref()).map(|P| P.line).unwrap_or(0),
+                    "endLine": R.and_then(|R| R.end.as_ref()).map(|P| P.line).unwrap_or(0),
+                }),
+                json!({ "diagnostics": [], "only": null }),
+            ).await {
                 Ok(_) => Ok(Response::new(ProvideCodeActionsResponse::default())),
                 Err(E) => Err(Status::internal(E.to_string())),
             }

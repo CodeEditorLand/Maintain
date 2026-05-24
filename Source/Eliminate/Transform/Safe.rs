@@ -9,7 +9,8 @@
 //   2. It does not contain an `unsafe { … }` block.
 //
 // Notable inclusions (expressions that ARE safe in Rust):
-//   - `?` operator  (`Expr::Try`)     - propagates the error, context unchanged.
+//   - `?` operator  (`Expr::Try`)     - propagates the error, context
+//     unchanged.
 //   - `.await`      (`Expr::Await`)   - async context is caller-determined.
 //   - Closures      (`Expr::Closure`) - safe when the closure does not capture
 //     the candidate binding (that is checked by Count, not here).
@@ -25,28 +26,26 @@ use syn::{
 // ---------------------------------------------------------------------------
 
 /// Returns `true` when `E` is safe to substitute at its single use site.
-pub fn IsSafe(E: &Expr, MaxSize: usize) -> bool {
-	NodeCount(E) <= MaxSize && !ContainsUnsafe(E)
-}
+pub fn IsSafe(E:&Expr, MaxSize:usize) -> bool { NodeCount(E) <= MaxSize && !ContainsUnsafe(E) }
 
 // ---------------------------------------------------------------------------
 // Node counting
 // ---------------------------------------------------------------------------
 
 struct NodeCounter {
-	pub Count: usize,
+	pub Count:usize,
 }
 
 impl<'ast> Visit<'ast> for NodeCounter {
-	fn visit_expr(&mut self, Node: &'ast Expr) {
+	fn visit_expr(&mut self, Node:&'ast Expr) {
 		self.Count += 1;
 
 		visit_expr(self, Node);
 	}
 }
 
-pub fn NodeCount(E: &Expr) -> usize {
-	let mut Counter = NodeCounter { Count: 0 };
+pub fn NodeCount(E:&Expr) -> usize {
+	let mut Counter = NodeCounter { Count:0 };
 
 	Counter.visit_expr(E);
 
@@ -58,19 +57,19 @@ pub fn NodeCount(E: &Expr) -> usize {
 // ---------------------------------------------------------------------------
 
 struct UnsafeDetector {
-	pub Found: bool,
+	pub Found:bool,
 }
 
 impl<'ast> Visit<'ast> for UnsafeDetector {
-	fn visit_expr_unsafe(&mut self, _Node: &'ast syn::ExprUnsafe) {
+	fn visit_expr_unsafe(&mut self, _Node:&'ast syn::ExprUnsafe) {
 		self.Found = true;
 
 		// Do not recurse - one match is enough.
 	}
 }
 
-pub fn ContainsUnsafe(E: &Expr) -> bool {
-	let mut Detector = UnsafeDetector { Found: false };
+pub fn ContainsUnsafe(E:&Expr) -> bool {
+	let mut Detector = UnsafeDetector { Found:false };
 
 	Detector.visit_expr(E);
 
@@ -85,9 +84,7 @@ pub fn ContainsUnsafe(E: &Expr) -> bool {
 mod Tests {
 	use super::*;
 
-	fn ParseExpr(Src: &str) -> Expr {
-		syn::parse_str(Src).expect("parse expression")
-	}
+	fn ParseExpr(Src:&str) -> Expr { syn::parse_str(Src).expect("parse expression") }
 
 	#[test]
 	fn LiteralIsSafe() {

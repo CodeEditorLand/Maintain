@@ -19,11 +19,7 @@ use super::{Definition, Error, Transform};
 /// `Options.DryRun` is set.
 ///
 /// Returns aggregate [`Definition::Stats`] describing what was processed.
-pub fn Process(
-	Root: &Path,
-	Pattern: &str,
-	Options: &Definition::Options,
-) -> Error::Result<Definition::Stats> {
+pub fn Process(Root:&Path, Pattern:&str, Options:&Definition::Options) -> Error::Result<Definition::Stats> {
 	let mut Stats = Definition::Stats::default();
 
 	let GlobMatcher = BuildGlobSet(Pattern)?;
@@ -43,7 +39,7 @@ pub fn Process(
 // Internals
 // ---------------------------------------------------------------------------
 
-fn BuildGlobSet(Pattern: &str) -> Error::Result<GlobSet> {
+fn BuildGlobSet(Pattern:&str) -> Error::Result<GlobSet> {
 	let mut Builder = GlobSetBuilder::new();
 
 	Builder.add(Glob::new(Pattern)?);
@@ -51,7 +47,7 @@ fn BuildGlobSet(Pattern: &str) -> Error::Result<GlobSet> {
 	Ok(Builder.build()?)
 }
 
-fn CollectFiles(Root: &Path, GlobMatcher: &GlobSet) -> Vec<PathBuf> {
+fn CollectFiles(Root:&Path, GlobMatcher:&GlobSet) -> Vec<PathBuf> {
 	if Root.is_file() {
 		return vec![Root.to_path_buf()];
 	}
@@ -70,19 +66,12 @@ fn CollectFiles(Root: &Path, GlobMatcher: &GlobSet) -> Vec<PathBuf> {
 		.collect()
 }
 
-fn ProcessFile(
-	FilePath: &Path,
-	Options: &Definition::Options,
-	Stats: &mut Definition::Stats,
-) -> Error::Result<()> {
+fn ProcessFile(FilePath:&Path, Options:&Definition::Options, Stats:&mut Definition::Stats) -> Error::Result<()> {
 	let Source = fs::read_to_string(FilePath)?;
 
 	let TransformResult = Transform::Run(&Source, Options).map_err(|E| {
 		if let Error::Error::Parse { Source: Src, .. } = E {
-			Error::Error::Parse {
-				Path: FilePath.display().to_string(),
-				Source: Src,
-			}
+			Error::Error::Parse { Path:FilePath.display().to_string(), Source:Src }
 		} else {
 			E
 		}
@@ -102,11 +91,7 @@ fn ProcessFile(
 	Stats.BindingsInlined += Before.saturating_sub(After);
 
 	if Options.Verbose {
-		log::info!(
-			"{}: {} binding(s) inlined",
-			FilePath.display(),
-			Before.saturating_sub(After)
-		);
+		log::info!("{}: {} binding(s) inlined", FilePath.display(), Before.saturating_sub(After));
 	}
 
 	if Options.DryRun {

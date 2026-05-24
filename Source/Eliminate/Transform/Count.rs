@@ -5,15 +5,15 @@
 //
 // Counts how many times a named identifier is referenced in a slice of
 // statements, respecting:
-//   - Top-level shadowing: a second `let <target> = …` at the same scope
-//     depth stops the count.
+//   - Top-level shadowing: a second `let <target> = …` at the same scope depth
+//     stops the count.
 //   - Inner-block shadowing: if an inner block re-introduces the name, all
 //     references inside that block are excluded (conservative; may under-count
 //     but never over-counts).
 //   - Macro token streams: identifiers inside `json!(…)`, `dev_log!(…)`, and
-//     other macro invocations are counted via raw token-tree scanning.  This
-//     is critical for correctness: without it, a variable used in both a macro
-//     and a regular expression would be miscounted as single-use.
+//     other macro invocations are counted via raw token-tree scanning.  This is
+//     critical for correctness: without it, a variable used in both a macro and
+//     a regular expression would be miscounted as single-use.
 //   - Closure captures: references inside a closure body set `InClosure`.
 //     Callers treat such bindings as non-inlinable (move semantics may differ).
 //=============================================================================//
@@ -39,7 +39,7 @@ use syn::{
 ///   body (even if `count == 1`).
 ///
 /// Counting stops when a top-level `let <target> = …` shadow is encountered.
-pub fn CountReferences(Target: &str, Stmts: &[Stmt]) -> (usize, bool) {
+pub fn CountReferences(Target:&str, Stmts:&[Stmt]) -> (usize, bool) {
 	let mut TotalCount = 0usize;
 	let mut InClosure = false;
 
@@ -49,7 +49,7 @@ pub fn CountReferences(Target: &str, Stmts: &[Stmt]) -> (usize, bool) {
 			break;
 		}
 
-		let mut Counter = ExprCounter { Target, Count: 0, InClosure: false };
+		let mut Counter = ExprCounter { Target, Count:0, InClosure:false };
 
 		Counter.visit_stmt(Stmt);
 
@@ -67,7 +67,7 @@ pub fn CountReferences(Target: &str, Stmts: &[Stmt]) -> (usize, bool) {
 // Internals
 // ---------------------------------------------------------------------------
 
-fn IsTopLevelShadow(Stmt: &Stmt, Target: &str) -> bool {
+fn IsTopLevelShadow(Stmt:&Stmt, Target:&str) -> bool {
 	if let Stmt::Local(Local) = Stmt {
 		if let Pat::Ident(P) = &Local.pat {
 			return P.ident == Target;
@@ -78,15 +78,15 @@ fn IsTopLevelShadow(Stmt: &Stmt, Target: &str) -> bool {
 }
 
 struct ExprCounter<'a> {
-	Target: &'a str,
-	Count: usize,
+	Target:&'a str,
+	Count:usize,
 	/// True when a reference to `Target` was found inside a closure body.
-	InClosure: bool,
+	InClosure:bool,
 }
 
 impl<'ast> Visit<'ast> for ExprCounter<'ast> {
 	// Count plain identifier path expressions that match Target.
-	fn visit_expr_path(&mut self, Node: &'ast syn::ExprPath) {
+	fn visit_expr_path(&mut self, Node:&'ast syn::ExprPath) {
 		if let Some(Ident) = Node.path.get_ident() {
 			if Ident == self.Target {
 				self.Count += 1;
@@ -97,13 +97,24 @@ impl<'ast> Visit<'ast> for ExprCounter<'ast> {
 	// Count identifier occurrences inside macro token streams (e.g. json!(…),
 	// dev_log!(…), format!(…)).  The default syn visitor does NOT recurse into
 	// Macro::tokens, so we do it manually here.
-	fn visit_expr_macro(&mut self, Node: &'ast syn::ExprMacro) {
+	//
+	// This covers macros that appear in expression position, e.g.:
+	//   emit(json!({ "data": X }))
+	fn visit_expr_macro(&mut self, Node:&'ast syn::ExprMacro) {
+		self.Count += CountIdentsInTokenStream(&Node.mac.tokens, self.Target);
+	}
+
+	// syn v2 has a SEPARATE `Stmt::Macro` variant for top-level macro
+	// invocation statements (e.g. `dev_log!("{}", URI);`).  These are NOT
+	// represented as `Stmt::Expr(Expr::Macro, semi)` and therefore the
+	// `visit_expr_macro` override above is never reached for them.
+	fn visit_stmt_macro(&mut self, Node:&'ast syn::StmtMacro) {
 		self.Count += CountIdentsInTokenStream(&Node.mac.tokens, self.Target);
 	}
 
 	// Skip inner blocks that would shadow Target - conservative, avoids
 	// counting references that actually belong to the inner binding.
-	fn visit_block(&mut self, Node: &'ast syn::Block) {
+	fn visit_block(&mut self, Node:&'ast syn::Block) {
 		if BlockShadowsTarget(&Node.stmts, self.Target) {
 			return; // skip entire inner block
 		}
@@ -113,32 +124,40 @@ impl<'ast> Visit<'ast> for ExprCounter<'ast> {
 
 	// References inside closure bodies are flagged so callers can conservatively
 	// decline inlining (move vs. capture semantics differ).
-	fn visit_expr_closure(&mut self, Node: &'ast syn::ExprClosure) {
+	//
+	// IMPORTANT: only set InClosure = true when Target was ACTUALLY found inside
+	// this closure body.  Setting it unconditionally would taint variables that
+	// appear *outside* the closure in the same expression (e.g. the `URI` in
+	// `Url::parse(URI).map_err(|E| /* no URI here */ ...)`).
+	fn visit_expr_closure(&mut self, Node:&'ast syn::ExprClosure) {
 		// If the closure itself shadows Target via a parameter, skip the body.
 		if ClosureParamShadows(Node, self.Target) {
 			return;
 		}
 
-		let WasInClosure = self.InClosure;
-
-		self.InClosure = true;
+		let CountBefore = self.Count;
 
 		visit_expr_closure(self, Node);
 
-		// propagate InClosure upward - once set, keep it
-		let _ = WasInClosure;
+		// Only mark InClosure if Target was actually referenced inside THIS body.
+		if self.Count > CountBefore {
+			self.InClosure = true;
+		}
 	}
 }
 
 /// Recursively count occurrences of `Target` as an `Ident` token inside a
 /// raw `TokenStream`.  This covers macro arguments that are otherwise opaque
 /// to syn's AST visitor.
-pub fn CountIdentsInTokenStream(Tokens: &TokenStream, Target: &str) -> usize {
+pub fn CountIdentsInTokenStream(Tokens:&TokenStream, Target:&str) -> usize {
 	let mut Count = 0;
 
 	for Tree in Tokens.clone() {
 		match Tree {
-			TokenTree::Ident(I) if I == Target => Count += 1,
+			// Use .to_string() explicitly - proc_macro2::Ident's PartialEq<str>
+			// has subtleties around &str vs str deref coercion that produce
+			// incorrect results in non-proc-macro (library) contexts.
+			TokenTree::Ident(I) if I.to_string() == Target => Count += 1,
 
 			TokenTree::Group(G) => Count += CountIdentsInTokenStream(&G.stream(), Target),
 
@@ -149,18 +168,13 @@ pub fn CountIdentsInTokenStream(Tokens: &TokenStream, Target: &str) -> usize {
 	Count
 }
 
-fn BlockShadowsTarget(Stmts: &[Stmt], Target: &str) -> bool {
-	Stmts.iter().any(|S| IsTopLevelShadow(S, Target))
-}
+fn BlockShadowsTarget(Stmts:&[Stmt], Target:&str) -> bool { Stmts.iter().any(|S| IsTopLevelShadow(S, Target)) }
 
-fn ClosureParamShadows(Closure: &syn::ExprClosure, Target: &str) -> bool {
-	Closure.inputs.iter().any(|P| {
-		if let Pat::Ident(PIdent) = P {
-			PIdent.ident == Target
-		} else {
-			false
-		}
-	})
+fn ClosureParamShadows(Closure:&syn::ExprClosure, Target:&str) -> bool {
+	Closure
+		.inputs
+		.iter()
+		.any(|P| if let Pat::Ident(PIdent) = P { PIdent.ident == Target } else { false })
 }
 
 // ---------------------------------------------------------------------------
@@ -171,8 +185,8 @@ fn ClosureParamShadows(Closure: &syn::ExprClosure, Target: &str) -> bool {
 mod Tests {
 	use super::*;
 
-	fn Stmts(Src: &str) -> Vec<Stmt> {
-		let File: syn::File = syn::parse_str(Src).expect("parse");
+	fn Stmts(Src:&str) -> Vec<Stmt> {
+		let File:syn::File = syn::parse_str(Src).expect("parse");
 
 		if let syn::Item::Fn(F) = &File.items[0] {
 			return F.block.stmts.clone();
@@ -265,7 +279,8 @@ mod Tests {
 		assert_eq!(Count, 1);
 	}
 
-	/// Variable used twice inside the same macro invocation: count=2, not eligible.
+	/// Variable used twice inside the same macro invocation: count=2, not
+	/// eligible.
 	#[test]
 	fn MacroDoubleUse() {
 		let S = Stmts(
