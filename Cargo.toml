@@ -3,8 +3,12 @@ name = "Maintain"
 path = "Source/main.rs"
 
 [[test]]
-name = "Eliminate"
-path = "tests/Eliminate.rs"
+name = "Syntactic"
+path = "tests/Eliminate/Syntactic.rs"
+
+[[test]]
+name = "Integration"
+path = "tests/Eliminate/Integration.rs"
 
 [build-dependencies]
 serde = { workspace = true, features = ["derive"] }
