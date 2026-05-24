@@ -9,11 +9,16 @@
 //     depth stops the count.
 //   - Inner-block shadowing: if an inner block re-introduces the name, all
 //     references inside that block are excluded (conservative; may under-count
-//     but will never over-count).
+//     but never over-counts).
+//   - Macro token streams: identifiers inside `json!(…)`, `dev_log!(…)`, and
+//     other macro invocations are counted via raw token-tree scanning.  This
+//     is critical for correctness: without it, a variable used in both a macro
+//     and a regular expression would be miscounted as single-use.
 //   - Closure captures: references inside a closure body set `InClosure`.
 //     Callers treat such bindings as non-inlinable (move semantics may differ).
 //=============================================================================//
 
+use proc_macro2::{TokenStream, TokenTree};
 use syn::{
 	Pat,
 	Stmt,
@@ -28,7 +33,8 @@ use syn::{
 ///
 /// Returns `(count, in_closure)`.
 ///
-/// - `count` is the number of times the identifier is referenced.
+/// - `count` is the number of times the identifier is referenced (both as a
+///   plain expression AND inside macro token streams).
 /// - `in_closure` is true when at least one reference occurs inside a closure
 ///   body (even if `count == 1`).
 ///
@@ -88,6 +94,13 @@ impl<'ast> Visit<'ast> for ExprCounter<'ast> {
 		}
 	}
 
+	// Count identifier occurrences inside macro token streams (e.g. json!(…),
+	// dev_log!(…), format!(…)).  The default syn visitor does NOT recurse into
+	// Macro::tokens, so we do it manually here.
+	fn visit_expr_macro(&mut self, Node: &'ast syn::ExprMacro) {
+		self.Count += CountIdentsInTokenStream(&Node.mac.tokens, self.Target);
+	}
+
 	// Skip inner blocks that would shadow Target - conservative, avoids
 	// counting references that actually belong to the inner binding.
 	fn visit_block(&mut self, Node: &'ast syn::Block) {
@@ -112,12 +125,28 @@ impl<'ast> Visit<'ast> for ExprCounter<'ast> {
 
 		visit_expr_closure(self, Node);
 
-		// Once in-closure is set, keep it set even after returning from this
-		// recursive call so that the caller sees the flag.
-		if !WasInClosure {
-			// propagate upward; do NOT reset to false
+		// propagate InClosure upward - once set, keep it
+		let _ = WasInClosure;
+	}
+}
+
+/// Recursively count occurrences of `Target` as an `Ident` token inside a
+/// raw `TokenStream`.  This covers macro arguments that are otherwise opaque
+/// to syn's AST visitor.
+pub fn CountIdentsInTokenStream(Tokens: &TokenStream, Target: &str) -> usize {
+	let mut Count = 0;
+
+	for Tree in Tokens.clone() {
+		match Tree {
+			TokenTree::Ident(I) if I == Target => Count += 1,
+
+			TokenTree::Group(G) => Count += CountIdentsInTokenStream(&G.stream(), Target),
+
+			_ => {},
 		}
 	}
+
+	Count
 }
 
 fn BlockShadowsTarget(Stmts: &[Stmt], Target: &str) -> bool {
@@ -154,7 +183,6 @@ mod Tests {
 
 	#[test]
 	fn SingleUse() {
-		// Stmts after the `let X` declaration are stmts[1..]
 		let S = Stmts("fn f() { let X = 1; g(X); }");
 
 		let (Count, InClosure) = CountReferences("X", &S[1..]);
@@ -184,25 +212,72 @@ mod Tests {
 
 	#[test]
 	fn ShadowStops() {
-		// let X = 1; f(X); let X = 2; g(X);
-		// When counting after the first let X, we see f(X) (count 1) then
-		// encounter `let X = 2` (shadow) and stop.
+		// let X=1; f(X); let X=2; g(X)
+		// Count refs for the FIRST X starting from index 1.
 		let S = Stmts("fn f() { let X = 1; f(X); let X = 2; g(X); }");
 
-		// Stmts are: [let X=1, f(X), let X=2, g(X)]
-		// Count refs for the FIRST X, starting from index 1.
 		let (Count, _) = CountReferences("X", &S[1..]);
 
 		assert_eq!(Count, 1); // only f(X) counted; shadow stops before g(X)
 	}
 
+	/// A variable used inside a format-style macro MUST be counted.
+	/// Previously, macros were transparent - this was a correctness bug.
 	#[test]
 	fn MacroCountsAsUse() {
+		// dev_log! uses URI once.
 		let S = Stmts(r#"fn f() { let URI = "x"; dev_log!("{}", URI); }"#);
 
 		let (Count, _) = CountReferences("URI", &S[1..]);
 
 		assert_eq!(Count, 1);
+	}
+
+	/// The motivating correctness bug: URI used in BOTH a macro and a plain
+	/// expression should give count=2, not count=1.
+	#[test]
+	fn MacroAndExprBothCounted() {
+		let S = Stmts(
+			r#"fn f() {
+                let URI = "x";
+                dev_log!("{}", URI);
+                let _ = Url::parse(URI);
+            }"#,
+		);
+
+		let (Count, _) = CountReferences("URI", &S[1..]);
+
+		assert_eq!(Count, 2, "URI used in macro + expression must count as 2");
+	}
+
+	/// Variable used ONLY inside a json! macro: count=1, eligible.
+	#[test]
+	fn MacroOnlyUse() {
+		let S = Stmts(
+			r#"fn f() {
+                let DataString = compute();
+                emit(json!({ "data": DataString }));
+            }"#,
+		);
+
+		let (Count, _) = CountReferences("DataString", &S[1..]);
+
+		assert_eq!(Count, 1);
+	}
+
+	/// Variable used twice inside the same macro invocation: count=2, not eligible.
+	#[test]
+	fn MacroDoubleUse() {
+		let S = Stmts(
+			r#"fn f() {
+                let X = val();
+                json!({ "a": X, "b": X });
+            }"#,
+		);
+
+		let (Count, _) = CountReferences("X", &S[1..]);
+
+		assert_eq!(Count, 2);
 	}
 
 	#[test]
@@ -218,7 +293,6 @@ mod Tests {
 
 	#[test]
 	fn InnerBlockShadowSkipped() {
-		// Inner block re-introduces X; its use should NOT be counted.
 		let S = Stmts(
 			r#"fn f() {
                 let X = 1;
@@ -226,15 +300,14 @@ mod Tests {
             }"#,
 		);
 
+		// X inside the inner block is the inner X, not the outer X.
 		let (Count, _) = CountReferences("X", &S[1..]);
 
-		// X inside { let X = 2; g(X); } is the inner X, not counted.
 		assert_eq!(Count, 0);
 	}
 
 	#[test]
 	fn ClosureParamShadowSkipped() {
-		// |X| uses X as a parameter name - the outer X is not captured.
 		let S = Stmts("fn f() { let X = 5; let _ = |X| X + 1; g(0); }");
 
 		let (Count, InClosure) = CountReferences("X", &S[1..]);

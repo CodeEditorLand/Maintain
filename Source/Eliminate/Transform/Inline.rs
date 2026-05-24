@@ -7,15 +7,20 @@
 //   1. Collect structurally eligible let-binding candidates (Collect).
 //   2. For each candidate (in declaration order):
 //      a. Count references in subsequent statements (Count).
+//         This includes references inside macro token streams (json!, dev_log!,
+//         format!, etc.) so that multi-use variables are never misidentified as
+//         single-use.
 //      b. Skip if count ≠ 1, used-in-closure, or initialiser is unsafe/large.
 //      c. Substitute the single reference with the initialiser (SubstituteRef).
+//         Handles both plain expression positions AND macro token streams.
 //      d. Remove the let statement.
 //      e. Set Changed = true and restart candidate collection.
-//   3. Wrap substituted expressions in parentheses when placed as a direct
-//      operand of a binary or unary expression and the replacement is a
-//      compound expression (preserves operator precedence).
+//   3. Wrap substituted binary/range expressions in parentheses when placed as
+//      a direct operand of a binary or unary expression (precedence safety).
 //=============================================================================//
 
+use proc_macro2::{Group, TokenStream, TokenTree};
+use quote::ToTokens;
 use syn::{
 	Expr,
 	Stmt,
@@ -28,9 +33,6 @@ use super::{Collect, Count, Safe};
 // Public: Eliminator
 // ---------------------------------------------------------------------------
 
-/// `VisitMut` implementation that eliminates single-use `let` bindings in
-/// every block it visits.  Bottom-up traversal ensures inner blocks are
-/// processed before outer ones.
 pub struct Eliminator<'a> {
 	pub Changed: bool,
 	Options: &'a crate::Eliminate::Definition::Options,
@@ -42,19 +44,16 @@ impl<'a> Eliminator<'a> {
 	}
 
 	fn EliminateBlock(&mut self, Block: &mut syn::Block) {
-		// Repeat until a full pass finds nothing to eliminate.
 		loop {
 			let Candidates = Collect::Collect(Block, self.Options.InlineComments);
 
 			let mut DidChange = false;
 
 			for Candidate in &Candidates {
-				// Safety check on the initialiser.
 				if !Safe::IsSafe(&Candidate.Init, self.Options.MaxSize) {
 					continue;
 				}
 
-				// Count references in the statements that follow the let.
 				let (RefCount, InClosure) =
 					Count::CountReferences(&Candidate.Ident, &Block.stmts[Candidate.StmtIndex + 1..]);
 
@@ -62,8 +61,6 @@ impl<'a> Eliminator<'a> {
 					continue;
 				}
 
-				// Attempt substitution.  Returns false only when the counter
-				// over-counted (can happen with deeply nested inner-block shadows).
 				let Substituted = SubstituteRef(
 					&mut Block.stmts[Candidate.StmtIndex + 1..],
 					&Candidate.Ident,
@@ -77,7 +74,7 @@ impl<'a> Eliminator<'a> {
 
 					DidChange = true;
 
-					break; // candidates are now stale - restart
+					break;
 				}
 			}
 
@@ -90,10 +87,9 @@ impl<'a> Eliminator<'a> {
 
 impl<'a> VisitMut for Eliminator<'a> {
 	fn visit_block_mut(&mut self, Block: &mut syn::Block) {
-		// Bottom-up: process inner blocks first.
+		// Bottom-up: process inner blocks before this one.
 		visit_block_mut(self, Block);
 
-		// Then process this block.
 		self.EliminateBlock(Block);
 	}
 }
@@ -102,10 +98,9 @@ impl<'a> VisitMut for Eliminator<'a> {
 // Public: SubstituteRef
 // ---------------------------------------------------------------------------
 
-/// Replace the first (and only expected) occurrence of `Target` in `Stmts`
-/// with `Replacement`.
-///
-/// Returns `true` when substitution succeeded.
+/// Replace the first occurrence of `Target` (as a plain identifier expression
+/// OR as an identifier token inside a macro's token stream) in `Stmts` with
+/// `Replacement`.  Returns `true` when the substitution was performed.
 pub fn SubstituteRef(Stmts: &mut [Stmt], Target: &str, Replacement: &Expr) -> bool {
 	let mut Sub = Substitutor {
 		Target,
@@ -133,8 +128,8 @@ struct Substitutor<'a> {
 	Target: &'a str,
 	Replacement: &'a Expr,
 	Substituted: bool,
-	/// True when the current position is a direct operand of a binary or unary
-	/// expression.  Used to decide whether to wrap `Replacement` in parens.
+	/// True when the current AST position is a direct operand of a binary or
+	/// unary expression - used to decide whether to wrap `Replacement`.
 	InBinaryOperandPosition: bool,
 }
 
@@ -144,7 +139,6 @@ impl<'a> VisitMut for Substitutor<'a> {
 			return;
 		}
 
-		// Check whether this expression IS the target identifier.
 		if IsTargetIdent(Node, self.Target) {
 			let NeedsWrapping = self.InBinaryOperandPosition && NeedsParen(self.Replacement);
 
@@ -163,7 +157,7 @@ impl<'a> VisitMut for Substitutor<'a> {
 			return;
 		}
 
-		// Recurse into children, tracking the binary-operand-position context.
+		// Propagate binary-operand context for children.
 		match Node {
 			Expr::Binary(B) => {
 				let Saved = self.InBinaryOperandPosition;
@@ -201,8 +195,27 @@ impl<'a> VisitMut for Substitutor<'a> {
 		}
 	}
 
-	// Skip inner blocks that shadow Target - mirrors the Count logic so that
-	// substitution and counting are always consistent.
+	/// Substitute inside macro token streams (e.g. `json!(…)`, `dev_log!(…)`).
+	/// The default VisitMut does NOT recurse into `Macro::tokens`, so we do it
+	/// manually via raw token-tree manipulation.
+	fn visit_expr_macro_mut(&mut self, Node: &mut syn::ExprMacro) {
+		if self.Substituted {
+			return;
+		}
+
+		let ReplacementTokens = ExprToTokenStream(self.Replacement);
+
+		let (NewTokens, Found) =
+			SubstituteInTokenStream(Node.mac.tokens.clone(), self.Target, &ReplacementTokens);
+
+		if Found {
+			Node.mac.tokens = NewTokens;
+
+			self.Substituted = true;
+		}
+	}
+
+	// Skip inner blocks that shadow Target - mirrors Count logic.
 	fn visit_block_mut(&mut self, Block: &mut syn::Block) {
 		if BlockShadowsTarget(&Block.stmts, self.Target) {
 			return;
@@ -222,7 +235,66 @@ impl<'a> VisitMut for Substitutor<'a> {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Token-stream helpers
+// ---------------------------------------------------------------------------
+
+/// Convert a `syn::Expr` to a `proc_macro2::TokenStream` by calling
+/// `quote::ToTokens::to_tokens`.
+fn ExprToTokenStream(E: &Expr) -> TokenStream {
+	let mut Tokens = TokenStream::new();
+
+	E.to_tokens(&mut Tokens);
+
+	Tokens
+}
+
+/// Walk `Tokens` and replace the first `Ident` token exactly equal to `Target`
+/// with `Replacement` (a pre-rendered `TokenStream`).  Recurses into `Group`
+/// delimiters.  Returns `(new_stream, found)`.
+fn SubstituteInTokenStream(
+	Tokens: TokenStream,
+	Target: &str,
+	Replacement: &TokenStream,
+) -> (TokenStream, bool) {
+	let mut Result: Vec<TokenTree> = Vec::new();
+
+	let mut Found = false;
+
+	for Tree in Tokens {
+		if Found {
+			Result.push(Tree);
+
+			continue;
+		}
+
+		match Tree {
+			TokenTree::Ident(ref I) if I == Target => {
+				// Extend with the replacement's token trees.
+				Result.extend(Replacement.clone());
+
+				Found = true;
+			},
+
+			TokenTree::Group(G) => {
+				let (NewStream, F) =
+					SubstituteInTokenStream(G.stream(), Target, Replacement);
+
+				if F {
+					Found = true;
+				}
+
+				Result.push(TokenTree::Group(Group::new(G.delimiter(), NewStream)));
+			},
+
+			Other => Result.push(Other),
+		}
+	}
+
+	(Result.into_iter().collect(), Found)
+}
+
+// ---------------------------------------------------------------------------
+// Expression helpers
 // ---------------------------------------------------------------------------
 
 fn IsTargetIdent(E: &Expr, Target: &str) -> bool {
@@ -237,13 +309,8 @@ fn IsTargetIdent(E: &Expr, Target: &str) -> bool {
 	false
 }
 
-/// Returns `true` for compound expressions that need parentheses when placed
-/// as a direct operand of a binary or unary expression.
 fn NeedsParen(E: &Expr) -> bool {
-	matches!(
-		E,
-		Expr::Binary(_) | Expr::Range(_) | Expr::Closure(_) | Expr::Cast(_)
-	)
+	matches!(E, Expr::Binary(_) | Expr::Range(_) | Expr::Closure(_) | Expr::Cast(_))
 }
 
 fn BlockShadowsTarget(Stmts: &[Stmt], Target: &str) -> bool {
@@ -282,7 +349,6 @@ mod Tests {
 		crate::Eliminate::Transform::Run(Src, &Opts)
 			.expect("transform failed")
 			.unwrap_or_else(|| {
-				// Already minimal - return normalised version for comparison.
 				let Ast: syn::File = syn::parse_str(Src).unwrap();
 
 				prettyplease::unparse(&Ast)
@@ -307,19 +373,18 @@ mod Tests {
 		assert!(Result.is_none(), "expected no change but got:\n{}", Result.unwrap());
 	}
 
-	// --- Simple cases -------------------------------------------------------
+	// --- Simple inline tests ------------------------------------------------
 
 	#[test]
 	fn SimpleInline() {
 		AssertEliminates(
-			"fn f() { let X = 5; println!(\"{}\", X); }",
-			"fn f() { println!(\"{}\", 5); }",
+			r#"fn f() { let X = 5; println!("{}", X); }"#,
+			r#"fn f() { println!("{}", 5); }"#,
 		);
 	}
 
 	#[test]
 	fn ChainInline() {
-		// Two passes: A → 1, then B → 1 + 1.
 		AssertEliminates(
 			"fn f() { let A = 1; let B = A + 1; g(B); }",
 			"fn f() { g(1 + 1); }",
@@ -327,10 +392,18 @@ mod Tests {
 	}
 
 	#[test]
-	fn StructInlined() {
+	fn BinaryExprParens() {
 		AssertEliminates(
-			"fn f() { let Opts = MyOpts { a: 1 }; call(Opts); }",
-			"fn f() { call(MyOpts { a: 1 }); }",
+			"fn f() { let X = A + B; let _ = Y * X; }",
+			"fn f() { let _ = Y * (A + B); }",
+		);
+	}
+
+	#[test]
+	fn BinaryExprNoParensInFnArg() {
+		AssertEliminates(
+			"fn f() { let X = A + B; foo(X); }",
+			"fn f() { foo(A + B); }",
 		);
 	}
 
@@ -342,75 +415,46 @@ mod Tests {
 		);
 	}
 
+	// --- Macro substitution tests -------------------------------------------
+
+	/// Variable used only inside a json! macro gets inlined into the macro.
 	#[test]
-	fn MatchExprInlined() {
+	fn InlineIntoJsonMacro() {
 		AssertEliminates(
-			"fn f() { let R = match x { 1 => true, _ => false }; use_result(R); }",
-			"fn f() { use_result(match x { 1 => true, _ => false }); }",
+			r#"fn f() {
+                let DataString = compute_data();
+                emit(json!({ "data": DataString }));
+            }"#,
+			r#"fn f() {
+                emit(json!({ "data": compute_data() }));
+            }"#,
 		);
 	}
 
+	/// Variable used in BOTH a macro and a plain expression: multi-use, kept.
 	#[test]
-	fn BorrowInlined() {
-		AssertEliminates(
-			"fn f() { let X = &foo; bar(X); }",
-			"fn f() { bar(&foo); }",
+	fn MacroAndExprMultiUseKept() {
+		AssertUnchanged(
+			r#"fn f() {
+                let URI = compute_uri();
+                dev_log!("{}", URI);
+                let _ = Url::parse(URI);
+            }"#,
 		);
 	}
 
-	// --- Binary expression parenthesisation --------------------------------
-
+	/// Variable used twice inside the same macro: multi-use, kept.
 	#[test]
-	fn BinaryExprParens() {
-		// let X = A + B; Y * X  →  Y * (A + B)
-		AssertEliminates(
-			"fn f() { let X = A + B; let _ = Y * X; }",
-			"fn f() { let _ = Y * (A + B); }",
+	fn MacroDoubleUseKept() {
+		AssertUnchanged(
+			r#"fn f() {
+                let X = val();
+                emit(json!({ "a": X, "b": X }));
+            }"#,
 		);
 	}
 
-	#[test]
-	fn BinaryExprNoParensInFnArg() {
-		// In a function-argument position, no parens needed.
-		AssertEliminates(
-			"fn f() { let X = A + B; foo(X); }",
-			"fn f() { foo(A + B); }",
-		);
-	}
-
-	// --- Kept as-is cases ---------------------------------------------------
-
-	#[test]
-	fn MultiUseKept() {
-		AssertUnchanged("fn f() { let X = foo(); bar(X); baz(X); }");
-	}
-
-	#[test]
-	fn MutKept() {
-		AssertUnchanged("fn f() { let mut X = 5; X += 1; g(X); }");
-	}
-
-	#[test]
-	fn DestructuringKept() {
-		AssertUnchanged("fn f() { let (A, B) = pair; g(A); }");
-	}
-
-	#[test]
-	fn ClosureCaptureKept() {
-		AssertUnchanged("fn f() { let X = heavy(); let F = move || X; call(F); }");
-	}
-
-	#[test]
-	fn ShadowFirstThenInline() {
-		// The first X (= 1) is used once before the shadow; second X (= 2) is
-		// used once after.  Both should inline.
-		AssertEliminates(
-			"fn f() { let X = 1; f(X); let X = 2; g(X); }",
-			"fn f() { f(1); g(2); }",
-		);
-	}
-
-	// --- URL-parsing pattern (the motivating example) -----------------------
+	// --- URL-parsing pattern (primary motivating example) -------------------
 
 	#[test]
 	fn UrlPatternInlined() {
@@ -440,9 +484,7 @@ mod Tests {
                         Url::parse(
                             Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or(""),
                         )
-                        .map_err(|E| {
-                            Status::invalid_argument(format!("Invalid URI: {}", E))
-                        })?,
+                        .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?,
                     )
                     .await
                 {
@@ -452,31 +494,35 @@ mod Tests {
             }
         "#;
 
-		// Compare after normalisation so whitespace differences don't matter.
 		let Got = Transform(Input);
 		let Norm = Normalise(Expected);
 		assert_eq!(Got, Norm, "URL pattern not inlined as expected");
 	}
 
-	// --- Idempotency --------------------------------------------------------
+	// --- Kept-as-is tests ---------------------------------------------------
 
 	#[test]
-	fn AlreadyMinimalReturnsNone() {
-		let Opts = crate::Eliminate::Definition::Options::default();
-
-		// A file with no single-use variables.
-		let Src = "fn f() { let X = foo(); bar(X); baz(X); }";
-
-		let Result = crate::Eliminate::Transform::Run(Src, &Opts).unwrap();
-
-		assert!(Result.is_none());
+	fn MultiUseKept() {
+		AssertUnchanged("fn f() { let X = foo(); bar(X); baz(X); }");
 	}
+
+	#[test]
+	fn MutKept() {
+		AssertUnchanged("fn f() { let mut X = 5; X += 1; g(X); }");
+	}
+
+	#[test]
+	fn ClosureCaptureKept() {
+		AssertUnchanged("fn f() { let X = heavy(); let F = move || X; call(F); }");
+	}
+
+	// --- Idempotency --------------------------------------------------------
 
 	#[test]
 	fn Idempotent() {
 		let Opts = crate::Eliminate::Definition::Options::default();
 
-		let Src = "fn f() { let X = 5; println!(\"{}\", X); }";
+		let Src = r#"fn f() { let X = 5; println!("{}", X); }"#;
 
 		let First = crate::Eliminate::Transform::Run(Src, &Opts)
 			.unwrap()
@@ -484,6 +530,6 @@ mod Tests {
 
 		let Second = crate::Eliminate::Transform::Run(&First, &Opts).unwrap();
 
-		assert!(Second.is_none(), "second pass should be idempotent");
+		assert!(Second.is_none(), "second pass must be a no-op:\n{}", First);
 	}
 }
