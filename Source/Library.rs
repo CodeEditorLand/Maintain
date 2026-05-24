@@ -101,6 +101,9 @@ pub fn main() {
 	// Check if we're in legacy mode (-- followed by a command)
 	let is_legacy_mode = first_arg == "--";
 
+	// Check for eliminate mode
+	let is_eliminate_mode = first_arg == "eliminate" || first_arg == "--eliminate";
+
 	// Check for run mode indicators
 	let is_run_flag = first_arg == "--run" || first_arg == "--dev" || first_arg == "-r";
 
@@ -208,6 +211,25 @@ pub fn main() {
 				std::process::exit(e.exit_code());
 			},
 		}
+	} else if is_eliminate_mode {
+		// Inline single-use Rust let-bindings across a file or directory tree.
+		args.remove(1);
+
+		match Eliminate::CLI::Cli::try_parse_from(args) {
+			Ok(Cli) => {
+				if let Err(E) = Cli.execute() {
+					eprintln!("Error: {}", E);
+
+					std::process::exit(1);
+				}
+			},
+
+			Err(E) => {
+				E.print().expect("Failed to print error");
+
+				std::process::exit(E.exit_code());
+			},
+		}
 	} else {
 		// Use legacy build mode (environment variable based)
 		// This handles: ./Maintain -- pnpm tauri build
@@ -258,5 +280,18 @@ pub mod Build;
 /// See the Run module documentation for detailed information about the
 /// development run system's capabilities and usage.
 pub mod Run;
+
+/// Eliminate Module - inline single-use Rust `let` bindings.
+///
+/// Uses `syn` to parse Rust source files and `prettyplease` to re-format the
+/// result after iteratively removing intermediate variables that are used
+/// exactly once and are safe to substitute at their use site.
+///
+/// Invoked as:
+/// ```bash
+/// cargo run --bin Maintain -- eliminate --path ./Source --glob "**/*.rs"
+/// cargo run --bin Maintain -- eliminate --path ./Source/Foo.rs --dry-run
+/// ```
+pub mod Eliminate;
 
 pub mod Architecture;
