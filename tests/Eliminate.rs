@@ -716,10 +716,10 @@ fn MountainContextDtoWithKeptRangeDto() {
 }
 
 // ===========================================================================
-// [EDGE-CASES] — format-string implicit captures, loop bodies, branch inits
+// [EDGE-CASES] - format-string implicit captures, loop bodies, branch inits
 // ===========================================================================
 
-/// `format!("{X}")` — X is used only via implicit capture.  The binding must
+/// `format!("{X}")` - X is used only via implicit capture.  The binding must
 /// NOT be inlined because the substitution engine operates on token trees, not
 /// string-literal content; removing the let would leave {X} undefined.
 #[test]
@@ -730,7 +730,7 @@ fn ImplicitFormatCaptureKept() {
 	assert_unchanged(r#"fn f() { let X = 5; println!("{X}"); }"#);
 }
 
-/// Mixed old-style + implicit: `println!("{}", X); println!("{X}")` — count =
+/// Mixed old-style + implicit: `println!("{}", X); println!("{X}")` - count =
 /// 2, must NOT be inlined.  Without the format-literal scanner this was a
 /// correctness bug where count came back as 1 and the binding was removed.
 #[test]
@@ -744,7 +744,7 @@ fn MixedImplicitAndExplicitKept() {
 	);
 }
 
-/// Two explicit uses in different `println!` calls — multi-use, kept.
+/// Two explicit uses in different `println!` calls - multi-use, kept.
 #[test]
 fn TwoMacroUsesKept() {
 	assert_unchanged(
@@ -756,17 +756,17 @@ fn TwoMacroUsesKept() {
 	);
 }
 
-/// Two uses of X as arguments to the same function call: `bar(X, X)` — count =
+/// Two uses of X as arguments to the same function call: `bar(X, X)` - count =
 /// 2, kept.
 #[test]
 fn TwoUsesInSameCallKept() { assert_unchanged("fn f() { let X = foo(); bar(X, X); }"); }
 
-/// `let mut X = 5; g(X)` — mut binding, conservatively kept even though X is
+/// `let mut X = 5; g(X)` - mut binding, conservatively kept even though X is
 /// never actually mutated.
 #[test]
 fn MutNeverMutatedKept() { assert_unchanged("fn f() { let mut X = 5; g(X); }"); }
 
-/// A `for` loop iteration variable is not a `let` binding — the loop body is
+/// A `for` loop iteration variable is not a `let` binding - the loop body is
 /// unchanged regardless of how often the var appears.
 #[test]
 fn ForLoopVarUntouched() {
@@ -779,7 +779,7 @@ fn ForLoopVarUntouched() {
 	);
 }
 
-/// An `if let Some(X) = foo()` binding is not a plain `let` — unchanged.
+/// An `if let Some(X) = foo()` binding is not a plain `let` - unchanged.
 #[test]
 fn IfLetBindingUntouched() {
 	assert_unchanged(
@@ -792,7 +792,7 @@ fn IfLetBindingUntouched() {
 }
 
 /// A `let X` used inside a `for` loop body: count = 1 (tool has no loop
-/// awareness — it counts textual occurrences, not execution frequency).
+/// awareness - it counts textual occurrences, not execution frequency).
 /// For cheap/Copy initialisers this is semantically safe; the test documents
 /// the current behavior.
 #[test]
@@ -813,10 +813,10 @@ fn LoopBodySingleUseInlined() {
 }
 
 // ===========================================================================
-// [EDGE-CASES] — chain inlining depths, block / if expressions as initialisers
+// [EDGE-CASES] - chain inlining depths, block / if expressions as initialisers
 // ===========================================================================
 
-/// Chain of three bindings: A→B→C — inlined in three iterative passes.
+/// Chain of three bindings: A→B→C - inlined in three iterative passes.
 #[test]
 fn ChainOfThreeInlined() {
 	assert_eliminates(
@@ -863,7 +863,7 @@ fn MatchExprAsInitInlined() {
 	);
 }
 
-/// Match arm containing an early `return` — the return is valid inside a
+/// Match arm containing an early `return` - the return is valid inside a
 /// sub-expression once the binding is inlined (Decrypt.rs `UnboundK` pattern).
 #[test]
 fn MatchArmWithEarlyReturnInlined() {
@@ -887,10 +887,10 @@ fn MatchArmWithEarlyReturnInlined() {
 }
 
 // ===========================================================================
-// [EDGE-CASES] — borrow of inline temporary expressions
+// [EDGE-CASES] - borrow of inline temporary expressions
 // ===========================================================================
 
-/// `&inline_expr` — borrow of an expression that becomes a temporary.
+/// `&inline_expr` - borrow of an expression that becomes a temporary.
 /// In Rust, the temporary lives to the end of the enclosing statement, which
 /// is long enough for the function call to complete.
 #[test]
@@ -908,7 +908,7 @@ fn BorrowOfInlineExprInlined() {
 	);
 }
 
-/// `.as_bytes()` call on an inline `format!` result — the temporary `String`
+/// `.as_bytes()` call on an inline `format!` result - the temporary `String`
 /// lives for the statement duration, so the borrow is valid.
 #[test]
 fn AsMethodOnInlineTemporaryInlined() {
@@ -924,10 +924,10 @@ fn AsMethodOnInlineTemporaryInlined() {
 }
 
 // ===========================================================================
-// [EDGE-CASES] — ? and .await in inline position
+// [EDGE-CASES] - ? and .await in inline position
 // ===========================================================================
 
-/// `let Status = cmd.status()?; if Status.success() { … }` — inlined into the
+/// `let Status = cmd.status()?; if Status.success() { … }` - inlined into the
 /// `if` condition.
 #[test]
 fn InlineIntoIfGuard() {
@@ -951,7 +951,7 @@ fn InlineIntoIfGuard() {
 }
 
 // ===========================================================================
-// [MOUNTAIN] — additional patterns from Key.rs / TerminalProvider.rs
+// [MOUNTAIN] - additional patterns from Key.rs / TerminalProvider.rs
 // ===========================================================================
 
 /// Key.rs pattern: `Input = format!(…)` → inlined into
@@ -977,7 +977,7 @@ fn MountainKeyDerivationChain() {
 	);
 }
 
-/// TerminalProvider.rs: `Payload = json!([Term, Data.clone()])` — single-use
+/// TerminalProvider.rs: `Payload = json!([Term, Data.clone()])` - single-use
 /// json! array literal inlined into a function call.
 #[test]
 fn MountainJsonArrayPayloadInlined() {
@@ -1059,12 +1059,11 @@ fn MountainSignatureHelpContextDto() {
 	);
 }
 
-/// ProvideHover.rs: `URI` used in `dev_log!` AND `Url::parse` = 2 uses.
-/// `Line` and `Character` each used in the struct AND in a hypothetical debug
-/// path = 2 uses.  Only `PositionDTO_` is single-use.
+/// URI/Line/Character are multi-use (dev_log! + method call), kept.
+/// DocumentURI and PositionDTO_ are single-use, inlined.
 #[test]
 fn MountainUriAndLineMultiUseKept() {
-	assert_unchanged(
+	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
             Request: ProvideHoverRequest,
@@ -1081,11 +1080,28 @@ fn MountainUriAndLineMultiUseKept() {
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
+		r#"pub async fn Fn(
+            Service: &CocoonServiceImpl,
+            Request: ProvideHoverRequest,
+        ) -> Result<Response<ProvideHoverResponse>, Status> {
+            let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+            let Line = Request.position.as_ref().map(|P| P.line).unwrap_or(0);
+            let Character = Request.position.as_ref().map(|P| P.character).unwrap_or(0);
+            dev_log!("hover pos={}:{} uri={}", Line, Character, URI);
+            match Service.environment.ProvideHover(
+                Url::parse(URI)
+                    .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?,
+                PositionDTO { LineNumber: Line, Column: Character },
+            ).await {
+                Ok(_) => Ok(Response::new(ProvideHoverResponse::default())),
+                Err(E) => Err(Status::internal(E.to_string())),
+            }
+        }"#,
 	);
 }
 
-/// Decrypt.rs pattern: `UnboundK = match { Ok(K) => K, Err(_) => return … }` is
-/// single-use, inlined directly into `LessSafeKey::new(…)`.
+/// Decrypt.rs pattern: both `UnboundK` and `Key` are single-use - inlined in
+/// two passes to produce the fully collapsed form.
 #[test]
 fn MountainDecryptUnboundKeyMatchReturn() {
 	assert_eliminates(
@@ -1098,17 +1114,16 @@ fn MountainDecryptUnboundKeyMatchReturn() {
             Ok(Key.open())
         }"#,
 		r#"fn decrypt(KeyBytes: &[u8]) -> Result<Vec<u8>, String> {
-            let Key = LessSafeKey::new(match UnboundKey::new(&AES_256_GCM, KeyBytes) {
+            Ok(LessSafeKey::new(match UnboundKey::new(&AES_256_GCM, KeyBytes) {
                 Ok(K) => K,
                 Err(_) => return Ok(vec![]),
-            });
-            Ok(Key.open())
+            }).open())
         }"#,
 	);
 }
 
 // ===========================================================================
-// [EDGE-CASES] — idempotency of format-string-aware transform
+// [EDGE-CASES] - idempotency of format-string-aware transform
 // ===========================================================================
 
 /// Re-running on already-minimal code containing `{X}` format strings must
