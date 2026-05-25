@@ -1,5 +1,6 @@
 //! Integration test: the closure VALUE (F) is inlined (single-use) while the
-//! captured variable (X) is kept because it is referenced inside the closure body.
+//! captured variable (X) is kept because it is referenced inside the closure
+//! body.
 
 #[test]
 fn ClosureCaptureKept() {
