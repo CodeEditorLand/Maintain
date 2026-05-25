@@ -1,4 +1,5 @@
-//! Integration test: chained single-use bindings collapse across multiple passes.
+//! Integration test: chained single-use bindings collapse across multiple
+//! passes.
 
 #[test]
 fn ChainInline() {
