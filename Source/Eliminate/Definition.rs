@@ -25,7 +25,7 @@ pub struct Options {
 	pub Verbose:bool,
 
 	/// When `true`, reformat the entire file with `prettyplease` after
-	/// inlining (the old default behaviour).
+	/// inlining (the previous default behaviour).
 	///
 	/// Default `false` - only the inlined binding sites are rewritten;
 	/// all comments, blank lines, section banners, and the original
