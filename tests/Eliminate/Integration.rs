@@ -87,43 +87,35 @@ mod TypeAnnotation;
 
 /// Run the elimination transform and return the normalised output.
 /// Returns the normalised *original* when no transformation was applied.
-pub fn transform(Src: &str) -> String {
-	transform_with(Src, Options::default())
-}
+pub fn transform(Src:&str) -> String { transform_with(Src, Options::default()) }
 
-pub fn transform_with(Src: &str, Opts: Options) -> String {
-	Transform::Run(Src, &Opts)
-		.expect("transform failed")
-		.unwrap_or_else(|| {
-			let Ast: syn::File = syn::parse_str(Src).unwrap();
+pub fn transform_with(Src:&str, Opts:Options) -> String {
+	Transform::Run(Src, &Opts).expect("transform failed").unwrap_or_else(|| {
+		let Ast:syn::File = syn::parse_str(Src).unwrap();
 
-			prettyplease::unparse(&Ast)
-		})
+		prettyplease::unparse(&Ast)
+	})
 }
 
 /// Normalise `Src` through prettyplease so whitespace differences are ignored.
-pub fn norm(Src: &str) -> String {
-	let Ast: syn::File = syn::parse_str(Src).unwrap();
+pub fn norm(Src:&str) -> String {
+	let Ast:syn::File = syn::parse_str(Src).unwrap();
 
 	prettyplease::unparse(&Ast)
 }
 
 /// Assert the transformation output matches `Expected`.
-pub fn assert_eliminates(Input: &str, Expected: &str) {
+pub fn assert_eliminates(Input:&str, Expected:&str) {
 	assert_eq!(transform(Input), norm(Expected));
 }
 
 /// Assert the input is not changed by the transform.
-pub fn assert_unchanged(Input: &str) {
+pub fn assert_unchanged(Input:&str) {
 	let Opts = Options::default();
 
 	let Result = Transform::Run(Input, &Opts).expect("transform");
 
-	assert!(
-		Result.is_none(),
-		"expected no change but got:\n{}",
-		Result.unwrap()
-	);
+	assert!(Result.is_none(), "expected no change but got:\n{}", Result.unwrap());
 }
 
 /// Write `Code` to a temp file and invoke
@@ -134,7 +126,7 @@ pub fn assert_unchanged(Input: &str) {
 /// the temp filename so concurrent tests do not collide.
 ///
 /// Set `SKIP_COMPILE=1` to bypass the compile step.
-pub fn compile(Code: &str, Label: &str) {
+pub fn compile(Code:&str, Label:&str) {
 	if std::env::var("SKIP_COMPILE").as_deref() == Ok("1") {
 		return;
 	}
@@ -146,8 +138,8 @@ pub fn compile(Code: &str, Label: &str) {
 	let SrcPath = TmpDir.join(format!("eliminate_integ_{}.rs", Label));
 
 	{
-		let mut F = std::fs::File::create(&SrcPath)
-			.unwrap_or_else(|E| panic!("create temp file {}: {}", SrcPath.display(), E));
+		let mut F =
+			std::fs::File::create(&SrcPath).unwrap_or_else(|E| panic!("create temp file {}: {}", SrcPath.display(), E));
 
 		F.write_all(Code.as_bytes())
 			.unwrap_or_else(|E| panic!("write temp file {}: {}", SrcPath.display(), E));
@@ -168,7 +160,6 @@ pub fn compile(Code: &str, Label: &str) {
 			)
 		});
 
-	// Best-effort cleanup of the source file.
 	std::fs::remove_file(&SrcPath).ok();
 
 	assert!(
@@ -185,7 +176,7 @@ pub fn compile(Code: &str, Label: &str) {
 ///
 /// `Preamble` is prepended to the transformed source before compilation
 /// (use it to define mock types/functions referenced by the snippet).
-pub fn assert_eliminates_and_compiles(Input: &str, Expected: &str, Preamble: &str, Label: &str) {
+pub fn assert_eliminates_and_compiles(Input:&str, Expected:&str, Preamble:&str, Label:&str) {
 	assert_eliminates(Input, Expected);
 
 	let Transformed = transform(Input);
@@ -199,7 +190,7 @@ pub fn assert_eliminates_and_compiles(Input: &str, Expected: &str, Preamble: &st
 }
 
 /// Assert the input is unchanged AND that the (normalised) input compiles.
-pub fn assert_unchanged_and_compiles(Input: &str, Preamble: &str, Label: &str) {
+pub fn assert_unchanged_and_compiles(Input:&str, Preamble:&str, Label:&str) {
 	assert_unchanged(Input);
 
 	let FullCode = format!(
