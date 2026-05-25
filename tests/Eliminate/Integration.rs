@@ -160,7 +160,6 @@ pub fn compile(Code:&str, Label:&str) {
 			)
 		});
 
-	// Best-effort cleanup of the source file.
 	std::fs::remove_file(&SrcPath).ok();
 
 	assert!(

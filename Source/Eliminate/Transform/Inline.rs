@@ -10,8 +10,8 @@
 //         references inside macro token streams (json!, dev_log!, format!,
 //         etc.) so that multi-use variables are never misidentified as
 //         single-use.
-//      b. Skip if count != 1, used-in-closure, or initialiser is
-//         unsafe/large.
+//      b. Skip if count != 1, used-in-closure, used-in-loop-body, or
+//         initialiser is unsafe/large.
 //      c. Skip if any free variable inside the initialiser is moved by value
 //         in the statements between the candidate declaration and the
 //         substitution site (IsFreeVarSafe). This prevents E0382 borrow-of-
@@ -60,10 +60,22 @@ impl<'a> Eliminator<'a> {
 
 				let StmtsAfter = &Block.stmts[Candidate.StmtIndex + 1..];
 
-				let (RefCount, InClosure) =
+				let (RefCount, InClosure, InLoop) =
 					Count::CountReferences(&Candidate.Ident, StmtsAfter);
 
-				if RefCount != 1 || InClosure {
+				if RefCount != 1 || InClosure || InLoop {
+					continue;
+				}
+
+				// Find the index of the substitution site within StmtsAfter
+				// (the first statement that contains a reference to Candidate).
+				// We need the slice of statements that come BEFORE that site
+				// to check whether any free variable in Init is moved there.
+				let SubstSiteOffset = FindSubstSite(StmtsAfter, &Candidate.Ident);
+
+				let StmtsBetween = &StmtsAfter[..SubstSiteOffset];
+
+				if !Safe::IsFreeVarSafe(&Candidate.Init, StmtsBetween) {
 					continue;
 				}
 
@@ -140,7 +152,7 @@ pub fn SubstituteRef(Stmts:&mut [Stmt], Target:&str, Replacement:&Expr) -> bool 
 /// choice.
 fn FindSubstSite(Stmts:&[Stmt], Target:&str) -> usize {
 	for (I, Stmt) in Stmts.iter().enumerate() {
-		let (Count, _) = Count::CountReferences(Target, std::slice::from_ref(Stmt));
+		let (Count, _, _) = Count::CountReferences(Target, std::slice::from_ref(Stmt));
 
 		if Count > 0 {
 			return I;
@@ -466,6 +478,51 @@ mod Tests {
                 let X = val();
                 emit(json!({ "a": X, "b": X }));
             }"#,
+		);
+	}
+
+	// --- Loop-body tests (#58) ----------------------------------------------
+
+	/// Binding used only inside a for loop body must not be inlined.
+	/// Inlining would move the initialiser inside the loop, running it
+	/// N times instead of once and potentially changing semantics or
+	/// introducing a compile error for move-only types.
+	#[test]
+	fn LoopBodyBindingKept() {
+		AssertUnchanged(
+			r#"fn f() {
+                let X = expensive();
+                for item in &collection { process(item, X); }
+            }"#,
+		);
+	}
+
+	#[test]
+	fn WhileBodyBindingKept() {
+		AssertUnchanged(
+			r#"fn f() {
+                let X = expensive();
+                while cond { process(X); }
+            }"#,
+		);
+	}
+
+	#[test]
+	fn LoopExprBindingKept() {
+		AssertUnchanged(
+			r#"fn f() {
+                let X = expensive();
+                loop { process(X); break; }
+            }"#,
+		);
+	}
+
+	/// A binding used outside any loop must still be inlined normally.
+	#[test]
+	fn OutsideLoopStillInlined() {
+		AssertEliminates(
+			"fn f() { let X = compute(); g(X); }",
+			"fn f() { g(compute()); }",
 		);
 	}
 
