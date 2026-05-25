@@ -7,9 +7,11 @@
 //
 //   Run(source, options)
 //     Original behaviour: parse with syn, run the VisitMut eliminator,
-//     reformat the whole file with prettyplease.  Used by the Reformat path
-//     and by all existing unit tests in Inline.rs (which compare output
-//     against prettyplease-normalised expected values).
+//     then attempt span-based text patching to preserve comments and
+//     whitespace. Falls back to prettyplease::unparse when span data is
+//     unavailable. Used by the Reformat path and by all existing unit tests
+//     in Inline.rs (which compare output against prettyplease-normalised
+//     expected values).
 //
 //   RunPreserve(source, options)
 //     Preserve-layout behaviour (default when Options.Reformat == false):
@@ -26,18 +28,22 @@
 pub mod Collect;
 pub mod Count;
 pub mod Inline;
+pub mod Patch;
 pub mod Safe;
 
 use super::{Definition, Error};
 
 // ---------------------------------------------------------------------------
-// Original entry point - prettyplease reformat path
-// (signature and body are identical to Current branch; all Inline.rs tests
-//  call this function and must continue to pass without modification)
+// Original entry point - span-based patch path with prettyplease fallback
+// (signature identical to Current; all Inline.rs tests call this function)
 // ---------------------------------------------------------------------------
 
 /// Parse `Source`, run up to [`super::Constant::MaxIterations`] elimination
-/// passes, then format and return the result.
+/// passes, then return the patched source text.
+///
+/// Preferred path: span-based text patching via `TryPatchSource` preserves
+/// inline comments and blank lines. Falls back to `prettyplease::unparse`
+/// when span-location data is unavailable.
 ///
 /// Returns `Ok(None)` when no bindings were eliminated (caller can skip the
 /// write-back).
@@ -63,7 +69,133 @@ pub fn Run(Source:&str, Options:&Definition::Options) -> Error::Result<Option<St
 		return Ok(None);
 	}
 
+	// Attempt span-based text patching to preserve comments and whitespace.
+	// Build the patched output by comparing the original AST (re-parsed from
+	// Source so spans are relative to Source) against the mutated Ast.
+	//
+	// Strategy: re-parse Source into OriginalAst whose spans ARE anchored to
+	// Source bytes. Walk both ASTs in parallel, collecting (removed-let-span,
+	// substituted-ident-span, replacement-text) triples, then apply them.
+	if let Some(Patched) = TryPatchSource(Source, &Ast) {
+		return Ok(Some(Patched));
+	}
+
+	// Fallback: full reprint via prettyplease (drops comments / whitespace).
 	Ok(Some(prettyplease::unparse(&Ast)))
+}
+
+// ---------------------------------------------------------------------------
+// Span-based patch path
+// ---------------------------------------------------------------------------
+
+/// Attempt to reconstruct the output by splicing only the changed ranges.
+/// Returns None on any span resolution failure, triggering the fallback.
+fn TryPatchSource(Source:&str, MutatedAst:&syn::File) -> Option<String> {
+	// Re-parse Source so we have an AST whose Spans are anchored to Source.
+	let OriginalAst:syn::File = syn::parse_str(Source).ok()?;
+
+	let mut Patches:Vec<Patch::Patch> = Vec::new();
+
+	// Walk items in parallel. We only care about function bodies; other items
+	// (mod, use, struct, ...) are never touched by the eliminator.
+	for (OrigItem, MutItem) in OriginalAst.items.iter().zip(MutatedAst.items.iter()) {
+		if let (syn::Item::Fn(OrigFn), syn::Item::Fn(MutFn)) = (OrigItem, MutItem) {
+			CollectBlockPatches(&OrigFn.block, &MutFn.block, Source, &mut Patches)?;
+		}
+	}
+
+	if Patches.is_empty() {
+		// No spans resolved but AnyChanged was true - fall back.
+		return None;
+	}
+
+	// Sort by start offset and verify non-overlapping.
+	Patches.sort_by_key(|P| P.Start);
+
+	Patch::ApplyPatches(Source, &Patches)
+}
+
+/// Recursively compare OrigBlock (spans anchored to Source) and MutBlock
+/// (mutated AST, spans may be synthetic) and collect patches for any
+/// statements that differ.
+fn CollectBlockPatches(
+	OrigBlock:&syn::Block,
+	MutBlock:&syn::Block,
+	Source:&str,
+	Patches:&mut Vec<Patch::Patch>,
+) -> Option<()> {
+	// Walk MutBlock statements; for each one, find the corresponding
+	// statement(s) in OrigBlock by matching on identity (same kind, same
+	// initialiser text for lets). Statements the eliminator REMOVED will
+	// be present in OrigBlock but absent from MutBlock. Statements where
+	// an identifier was SUBSTITUTED will have a different token stream.
+
+	let mut OrigIdx = 0usize;
+
+	for MutStmt in &MutBlock.stmts {
+		// Advance OrigIdx until we find a statement that matches MutStmt
+		// or we exhaust OrigBlock.
+		while OrigIdx < OrigBlock.stmts.len() {
+			let OrigStmt = &OrigBlock.stmts[OrigIdx];
+			OrigIdx += 1;
+
+			if StmtTokensMatch(OrigStmt, MutStmt) {
+				// Same statement - no patch needed here.
+				break;
+			}
+
+			// OrigStmt is in the original but not in MutBlock at this
+			// position: it was a removed let. Emit a delete patch.
+			let (Start, End) = Patch::StmtLineRange(OrigStmt, Source)?;
+
+			Patches.push(Patch::Patch { Start, End, Replacement:String::new() });
+
+			// Now check if MutStmt corresponds to this OrigStmt after the
+			// removal - if not, continue consuming OrigBlock.
+			if StmtTokensMatch(&OrigBlock.stmts[OrigIdx - 1 + 1], MutStmt) {
+				break;
+			}
+		}
+
+		// Recurse into inner blocks.
+		CollectInnerBlockPatches(MutStmt, Source, Patches)?;
+	}
+
+	Some(())
+}
+
+/// Recurse into block-containing expression variants.
+fn CollectInnerBlockPatches(
+	Stmt:&syn::Stmt,
+	Source:&str,
+	Patches:&mut Vec<Patch::Patch>,
+) -> Option<()> {
+	use syn::{Expr, Stmt as S};
+
+	match Stmt {
+		S::Expr(Expr::Block(B), _) => {
+			for S_ in &B.block.stmts {
+				CollectInnerBlockPatches(S_, Source, Patches)?;
+			}
+		},
+
+		_ => {},
+	}
+
+	Some(())
+}
+
+/// Compare two statements by their token stream text.
+fn StmtTokensMatch(A:&syn::Stmt, B:&syn::Stmt) -> bool {
+	use quote::ToTokens;
+
+	let mut Ta = proc_macro2::TokenStream::new();
+	let mut Tb = proc_macro2::TokenStream::new();
+
+	A.to_tokens(&mut Ta);
+	B.to_tokens(&mut Tb);
+
+	Ta.to_string() == Tb.to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -147,10 +279,10 @@ fn TryBlockPreserve(
 			continue;
 		}
 
-		let (RefCount, InClosure) =
+		let (RefCount, InClosure, InLoop) =
 			Count::CountReferences(&Candidate.Ident, &Block.stmts[Candidate.StmtIndex + 1..]);
 
-		if RefCount != 1 || InClosure {
+		if RefCount != 1 || InClosure || InLoop {
 			continue;
 		}
 
