@@ -14,11 +14,11 @@
 //     contexts).  When offsets are unavailable (start == end == 0 for a
 //     non-empty token), ApplyPatches returns None and the caller falls back to
 //     prettyplease.
-//   - Patches must be non-overlapping and sorted by start offset.  If two
-//     edits would overlap (should never happen given the eliminator logic but
+//   - Patches must be non-overlapping and sorted by start offset.  If two edits
+//     would overlap (should never happen given the eliminator logic but
 //     defended against) the function returns None.
-//   - A removed let-statement line is deleted including its trailing newline
-//     so blank lines are not left behind.
+//   - A removed let-statement line is deleted including its trailing newline so
+//     blank lines are not left behind.
 //=============================================================================//
 
 use proc_macro2::Span;

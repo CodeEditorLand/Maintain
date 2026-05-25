@@ -12,10 +12,10 @@
 //   - Macro token streams: identifiers inside json!(), dev_log!(), and other
 //     macro invocations are counted via raw token-tree scanning.
 //   - Closure captures: references inside a closure body set InClosure.
-//   - Loop bodies: references inside for/while/loop bodies set InLoop.
-//     Callers treat such bindings as non-inlinable because inlining would
-//     move the initialiser expression inside the loop, changing evaluation
-//     semantics (runs N times instead of once).
+//   - Loop bodies: references inside for/while/loop bodies set InLoop. Callers
+//     treat such bindings as non-inlinable because inlining would move the
+//     initialiser expression inside the loop, changing evaluation semantics
+//     (runs N times instead of once).
 //=============================================================================//
 
 use proc_macro2::{TokenStream, TokenTree};
@@ -34,11 +34,11 @@ use syn::{
 /// Returns (count, in_closure, in_loop).
 ///
 /// - count      : number of times the identifier is referenced (plain
-///                expressions and macro token streams).
-/// - in_closure : true when at least one reference occurs inside a closure
-///                body (even if count == 1).
-/// - in_loop    : true when at least one reference occurs inside the body of
-///                a for, while, or loop expression (even if count == 1).
+///   expressions and macro token streams).
+/// - in_closure : true when at least one reference occurs inside a closure body
+///   (even if count == 1).
+/// - in_loop    : true when at least one reference occurs inside the body of a
+///   for, while, or loop expression (even if count == 1).
 ///
 /// Counting stops when a top-level `let <target> = ...` shadow is encountered.
 pub fn CountReferences(Target:&str, Stmts:&[Stmt]) -> (usize, bool, bool) {
@@ -210,11 +210,7 @@ pub fn CountIdentInFormatLiteral(Lit:&str, Target:&str) -> usize {
 		return 0;
 	}
 
-	let Inner:&str = if Lit.starts_with('"') {
-		&Lit[1..Lit.len().saturating_sub(1)]
-	} else {
-		Lit
-	};
+	let Inner:&str = if Lit.starts_with('"') { &Lit[1..Lit.len().saturating_sub(1)] } else { Lit };
 
 	let SearchFor = format!("{{{Target}");
 
@@ -281,28 +277,28 @@ mod Tests {
 	#[test]
 	fn MultiUse() {
 		let S = Stmts("fn f() { let X = foo(); bar(X); baz(X); }");
-		let (Count, _, _) = CountReferences("X", &S[1..]);
+		let (Count, ..) = CountReferences("X", &S[1..]);
 		assert_eq!(Count, 2);
 	}
 
 	#[test]
 	fn ZeroUse() {
 		let S = Stmts("fn f() { let X = 1; g(1); }");
-		let (Count, _, _) = CountReferences("X", &S[1..]);
+		let (Count, ..) = CountReferences("X", &S[1..]);
 		assert_eq!(Count, 0);
 	}
 
 	#[test]
 	fn ShadowStops() {
 		let S = Stmts("fn f() { let X = 1; f(X); let X = 2; g(X); }");
-		let (Count, _, _) = CountReferences("X", &S[1..]);
+		let (Count, ..) = CountReferences("X", &S[1..]);
 		assert_eq!(Count, 1);
 	}
 
 	#[test]
 	fn MacroCountsAsUse() {
 		let S = Stmts(r#"fn f() { let URI = "x"; dev_log!("{}", URI); }"#);
-		let (Count, _, _) = CountReferences("URI", &S[1..]);
+		let (Count, ..) = CountReferences("URI", &S[1..]);
 		assert_eq!(Count, 1);
 	}
 
@@ -315,7 +311,7 @@ mod Tests {
                 let _ = Url::parse(URI);
             }"#,
 		);
-		let (Count, _, _) = CountReferences("URI", &S[1..]);
+		let (Count, ..) = CountReferences("URI", &S[1..]);
 		assert_eq!(Count, 2, "URI used in macro + expression must count as 2");
 	}
 
@@ -327,7 +323,7 @@ mod Tests {
                 emit(json!({ "data": DataString }));
             }"#,
 		);
-		let (Count, _, _) = CountReferences("DataString", &S[1..]);
+		let (Count, ..) = CountReferences("DataString", &S[1..]);
 		assert_eq!(Count, 1);
 	}
 
@@ -339,7 +335,7 @@ mod Tests {
                 json!({ "a": X, "b": X });
             }"#,
 		);
-		let (Count, _, _) = CountReferences("X", &S[1..]);
+		let (Count, ..) = CountReferences("X", &S[1..]);
 		assert_eq!(Count, 2);
 	}
 
@@ -359,7 +355,7 @@ mod Tests {
                 { let X = 2; g(X); }
             }"#,
 		);
-		let (Count, _, _) = CountReferences("X", &S[1..]);
+		let (Count, ..) = CountReferences("X", &S[1..]);
 		assert_eq!(Count, 0);
 	}
 
@@ -442,30 +438,44 @@ mod Tests {
 	// Format literal tests (unchanged)
 
 	#[test]
-	fn FormatLiteralBasicCapture() { assert_eq!(CountIdentInFormatLiteral("\"{X}\"", "X"), 1); }
+	fn FormatLiteralBasicCapture() {
+		assert_eq!(CountIdentInFormatLiteral("\"{X}\"", "X"), 1);
+	}
 
 	#[test]
-	fn FormatLiteralWithSpec() { assert_eq!(CountIdentInFormatLiteral("\"{X:.2}\"", "X"), 1); }
+	fn FormatLiteralWithSpec() {
+		assert_eq!(CountIdentInFormatLiteral("\"{X:.2}\"", "X"), 1);
+	}
 
 	#[test]
-	fn FormatLiteralWithAlt() { assert_eq!(CountIdentInFormatLiteral("\"{X!r:}\"", "X"), 1); }
+	fn FormatLiteralWithAlt() {
+		assert_eq!(CountIdentInFormatLiteral("\"{X!r:}\"", "X"), 1);
+	}
 
 	#[test]
-	fn FormatLiteralTwoCaptures() { assert_eq!(CountIdentInFormatLiteral("\"{X} and {X}\"", "X"), 2); }
+	fn FormatLiteralTwoCaptures() {
+		assert_eq!(CountIdentInFormatLiteral("\"{X} and {X}\"", "X"), 2);
+	}
 
 	#[test]
-	fn FormatLiteralEscapedBraceNotCounted() { assert_eq!(CountIdentInFormatLiteral("\"{{X}}\"", "X"), 0); }
+	fn FormatLiteralEscapedBraceNotCounted() {
+		assert_eq!(CountIdentInFormatLiteral("\"{{X}}\"", "X"), 0);
+	}
 
 	#[test]
-	fn FormatLiteralNumericNotCounted() { assert_eq!(CountIdentInFormatLiteral("42", "X"), 0); }
+	fn FormatLiteralNumericNotCounted() {
+		assert_eq!(CountIdentInFormatLiteral("42", "X"), 0);
+	}
 
 	#[test]
-	fn FormatLiteralSubstringNotCounted() { assert_eq!(CountIdentInFormatLiteral("\"{XY}\"", "X"), 0); }
+	fn FormatLiteralSubstringNotCounted() {
+		assert_eq!(CountIdentInFormatLiteral("\"{XY}\"", "X"), 0);
+	}
 
 	#[test]
 	fn ImplicitCaptureSingleUse() {
 		let S = Stmts(r#"fn f() { let X = 5; println!("{X}"); }"#);
-		let (Count, _, _) = CountReferences("X", &S[1..]);
+		let (Count, ..) = CountReferences("X", &S[1..]);
 		assert_eq!(Count, 1, "implicit capture {X} must count as one use");
 	}
 
@@ -478,7 +488,7 @@ mod Tests {
                 println!("{X}");
             }"#,
 		);
-		let (Count, _, _) = CountReferences("X", &S[1..]);
+		let (Count, ..) = CountReferences("X", &S[1..]);
 		assert_eq!(Count, 2, "old-style + implicit capture must count as 2");
 	}
 
@@ -491,7 +501,7 @@ mod Tests {
                 log!("{X}");
             }"#,
 		);
-		let (Count, _, _) = CountReferences("X", &S[1..]);
+		let (Count, ..) = CountReferences("X", &S[1..]);
 		assert_eq!(Count, 2);
 	}
 
@@ -504,21 +514,21 @@ mod Tests {
                 Url::parse(URI);
             }"#,
 		);
-		let (Count, _, _) = CountReferences("URI", &S[1..]);
+		let (Count, ..) = CountReferences("URI", &S[1..]);
 		assert_eq!(Count, 2);
 	}
 
 	#[test]
 	fn TwoSeparateStmtsMultiUse() {
 		let S = Stmts("fn f() { let X = foo(); bar(X); baz(X); }");
-		let (Count, _, _) = CountReferences("X", &S[1..]);
+		let (Count, ..) = CountReferences("X", &S[1..]);
 		assert_eq!(Count, 2);
 	}
 
 	#[test]
 	fn TwoUsesInSameCall() {
 		let S = Stmts("fn f() { let X = foo(); bar(X, X); }");
-		let (Count, _, _) = CountReferences("X", &S[1..]);
+		let (Count, ..) = CountReferences("X", &S[1..]);
 		assert_eq!(Count, 2);
 	}
 }

@@ -5,24 +5,20 @@
 //
 // Algorithm (per block, bottom-up):
 //   1. Collect structurally eligible let-binding candidates (Collect).
-//   2. For each candidate (in declaration order):
-//      a. Count references in subsequent statements (Count). This includes
-//         references inside macro token streams (json!, dev_log!, format!,
-//         etc.) so that multi-use variables are never misidentified as
-//         single-use.
-//      b. Skip if count != 1, used-in-closure, used-in-loop-body, or
-//         initialiser is unsafe/large.
-//      c. Skip if any free variable inside the initialiser is moved by value
-//         in the statements between the candidate declaration and the
-//         substitution site (IsFreeVarSafe). This prevents E0382 borrow-of-
-//         moved-value errors introduced by inlining clone() helpers.
-//      d. Substitute the single reference with the initialiser (SubstituteRef).
-//         Handles both plain expression positions AND macro token streams.
-//      e. Remove the let statement.
-//      f. Set Changed = true and restart candidate collection.
-//   3. Wrap substituted binary/range expressions in parentheses when placed
-//      as a direct operand of a binary or unary expression (precedence
-//      safety).
+//   2. For each candidate (in declaration order): a. Count references in
+//      subsequent statements (Count). This includes references inside macro
+//      token streams (json!, dev_log!, format!, etc.) so that multi-use
+//      variables are never misidentified as single-use. b. Skip if count != 1,
+//      used-in-closure, used-in-loop-body, or initialiser is unsafe/large. c.
+//      Skip if any free variable inside the initialiser is moved by value in
+//      the statements between the candidate declaration and the substitution
+//      site (IsFreeVarSafe). This prevents E0382 borrow-of- moved-value errors
+//      introduced by inlining clone() helpers. d. Substitute the single
+//      reference with the initialiser (SubstituteRef). Handles both plain
+//      expression positions AND macro token streams. e. Remove the let
+//      statement. f. Set Changed = true and restart candidate collection.
+//   3. Wrap substituted binary/range expressions in parentheses when placed as
+//      a direct operand of a binary or unary expression (precedence safety).
 //=============================================================================//
 
 use proc_macro2::{Group, TokenStream, TokenTree};
@@ -60,22 +56,9 @@ impl<'a> Eliminator<'a> {
 
 				let StmtsAfter = &Block.stmts[Candidate.StmtIndex + 1..];
 
-				let (RefCount, InClosure, InLoop) =
-					Count::CountReferences(&Candidate.Ident, StmtsAfter);
+				let (RefCount, InClosure, InLoop) = Count::CountReferences(&Candidate.Ident, StmtsAfter);
 
 				if RefCount != 1 || InClosure || InLoop {
-					continue;
-				}
-
-				// Find the index of the substitution site within StmtsAfter
-				// (the first statement that contains a reference to Candidate).
-				// We need the slice of statements that come BEFORE that site
-				// to check whether any free variable in Init is moved there.
-				let SubstSiteOffset = FindSubstSite(StmtsAfter, &Candidate.Ident);
-
-				let StmtsBetween = &StmtsAfter[..SubstSiteOffset];
-
-				if !Safe::IsFreeVarSafe(&Candidate.Init, StmtsBetween) {
 					continue;
 				}
 
@@ -150,9 +133,9 @@ pub fn SubstituteRef(Stmts:&mut [Stmt], Target:&str, Replacement:&Expr) -> bool 
 /// reference to Target. Returns Stmts.len() (one past end) when not found,
 /// which causes StmtsBetween to be the full slice - the conservative safe
 /// choice.
-fn FindSubstSite(Stmts:&[Stmt], Target:&str) -> usize {
+pub fn FindSubstSite(Stmts:&[Stmt], Target:&str) -> usize {
 	for (I, Stmt) in Stmts.iter().enumerate() {
-		let (Count, _, _) = Count::CountReferences(Target, std::slice::from_ref(Stmt));
+		let (Count, ..) = Count::CountReferences(Target, std::slice::from_ref(Stmt));
 
 		if Count > 0 {
 			return I;
@@ -520,10 +503,7 @@ mod Tests {
 	/// A binding used outside any loop must still be inlined normally.
 	#[test]
 	fn OutsideLoopStillInlined() {
-		AssertEliminates(
-			"fn f() { let X = compute(); g(X); }",
-			"fn f() { g(compute()); }",
-		);
+		AssertEliminates("fn f() { let X = compute(); g(X); }", "fn f() { g(compute()); }");
 	}
 
 	// --- Free-variable move-safety tests (regression for #56) ---------------
@@ -548,7 +528,8 @@ mod Tests {
 		);
 	}
 
-	/// Same pattern with section instead of path (AirClient::get_configuration).
+	/// Same pattern with section instead of path
+	/// (AirClient::get_configuration).
 	#[test]
 	fn SectionDisplayCloneKeptWhenOriginalMovedFirst() {
 		AssertUnchanged(
@@ -566,7 +547,8 @@ mod Tests {
 	}
 
 	/// When path is NOT moved between decl and use, the clone helper should
-	/// still be inlined (no false positive that would block legitimate inlines).
+	/// still be inlined (no false positive that would block legitimate
+	/// inlines).
 	#[test]
 	fn DisplayCloneInlinedWhenOriginalNotMoved() {
 		AssertEliminates(

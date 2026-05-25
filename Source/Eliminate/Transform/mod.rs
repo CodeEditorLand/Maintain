@@ -48,8 +48,7 @@ use super::{Definition, Error};
 /// Returns `Ok(None)` when no bindings were eliminated (caller can skip the
 /// write-back).
 pub fn Run(Source:&str, Options:&Definition::Options) -> Error::Result<Option<String>> {
-	let mut Ast:syn::File = syn::parse_str(Source)
-		.map_err(|E| Error::Error::Parse { Path:String::new(), Source:E })?;
+	let mut Ast:syn::File = syn::parse_str(Source).map_err(|E| Error::Error::Parse { Path:String::new(), Source:E })?;
 
 	let mut AnyChanged = false;
 
@@ -165,11 +164,7 @@ fn CollectBlockPatches(
 }
 
 /// Recurse into block-containing expression variants.
-fn CollectInnerBlockPatches(
-	Stmt:&syn::Stmt,
-	Source:&str,
-	Patches:&mut Vec<Patch::Patch>,
-) -> Option<()> {
+fn CollectInnerBlockPatches(Stmt:&syn::Stmt, Source:&str, Patches:&mut Vec<Patch::Patch>) -> Option<()> {
 	use syn::{Expr, Stmt as S};
 
 	match Stmt {
@@ -231,8 +226,7 @@ pub fn RunPreserve(Source:&str, Options:&Definition::Options) -> Error::Result<O
 /// One pass: parse `Working`, find the first inlinable binding, apply the
 /// text edit, return `Some(new_text)`. Returns `None` when nothing changed.
 fn PreservePass(Working:&str, Options:&Definition::Options) -> Error::Result<Option<String>> {
-	let Ast:syn::File = syn::parse_str(Working)
-		.map_err(|E| Error::Error::Parse { Path:String::new(), Source:E })?;
+	let Ast:syn::File = syn::parse_str(Working).map_err(|E| Error::Error::Parse { Path:String::new(), Source:E })?;
 
 	for Item in &Ast.items {
 		if let Some(Result) = TryItemPreserve(Item, Working, Options)? {
@@ -243,11 +237,7 @@ fn PreservePass(Working:&str, Options:&Definition::Options) -> Error::Result<Opt
 	Ok(None)
 }
 
-fn TryItemPreserve(
-	Item:&syn::Item,
-	Working:&str,
-	Options:&Definition::Options,
-) -> Error::Result<Option<String>> {
+fn TryItemPreserve(Item:&syn::Item, Working:&str, Options:&Definition::Options) -> Error::Result<Option<String>> {
 	match Item {
 		syn::Item::Fn(F) => TryBlockPreserve(&F.block, Working, Options),
 
@@ -267,11 +257,7 @@ fn TryItemPreserve(
 	}
 }
 
-fn TryBlockPreserve(
-	Block:&syn::Block,
-	Working:&str,
-	Options:&Definition::Options,
-) -> Error::Result<Option<String>> {
+fn TryBlockPreserve(Block:&syn::Block, Working:&str, Options:&Definition::Options) -> Error::Result<Option<String>> {
 	let Candidates = Collect::Collect(Block, Options.InlineComments);
 
 	for Candidate in &Candidates {
@@ -286,6 +272,12 @@ fn TryBlockPreserve(
 			continue;
 		}
 
+		let StmtsAfter = &Block.stmts[Candidate.StmtIndex + 1..];
+		let SubstSiteOffset = Inline::FindSubstSite(StmtsAfter, &Candidate.Ident);
+		if !Safe::IsFreeVarSafe(&Candidate.Init, &StmtsAfter[..SubstSiteOffset]) {
+			continue;
+		}
+
 		// Clone downstream statements; substitute in-memory.
 		let mut UseStmts:Vec<syn::Stmt> = Block.stmts[Candidate.StmtIndex + 1..].to_vec();
 
@@ -296,8 +288,8 @@ fn TryBlockPreserve(
 		// Render the ORIGINAL let-stmt and use-stmt to canonical text so we
 		// can locate them in `Working` by plain string search.
 		let LetText = StmtToText(&Block.stmts[Candidate.StmtIndex]);
-		let UseOrigText = StmtToText(&Block.stmts[Candidate.StmtIndex + 1]);
-		let UseNewText = StmtToText(&UseStmts[0]);
+		let UseOrigText = StmtToText(&Block.stmts[Candidate.StmtIndex + 1 + SubstSiteOffset]);
+		let UseNewText = StmtToText(&UseStmts[SubstSiteOffset]);
 
 		// Locate the original let-stmt text in Working.
 		let Some(LetPos) = Working.find(&LetText) else {

@@ -85,7 +85,7 @@ fn ProcessFile(FilePath:&Path, Options:&Definition::Options, Stats:&mut Definiti
 		Transform::RunPreserve(&Source, Options)
 	}
 	.map_err(|E| {
-		if let Error::Error::Parse { Source:Src, .. } = E {
+		if let Error::Error::Parse { Source: Src, .. } = E {
 			Error::Error::Parse { Path:FilePath.display().to_string(), Source:Src }
 		} else {
 			E

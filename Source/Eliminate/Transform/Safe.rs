@@ -13,8 +13,8 @@
 // Notable inclusions (expressions that ARE safe in Rust):
 //   - ? operator  (Expr::Try)    - propagates the error, context unchanged.
 //   - .await      (Expr::Await)  - async context is caller-determined.
-//   - Closures    (Expr::Closure)- safe when the closure does not capture
-//     the candidate binding (checked by Count, not here).
+//   - Closures    (Expr::Closure)- safe when the closure does not capture the
+//     candidate binding (checked by Count, not here).
 //=============================================================================//
 
 use syn::{
@@ -189,9 +189,7 @@ struct UnsafeDetector {
 }
 
 impl<'ast> Visit<'ast> for UnsafeDetector {
-	fn visit_expr_unsafe(&mut self, _Node:&'ast syn::ExprUnsafe) {
-		self.Found = true;
-	}
+	fn visit_expr_unsafe(&mut self, _Node:&'ast syn::ExprUnsafe) { self.Found = true; }
 }
 
 pub fn ContainsUnsafe(E:&Expr) -> bool {
@@ -223,25 +221,39 @@ mod Tests {
 	}
 
 	#[test]
-	fn LiteralIsSafe() { assert!(IsSafe(&ParseExpr("42"), 100)); }
+	fn LiteralIsSafe() {
+		assert!(IsSafe(&ParseExpr("42"), 100));
+	}
 
 	#[test]
-	fn UnsafeBlockIsNotSafe() { assert!(!IsSafe(&ParseExpr("unsafe { *ptr }"), 100)); }
+	fn UnsafeBlockIsNotSafe() {
+		assert!(!IsSafe(&ParseExpr("unsafe { *ptr }"), 100));
+	}
 
 	#[test]
-	fn QuestionMarkIsSafe() { assert!(IsSafe(&ParseExpr("foo().map_err(|e| e)?"), 100)); }
+	fn QuestionMarkIsSafe() {
+		assert!(IsSafe(&ParseExpr("foo().map_err(|e| e)?"), 100));
+	}
 
 	#[test]
-	fn AwaitIsSafe() { assert!(IsSafe(&ParseExpr("service.call().await"), 100)); }
+	fn AwaitIsSafe() {
+		assert!(IsSafe(&ParseExpr("service.call().await"), 100));
+	}
 
 	#[test]
-	fn ClosureIsSafe() { assert!(IsSafe(&ParseExpr("|| { 1 + 1 }"), 100)); }
+	fn ClosureIsSafe() {
+		assert!(IsSafe(&ParseExpr("|| { 1 + 1 }"), 100));
+	}
 
 	#[test]
-	fn StructLiteralIsSafe() { assert!(IsSafe(&ParseExpr("Opts { a: 1, b: 2 }"), 100)); }
+	fn StructLiteralIsSafe() {
+		assert!(IsSafe(&ParseExpr("Opts { a: 1, b: 2 }"), 100));
+	}
 
 	#[test]
-	fn MacroCallIsSafe() { assert!(IsSafe(&ParseExpr(r#"json!({ "key": val })"#), 100)); }
+	fn MacroCallIsSafe() {
+		assert!(IsSafe(&ParseExpr(r#"json!({ "key": val })"#), 100));
+	}
 
 	#[test]
 	fn OversizedExprFails() {
@@ -251,13 +263,19 @@ mod Tests {
 	}
 
 	#[test]
-	fn NodeCountLiteral() { assert_eq!(NodeCount(&ParseExpr("1")), 1); }
+	fn NodeCountLiteral() {
+		assert_eq!(NodeCount(&ParseExpr("1")), 1);
+	}
 
 	#[test]
-	fn NodeCountBinary() { assert_eq!(NodeCount(&ParseExpr("A + B")), 3); }
+	fn NodeCountBinary() {
+		assert_eq!(NodeCount(&ParseExpr("A + B")), 3);
+	}
 
 	#[test]
-	fn NodeCountCall() { assert_eq!(NodeCount(&ParseExpr("f(A, B)")), 4); }
+	fn NodeCountCall() {
+		assert_eq!(NodeCount(&ParseExpr("f(A, B)")), 4);
+	}
 
 	// IsFreeVarSafe tests
 
