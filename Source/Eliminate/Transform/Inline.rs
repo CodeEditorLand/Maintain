@@ -5,16 +5,17 @@
 //
 // Algorithm (per block, bottom-up):
 //   1. Collect structurally eligible let-binding candidates (Collect).
-//   2. For each candidate (in declaration order): a. Count references in
-//      subsequent statements (Count). This includes references inside macro
-//      token streams (json!, dev_log!, format!, etc.) so that multi-use
-//      variables are never misidentified as single-use. b. Skip if count ≠ 1,
-//      used-in-closure, or initialiser is unsafe/large. c. Substitute the
-//      single reference with the initialiser (SubstituteRef). Handles both
-//      plain expression positions AND macro token streams. d. Remove the let
-//      statement. e. Set Changed = true and restart candidate collection.
-//   3. Wrap substituted binary/range expressions in parentheses when placed as
-//      a direct operand of a binary or unary expression (precedence safety).
+//   2. For each candidate (in declaration order):
+//      a. Count references in subsequent statements (Count). Includes macro
+//         token streams so multi-use variables are never misidentified.
+//      b. Skip if count != 1, used-in-closure, used-in-loop-body, or
+//         initialiser is unsafe/large.
+//      c. Substitute the single reference with the initialiser (SubstituteRef).
+//         Handles plain expression positions and macro token streams.
+//      d. Remove the let statement.
+//      e. Set Changed = true and restart candidate collection.
+//   3. Wrap substituted binary/range expressions in parentheses when placed
+//      as a direct operand of a binary or unary expression.
 //=============================================================================//
 
 use proc_macro2::{Group, TokenStream, TokenTree};
@@ -26,10 +27,6 @@ use syn::{
 };
 
 use super::{Collect, Count, Safe};
-
-// ---------------------------------------------------------------------------
-// Public: Eliminator
-// ---------------------------------------------------------------------------
 
 pub struct Eliminator<'a> {
 	pub Changed:bool,
@@ -50,10 +47,10 @@ impl<'a> Eliminator<'a> {
 					continue;
 				}
 
-				let (RefCount, InClosure) =
+				let (RefCount, InClosure, InLoop) =
 					Count::CountReferences(&Candidate.Ident, &Block.stmts[Candidate.StmtIndex + 1..]);
 
-				if RefCount != 1 || InClosure {
+				if RefCount != 1 || InClosure || InLoop {
 					continue;
 				}
 
@@ -80,20 +77,12 @@ impl<'a> Eliminator<'a> {
 
 impl<'a> VisitMut for Eliminator<'a> {
 	fn visit_block_mut(&mut self, Block:&mut syn::Block) {
-		// Bottom-up: process inner blocks before this one.
 		visit_block_mut(self, Block);
 
 		self.EliminateBlock(Block);
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Public: SubstituteRef
-// ---------------------------------------------------------------------------
-
-/// Replace the first occurrence of `Target` (as a plain identifier expression
-/// OR as an identifier token inside a macro's token stream) in `Stmts` with
-/// `Replacement`.  Returns `true` when the substitution was performed.
 pub fn SubstituteRef(Stmts:&mut [Stmt], Target:&str, Replacement:&Expr) -> bool {
 	let mut Sub = Substitutor { Target, Replacement, Substituted:false, InBinaryOperandPosition:false };
 
@@ -108,16 +97,10 @@ pub fn SubstituteRef(Stmts:&mut [Stmt], Target:&str, Replacement:&Expr) -> bool 
 	Sub.Substituted
 }
 
-// ---------------------------------------------------------------------------
-// Internal: Substitutor
-// ---------------------------------------------------------------------------
-
 struct Substitutor<'a> {
 	Target:&'a str,
 	Replacement:&'a Expr,
 	Substituted:bool,
-	/// True when the current AST position is a direct operand of a binary or
-	/// unary expression - used to decide whether to wrap `Replacement`.
 	InBinaryOperandPosition:bool,
 }
 
@@ -145,7 +128,6 @@ impl<'a> VisitMut for Substitutor<'a> {
 			return;
 		}
 
-		// Propagate binary-operand context for children.
 		match Node {
 			Expr::Binary(B) => {
 				let Saved = self.InBinaryOperandPosition;
@@ -183,9 +165,6 @@ impl<'a> VisitMut for Substitutor<'a> {
 		}
 	}
 
-	/// Substitute inside macro token streams (e.g. `json!(…)`, `dev_log!(…)`).
-	/// The default VisitMut does NOT recurse into `Macro::tokens`, so we do it
-	/// manually via raw token-tree manipulation.
 	fn visit_expr_macro_mut(&mut self, Node:&mut syn::ExprMacro) {
 		if self.Substituted {
 			return;
@@ -202,9 +181,6 @@ impl<'a> VisitMut for Substitutor<'a> {
 		}
 	}
 
-	/// syn v2 separates top-level macro statements (`dev_log!("{}", X);`) into
-	/// `Stmt::Macro(StmtMacro)`, which is never routed through
-	/// `visit_expr_macro_mut`.  Mirror the same substitution here.
 	fn visit_stmt_macro_mut(&mut self, Node:&mut syn::StmtMacro) {
 		if self.Substituted {
 			return;
@@ -221,7 +197,6 @@ impl<'a> VisitMut for Substitutor<'a> {
 		}
 	}
 
-	// Skip inner blocks that shadow Target - mirrors Count logic.
 	fn visit_block_mut(&mut self, Block:&mut syn::Block) {
 		if BlockShadowsTarget(&Block.stmts, self.Target) {
 			return;
@@ -230,7 +205,6 @@ impl<'a> VisitMut for Substitutor<'a> {
 		syn::visit_mut::visit_block_mut(self, Block);
 	}
 
-	// Skip closures whose parameter shadows Target.
 	fn visit_expr_closure_mut(&mut self, Node:&mut syn::ExprClosure) {
 		if ClosureParamShadows(Node, self.Target) {
 			return;
@@ -240,12 +214,6 @@ impl<'a> VisitMut for Substitutor<'a> {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Token-stream helpers
-// ---------------------------------------------------------------------------
-
-/// Convert a `syn::Expr` to a `proc_macro2::TokenStream` by calling
-/// `quote::ToTokens::to_tokens`.
 fn ExprToTokenStream(E:&Expr) -> TokenStream {
 	let mut Tokens = TokenStream::new();
 
@@ -254,9 +222,6 @@ fn ExprToTokenStream(E:&Expr) -> TokenStream {
 	Tokens
 }
 
-/// Walk `Tokens` and replace the first `Ident` token exactly equal to `Target`
-/// with `Replacement` (a pre-rendered `TokenStream`).  Recurses into `Group`
-/// delimiters.  Returns `(new_stream, found)`.
 fn SubstituteInTokenStream(Tokens:TokenStream, Target:&str, Replacement:&TokenStream) -> (TokenStream, bool) {
 	let mut Result:Vec<TokenTree> = Vec::new();
 
@@ -271,7 +236,6 @@ fn SubstituteInTokenStream(Tokens:TokenStream, Target:&str, Replacement:&TokenSt
 
 		match Tree {
 			TokenTree::Ident(ref I) if I.to_string() == Target => {
-				// Extend with the replacement's token trees.
 				Result.extend(Replacement.clone());
 
 				Found = true;
@@ -293,10 +257,6 @@ fn SubstituteInTokenStream(Tokens:TokenStream, Target:&str, Replacement:&TokenSt
 
 	(Result.into_iter().collect(), Found)
 }
-
-// ---------------------------------------------------------------------------
-// Expression helpers
-// ---------------------------------------------------------------------------
 
 fn IsTargetIdent(E:&Expr, Target:&str) -> bool {
 	if let Expr::Path(ExprPath) = E {
@@ -330,10 +290,6 @@ fn ClosureParamShadows(Closure:&syn::ExprClosure, Target:&str) -> bool {
 		.iter()
 		.any(|P| if let syn::Pat::Ident(P) = P { P.ident == Target } else { false })
 }
-
-// ---------------------------------------------------------------------------
-// Unit tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod Tests {
@@ -369,8 +325,6 @@ mod Tests {
 		assert!(Result.is_none(), "expected no change but got:\n{}", Result.unwrap());
 	}
 
-	// --- Simple inline tests ------------------------------------------------
-
 	#[test]
 	fn SimpleInline() {
 		AssertEliminates(
@@ -398,9 +352,6 @@ mod Tests {
 		);
 	}
 
-	// --- Macro substitution tests -------------------------------------------
-
-	/// Variable used only inside a json! macro gets inlined into the macro.
 	#[test]
 	fn InlineIntoJsonMacro() {
 		AssertEliminates(
@@ -414,7 +365,6 @@ mod Tests {
 		);
 	}
 
-	/// Variable used in BOTH a macro and a plain expression: multi-use, kept.
 	#[test]
 	fn MacroAndExprMultiUseKept() {
 		AssertUnchanged(
@@ -426,7 +376,6 @@ mod Tests {
 		);
 	}
 
-	/// Variable used twice inside the same macro: multi-use, kept.
 	#[test]
 	fn MacroDoubleUseKept() {
 		AssertUnchanged(
@@ -437,7 +386,77 @@ mod Tests {
 		);
 	}
 
-	// --- URL-parsing pattern (primary motivating example) -------------------
+	/// Binding used only inside a for loop body must not be inlined.
+	/// Inlining would move the initialiser inside the loop, running it
+	/// N times instead of once and potentially changing semantics or
+	/// introducing a compile error for move-only types.
+	#[test]
+	fn LoopBodyBindingKept() {
+		AssertUnchanged(
+			r#"fn f() {
+                let X = expensive();
+                for item in &collection { process(item, X); }
+            }"#,
+		);
+	}
+
+	#[test]
+	fn WhileBodyBindingKept() {
+		AssertUnchanged(
+			r#"fn f() {
+                let X = expensive();
+                while cond { process(X); }
+            }"#,
+		);
+	}
+
+	#[test]
+	fn LoopExprBindingKept() {
+		AssertUnchanged(
+			r#"fn f() {
+                let X = expensive();
+                loop { process(X); break; }
+            }"#,
+		);
+	}
+
+	/// A binding used outside any loop must still be inlined normally.
+	#[test]
+	fn OutsideLoopStillInlined() {
+		AssertEliminates(
+			"fn f() { let X = compute(); g(X); }",
+			"fn f() { g(compute()); }",
+		);
+	}
+
+	#[test]
+	fn MultiUseKept() { AssertUnchanged("fn f() { let X = foo(); bar(X); baz(X); }"); }
+
+	#[test]
+	fn MutKept() { AssertUnchanged("fn f() { let mut X = 5; X += 1; g(X); }"); }
+
+	#[test]
+	fn ClosureCaptureKept() {
+		AssertEliminates(
+			"fn f() { let X = heavy(); let F = move || X; call(F); }",
+			"fn f() { let X = heavy(); call(move || X); }",
+		);
+	}
+
+	#[test]
+	fn Idempotent() {
+		let Opts = crate::Eliminate::Definition::Options::default();
+
+		let Src = r#"fn f() { let X = 5; println!("{}", X); }"#;
+
+		let First = crate::Eliminate::Transform::Run(Src, &Opts)
+			.unwrap()
+			.expect("first pass should change");
+
+		let Second = crate::Eliminate::Transform::Run(&First, &Opts).unwrap();
+
+		assert!(Second.is_none(), "second pass must be a no-op:\n{}", First);
+	}
 
 	#[test]
 	fn UrlPatternInlined() {
@@ -480,40 +499,5 @@ mod Tests {
 		let Got = Transform(Input);
 		let Norm = Normalise(Expected);
 		assert_eq!(Got, Norm, "URL pattern not inlined as expected");
-	}
-
-	// --- Kept-as-is tests ---------------------------------------------------
-
-	#[test]
-	fn MultiUseKept() { AssertUnchanged("fn f() { let X = foo(); bar(X); baz(X); }"); }
-
-	#[test]
-	fn MutKept() { AssertUnchanged("fn f() { let mut X = 5; X += 1; g(X); }"); }
-
-	#[test]
-	fn ClosureCaptureKept() {
-		// F (the closure value) is single-use and is inlined.
-		// X (captured inside the closure) is conservatively kept.
-		AssertEliminates(
-			"fn f() { let X = heavy(); let F = move || X; call(F); }",
-			"fn f() { let X = heavy(); call(move || X); }",
-		);
-	}
-
-	// --- Idempotency --------------------------------------------------------
-
-	#[test]
-	fn Idempotent() {
-		let Opts = crate::Eliminate::Definition::Options::default();
-
-		let Src = r#"fn f() { let X = 5; println!("{}", X); }"#;
-
-		let First = crate::Eliminate::Transform::Run(Src, &Opts)
-			.unwrap()
-			.expect("first pass should change");
-
-		let Second = crate::Eliminate::Transform::Run(&First, &Opts).unwrap();
-
-		assert!(Second.is_none(), "second pass must be a no-op:\n{}", First);
 	}
 }
