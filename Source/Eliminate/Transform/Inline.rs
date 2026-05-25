@@ -79,6 +79,18 @@ impl<'a> Eliminator<'a> {
 					continue;
 				}
 
+				// Find the index of the substitution site within StmtsAfter
+				// (the first statement that contains a reference to Candidate).
+				// We need the slice of statements that come BEFORE that site
+				// to check whether any free variable in Init is moved there.
+				let SubstSiteOffset = FindSubstSite(StmtsAfter, &Candidate.Ident);
+
+				let StmtsBetween = &StmtsAfter[..SubstSiteOffset];
+
+				if !Safe::IsFreeVarSafe(&Candidate.Init, StmtsBetween) {
+					continue;
+				}
+
 				let Substituted =
 					SubstituteRef(&mut Block.stmts[Candidate.StmtIndex + 1..], &Candidate.Ident, &Candidate.Init);
 
