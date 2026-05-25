@@ -6,16 +6,23 @@
 // Algorithm (per block, bottom-up):
 //   1. Collect structurally eligible let-binding candidates (Collect).
 //   2. For each candidate (in declaration order):
-//      a. Count references in subsequent statements (Count). Includes macro
-//         token streams so multi-use variables are never misidentified.
+//      a. Count references in subsequent statements (Count). This includes
+//         references inside macro token streams (json!, dev_log!, format!,
+//         etc.) so that multi-use variables are never misidentified as
+//         single-use.
 //      b. Skip if count != 1, used-in-closure, used-in-loop-body, or
 //         initialiser is unsafe/large.
-//      c. Substitute the single reference with the initialiser (SubstituteRef).
-//         Handles plain expression positions and macro token streams.
-//      d. Remove the let statement.
-//      e. Set Changed = true and restart candidate collection.
+//      c. Skip if any free variable inside the initialiser is moved by value
+//         in the statements between the candidate declaration and the
+//         substitution site (IsFreeVarSafe). This prevents E0382 borrow-of-
+//         moved-value errors introduced by inlining clone() helpers.
+//      d. Substitute the single reference with the initialiser (SubstituteRef).
+//         Handles both plain expression positions AND macro token streams.
+//      e. Remove the let statement.
+//      f. Set Changed = true and restart candidate collection.
 //   3. Wrap substituted binary/range expressions in parentheses when placed
-//      as a direct operand of a binary or unary expression.
+//      as a direct operand of a binary or unary expression (precedence
+//      safety).
 //=============================================================================//
 
 use proc_macro2::{Group, TokenStream, TokenTree};
@@ -27,6 +34,10 @@ use syn::{
 };
 
 use super::{Collect, Count, Safe};
+
+// ---------------------------------------------------------------------------
+// Public: Eliminator
+// ---------------------------------------------------------------------------
 
 pub struct Eliminator<'a> {
 	pub Changed:bool,
@@ -47,10 +58,24 @@ impl<'a> Eliminator<'a> {
 					continue;
 				}
 
+				let StmtsAfter = &Block.stmts[Candidate.StmtIndex + 1..];
+
 				let (RefCount, InClosure, InLoop) =
-					Count::CountReferences(&Candidate.Ident, &Block.stmts[Candidate.StmtIndex + 1..]);
+					Count::CountReferences(&Candidate.Ident, StmtsAfter);
 
 				if RefCount != 1 || InClosure || InLoop {
+					continue;
+				}
+
+				// Find the index of the substitution site within StmtsAfter
+				// (the first statement that contains a reference to Candidate).
+				// We need the slice of statements that come BEFORE that site
+				// to check whether any free variable in Init is moved there.
+				let SubstSiteOffset = FindSubstSite(StmtsAfter, &Candidate.Ident);
+
+				let StmtsBetween = &StmtsAfter[..SubstSiteOffset];
+
+				if !Safe::IsFreeVarSafe(&Candidate.Init, StmtsBetween) {
 					continue;
 				}
 
@@ -77,12 +102,20 @@ impl<'a> Eliminator<'a> {
 
 impl<'a> VisitMut for Eliminator<'a> {
 	fn visit_block_mut(&mut self, Block:&mut syn::Block) {
+		// Bottom-up: process inner blocks before this one.
 		visit_block_mut(self, Block);
 
 		self.EliminateBlock(Block);
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Public: SubstituteRef
+// ---------------------------------------------------------------------------
+
+/// Replace the first occurrence of Target (as a plain identifier expression
+/// OR as an identifier token inside a macro's token stream) in Stmts with
+/// Replacement. Returns true when the substitution was performed.
 pub fn SubstituteRef(Stmts:&mut [Stmt], Target:&str, Replacement:&Expr) -> bool {
 	let mut Sub = Substitutor { Target, Replacement, Substituted:false, InBinaryOperandPosition:false };
 
@@ -97,10 +130,36 @@ pub fn SubstituteRef(Stmts:&mut [Stmt], Target:&str, Replacement:&Expr) -> bool 
 	Sub.Substituted
 }
 
+// ---------------------------------------------------------------------------
+// Internal: FindSubstSite
+// ---------------------------------------------------------------------------
+
+/// Return the index within Stmts of the first statement that contains a
+/// reference to Target. Returns Stmts.len() (one past end) when not found,
+/// which causes StmtsBetween to be the full slice - the conservative safe
+/// choice.
+fn FindSubstSite(Stmts:&[Stmt], Target:&str) -> usize {
+	for (I, Stmt) in Stmts.iter().enumerate() {
+		let (Count, _, _) = Count::CountReferences(Target, std::slice::from_ref(Stmt));
+
+		if Count > 0 {
+			return I;
+		}
+	}
+
+	Stmts.len()
+}
+
+// ---------------------------------------------------------------------------
+// Internal: Substitutor
+// ---------------------------------------------------------------------------
+
 struct Substitutor<'a> {
 	Target:&'a str,
 	Replacement:&'a Expr,
 	Substituted:bool,
+	/// True when the current AST position is a direct operand of a binary or
+	/// unary expression - used to decide whether to wrap Replacement.
 	InBinaryOperandPosition:bool,
 }
 
@@ -128,6 +187,7 @@ impl<'a> VisitMut for Substitutor<'a> {
 			return;
 		}
 
+		// Propagate binary-operand context for children.
 		match Node {
 			Expr::Binary(B) => {
 				let Saved = self.InBinaryOperandPosition;
@@ -165,6 +225,8 @@ impl<'a> VisitMut for Substitutor<'a> {
 		}
 	}
 
+	/// Substitute inside macro token streams (e.g. json!(), dev_log!()).
+	/// The default VisitMut does NOT recurse into Macro::tokens.
 	fn visit_expr_macro_mut(&mut self, Node:&mut syn::ExprMacro) {
 		if self.Substituted {
 			return;
@@ -181,6 +243,9 @@ impl<'a> VisitMut for Substitutor<'a> {
 		}
 	}
 
+	/// syn v2 separates top-level macro statements (dev_log!("{}", X);) into
+	/// Stmt::Macro(StmtMacro), which is never routed through
+	/// visit_expr_macro_mut. Mirror the same substitution here.
 	fn visit_stmt_macro_mut(&mut self, Node:&mut syn::StmtMacro) {
 		if self.Substituted {
 			return;
@@ -197,6 +262,7 @@ impl<'a> VisitMut for Substitutor<'a> {
 		}
 	}
 
+	// Skip inner blocks that shadow Target - mirrors Count logic.
 	fn visit_block_mut(&mut self, Block:&mut syn::Block) {
 		if BlockShadowsTarget(&Block.stmts, self.Target) {
 			return;
@@ -205,6 +271,7 @@ impl<'a> VisitMut for Substitutor<'a> {
 		syn::visit_mut::visit_block_mut(self, Block);
 	}
 
+	// Skip closures whose parameter shadows Target.
 	fn visit_expr_closure_mut(&mut self, Node:&mut syn::ExprClosure) {
 		if ClosureParamShadows(Node, self.Target) {
 			return;
@@ -213,6 +280,10 @@ impl<'a> VisitMut for Substitutor<'a> {
 		syn::visit_mut::visit_expr_closure_mut(self, Node);
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Token-stream helpers
+// ---------------------------------------------------------------------------
 
 fn ExprToTokenStream(E:&Expr) -> TokenStream {
 	let mut Tokens = TokenStream::new();
@@ -258,6 +329,10 @@ fn SubstituteInTokenStream(Tokens:TokenStream, Target:&str, Replacement:&TokenSt
 	(Result.into_iter().collect(), Found)
 }
 
+// ---------------------------------------------------------------------------
+// Expression helpers
+// ---------------------------------------------------------------------------
+
 fn IsTargetIdent(E:&Expr, Target:&str) -> bool {
 	if let Expr::Path(ExprPath) = E {
 		if ExprPath.qself.is_none() {
@@ -290,6 +365,10 @@ fn ClosureParamShadows(Closure:&syn::ExprClosure, Target:&str) -> bool {
 		.iter()
 		.any(|P| if let syn::Pat::Ident(P) = P { P.ident == Target } else { false })
 }
+
+// ---------------------------------------------------------------------------
+// Unit tests
+// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod Tests {
@@ -325,6 +404,8 @@ mod Tests {
 		assert!(Result.is_none(), "expected no change but got:\n{}", Result.unwrap());
 	}
 
+	// --- Simple inline tests ------------------------------------------------
+
 	#[test]
 	fn SimpleInline() {
 		AssertEliminates(
@@ -351,6 +432,8 @@ mod Tests {
 			"async fn f() -> Result<(), E> { bar(foo().map_err(|e| e)?); Ok(()) }",
 		);
 	}
+
+	// --- Macro substitution tests -------------------------------------------
 
 	#[test]
 	fn InlineIntoJsonMacro() {
@@ -385,6 +468,8 @@ mod Tests {
             }"#,
 		);
 	}
+
+	// --- Loop-body tests (#58) ----------------------------------------------
 
 	/// Binding used only inside a for loop body must not be inlined.
 	/// Inlining would move the initialiser inside the loop, running it
@@ -429,34 +514,67 @@ mod Tests {
 		);
 	}
 
-	#[test]
-	fn MultiUseKept() { AssertUnchanged("fn f() { let X = foo(); bar(X); baz(X); }"); }
+	// --- Free-variable move-safety tests (regression for #56) ---------------
 
+	/// display = path.clone() must NOT be inlined when path is moved into a
+	/// struct field between the declaration and the devlog use site.
+	/// This is the exact pattern from AirClient::get_file_info that produced
+	/// E0382 after eliminate ran on Source/Air.
 	#[test]
-	fn MutKept() { AssertUnchanged("fn f() { let mut X = 5; X += 1; g(X); }"); }
-
-	#[test]
-	fn ClosureCaptureKept() {
-		AssertEliminates(
-			"fn f() { let X = heavy(); let F = move || X; call(F); }",
-			"fn f() { let X = heavy(); call(move || X); }",
+	fn DisplayCloneKeptWhenOriginalMovedFirst() {
+		AssertUnchanged(
+			r#"
+				pub async fn get_file_info(request_id: String, path: String) -> Result<(), E> {
+					let path_display = path.clone();
+					client
+						.get_file_info(Request::new(FileInfoRequest { request_id, path }))
+						.await?;
+					devlog!("{}", path_display, path.clone());
+					Ok(())
+				}
+			"#,
 		);
 	}
 
+	/// Same pattern with section instead of path (AirClient::get_configuration).
 	#[test]
-	fn Idempotent() {
-		let Opts = crate::Eliminate::Definition::Options::default();
-
-		let Src = r#"fn f() { let X = 5; println!("{}", X); }"#;
-
-		let First = crate::Eliminate::Transform::Run(Src, &Opts)
-			.unwrap()
-			.expect("first pass should change");
-
-		let Second = crate::Eliminate::Transform::Run(&First, &Opts).unwrap();
-
-		assert!(Second.is_none(), "second pass must be a no-op:\n{}", First);
+	fn SectionDisplayCloneKeptWhenOriginalMovedFirst() {
+		AssertUnchanged(
+			r#"
+				pub async fn get_configuration(request_id: String, section: String) -> Result<(), E> {
+					let section_display = section.clone();
+					client
+						.get_configuration(Request::new(ConfigurationRequest { request_id, section }))
+						.await?;
+					devlog!("{}", section_display, section.clone());
+					Ok(())
+				}
+			"#,
+		);
 	}
+
+	/// When path is NOT moved between decl and use, the clone helper should
+	/// still be inlined (no false positive that would block legitimate inlines).
+	#[test]
+	fn DisplayCloneInlinedWhenOriginalNotMoved() {
+		AssertEliminates(
+			r#"
+				pub async fn log_path(path: String) -> Result<(), E> {
+					let path_display = path.clone();
+					devlog!("{}", path_display);
+					Ok(())
+				}
+			"#,
+			r#"
+				pub async fn log_path(path: String) -> Result<(), E> {
+					devlog!("{}", path.clone());
+					Ok(())
+				}
+			"#,
+		);
+	}
+
+	// --- URL-parsing pattern ------------------------------------------------
 
 	#[test]
 	fn UrlPatternInlined() {
@@ -499,5 +617,38 @@ mod Tests {
 		let Got = Transform(Input);
 		let Norm = Normalise(Expected);
 		assert_eq!(Got, Norm, "URL pattern not inlined as expected");
+	}
+
+	// --- Kept-as-is tests ---------------------------------------------------
+
+	#[test]
+	fn MultiUseKept() { AssertUnchanged("fn f() { let X = foo(); bar(X); baz(X); }"); }
+
+	#[test]
+	fn MutKept() { AssertUnchanged("fn f() { let mut X = 5; X += 1; g(X); }"); }
+
+	#[test]
+	fn ClosureCaptureKept() {
+		AssertEliminates(
+			"fn f() { let X = heavy(); let F = move || X; call(F); }",
+			"fn f() { let X = heavy(); call(move || X); }",
+		);
+	}
+
+	// --- Idempotency --------------------------------------------------------
+
+	#[test]
+	fn Idempotent() {
+		let Opts = crate::Eliminate::Definition::Options::default();
+
+		let Src = r#"fn f() { let X = 5; println!("{}", X); }"#;
+
+		let First = crate::Eliminate::Transform::Run(Src, &Opts)
+			.unwrap()
+			.expect("first pass should change");
+
+		let Second = crate::Eliminate::Transform::Run(&First, &Opts).unwrap();
+
+		assert!(Second.is_none(), "second pass must be a no-op:\n{}", First);
 	}
 }
