@@ -77,72 +77,92 @@ fn RunReformat(Source:&str, Options:&Definition::Options) -> Error::Result<Optio
 // ---------------------------------------------------------------------------
 //
 // Strategy:
-//   Parse the working text into an AST solely to *identify* which let
-//   bindings are eligible (Collect) and safe (Safe/Count).  Once a candidate
-//   is confirmed for inlining we locate its byte range in the original source
-//   using proc_macro2 span information and splice the replacement text in,
-//   leaving everything else character-for-character identical.
+//   Parse the working text into an AST solely to *identify* which let bindings
+//   are eligible (Collect) and safe (Safe/Count). Once a candidate is confirmed
+//   for inlining we locate its line range in the current working text using
+//   proc_macro2 Span::start()/end() line/column information and splice the
+//   replacement in, leaving every other byte unchanged.
 //
-//   We iterate up to MaxIterations so that chains (A→B→C) converge.
-//   Each iteration re-parses the *current working text* so span offsets
-//   stay accurate after prior edits.
-//
-// Span byte offsets:
-//   proc_macro2 provides `Span::byte_range()` (a `std::ops::Range<usize>`)
-//   when the "span-locations" feature is active (it is, because syn enables
-//   it via the proc-macro2 dependency).  This gives us the exact half-open
-//   byte range [start, end) of any token or node within the *last string
-//   passed to proc_macro2::SourceFile* — which, because we call
-//   `syn::parse_str`, is our working text.
+//   We iterate up to MaxIterations so chains (A->B->C) converge. Each
+//   iteration re-parses the current working text so span positions stay valid.
 
 fn RunPreserve(Source:&str, Options:&Definition::Options) -> Error::Result<Option<String>> {
 	let mut Working = Source.to_owned();
 	let mut AnyChanged = false;
 
 	'outer: for _ in 0..super::Constant::MaxIterations {
-		// Parse the current working text. We keep the Ast immutable after
-		// parse because we only need it for candidate discovery; actual edits
-		// are applied to `Working` as strings.
 		let Ast:syn::File = syn::parse_str(&Working)
 			.map_err(|E| Error::Error::Parse { Path:String::new(), Source:E })?;
 
-		// Walk every function/closure body looking for a single inlinable
-		// binding. We apply at most one substitution per iteration then
-		// restart, so indices stay valid.
+		// Build the line-start table once per parse iteration, not per stmt.
+		let LineStarts = BuildLineStartTable(&Working);
+
 		for Item in &Ast.items {
-			if let Some(NewWorking) = TryInlineInItem(Item, &Working, Options)? {
+			if let Some(NewWorking) = TryInlineInItem(Item, &Working, &LineStarts, Options)? {
 				Working = NewWorking;
 				AnyChanged = true;
 				continue 'outer;
 			}
 		}
 
-		// Nothing changed in this pass — converged.
 		break;
 	}
 
 	if AnyChanged { Ok(Some(Working)) } else { Ok(None) }
 }
 
-/// Attempt one text-level inline substitution inside `Item`.
-/// Returns `Some(new_working_text)` on the first successful substitution.
+// ---------------------------------------------------------------------------
+// Line-start table
+// ---------------------------------------------------------------------------
+
+/// Build a table where `table[i]` is the byte offset of the first character
+/// on 1-based line `i+1`.  Line 1 always starts at byte 0.
+fn BuildLineStartTable(Source:&str) -> Vec<usize> {
+	let mut Table = vec![0usize];
+
+	for (Offset, Ch) in Source.char_indices() {
+		if Ch == '\n' {
+			Table.push(Offset + Ch.len_utf8());
+		}
+	}
+
+	Table
+}
+
+/// Convert a (1-based line, 0-based column) pair from `proc_macro2::LineColumn`
+/// to a byte offset within `Source`, using the pre-built `LineStarts` table.
+fn LcToByte(Lc:proc_macro2::LineColumn, LineStarts:&[usize], Source:&str) -> usize {
+	let LineOffset = LineStarts.get(Lc.line.saturating_sub(1)).copied().unwrap_or(0);
+
+	// Column is 0-based character count; translate to byte offset.
+	Source[LineOffset..]
+		.char_indices()
+		.nth(Lc.column)
+		.map(|(ByteOff, _)| LineOffset + ByteOff)
+		.unwrap_or(Source.len())
+}
+
+// ---------------------------------------------------------------------------
+// Item / block traversal
+// ---------------------------------------------------------------------------
+
 fn TryInlineInItem(
 	Item:&syn::Item,
 	Working:&str,
+	LineStarts:&[usize],
 	Options:&Definition::Options,
 ) -> Error::Result<Option<String>> {
 	match Item {
-		syn::Item::Fn(F) => TryInlineInBlock(&F.block, Working, Options),
+		syn::Item::Fn(F) => TryInlineInBlock(&F.block, Working, LineStarts, Options),
 
 		syn::Item::Impl(I) => {
 			for ImplItem in &I.items {
 				if let syn::ImplItem::Fn(Method) = ImplItem {
-					if let Some(Result) = TryInlineInBlock(&Method.block, Working, Options)? {
-						return Ok(Some(Result));
+					if let Some(R) = TryInlineInBlock(&Method.block, Working, LineStarts, Options)? {
+						return Ok(Some(R));
 					}
 				}
 			}
-
 			Ok(None)
 		},
 
@@ -150,10 +170,10 @@ fn TryInlineInItem(
 	}
 }
 
-/// Attempt one text-level inline substitution inside `Block`.
 fn TryInlineInBlock(
 	Block:&syn::Block,
 	Working:&str,
+	LineStarts:&[usize],
 	Options:&Definition::Options,
 ) -> Error::Result<Option<String>> {
 	let Candidates = Collect::Collect(Block, Options.InlineComments);
@@ -170,66 +190,51 @@ fn TryInlineInBlock(
 			continue;
 		}
 
-		// We have a confirmed single-use candidate.  Clone the downstream
-		// statements into a mutable copy so SubstituteRef can mutate them
-		// in memory — we use the resulting AST node only to render the
-		// replacement text via prettyplease, not to rewrite the whole file.
+		// Clone only the downstream statements for in-memory substitution.
 		let mut UseStmts:Vec<syn::Stmt> = Block.stmts[Candidate.StmtIndex + 1..].to_vec();
 
-		let Substituted = Inline::SubstituteRef(&mut UseStmts, &Candidate.Ident, &Candidate.Init);
-
-		if !Substituted {
+		if !Inline::SubstituteRef(&mut UseStmts, &Candidate.Ident, &Candidate.Init) {
 			continue;
 		}
 
-		// Obtain the byte range of the `let` statement in Working.
-		let LetStmt = &Block.stmts[Candidate.StmtIndex];
-		let LetRange = SpanByteRange(LetStmt);
+		// Locate the `let` and its use statement in the source text.
+		let LetRange = StmtByteRange(&Block.stmts[Candidate.StmtIndex], LineStarts, Working);
+		let UseRange = StmtByteRange(&Block.stmts[Candidate.StmtIndex + 1], LineStarts, Working);
 
-		// Obtain the byte range of the single use statement in Working.
-		// After substitution, render the mutated statement back to source.
-		let UseStmt = &Block.stmts[Candidate.StmtIndex + 1];
-		let UseRange = SpanByteRange(UseStmt);
+		// Render the substituted use-statement to source text.
 		let UseReplacement = StmtToSource(&UseStmts[0]);
 
-		// Apply edits in reverse order (use first because it comes later in
-		// the file, so the let-statement range is unaffected).
+		// Apply the two edits to `Working` in reverse offset order so the
+		// earlier `let` range isn't invalidated by the later use-range edit.
 		let mut Out = Working.to_owned();
 
-		if UseRange.start <= Out.len() && UseRange.end <= Out.len() && UseRange.start <= UseRange.end {
+		// 1. Replace the use-statement text with the inlined version.
+		if UseRange.start < UseRange.end && UseRange.end <= Out.len() {
 			Out.replace_range(UseRange.clone(), &UseReplacement);
 		}
 
-		// Remove the let statement line.  After splicing UseReplacement the
-		// let-stmt offsets in `Out` may have shifted; recalculate from the
-		// delta.
-		let Delta:i64 = UseReplacement.len() as i64 - (UseRange.end - UseRange.start) as i64;
+		// 2. Remove the let-statement line (including its trailing newline).
+		//    The use-range edit happened *after* the let range in the file, so
+		//    the let-range offsets inside `Out` are still valid here.
+		if LetRange.start < LetRange.end && LetRange.end <= Out.len() {
+			let ExpandedEnd =
+				if LetRange.end < Out.len() && Out.as_bytes()[LetRange.end] == b'\n' {
+					LetRange.end + 1
+				} else {
+					LetRange.end
+				};
 
-		let LetStart = (LetRange.start as i64) as usize;
-		let LetEnd = (LetRange.end as i64) as usize;
-
-		if LetStart <= Out.len() && LetEnd <= Out.len() && LetStart <= LetEnd {
-			// Expand the removal to include any trailing newline so we don't
-			// leave a blank line in place of the let statement.
-			let ExpandedEnd = if LetEnd < Out.len() && Out.as_bytes()[LetEnd] == b'\n' {
-				LetEnd + 1
-			} else {
-				LetEnd
-			};
-
-			Out.replace_range(LetStart..ExpandedEnd, "");
+			Out.replace_range(LetRange.start..ExpandedEnd, "");
 		}
 
-		// Recurse into nested blocks within the statements we just modified.
-		// (Handled by the outer 'outer loop re-parsing Working.)
 		return Ok(Some(Out));
 	}
 
-	// Recurse into nested blocks (e.g. if/match arms, nested fns).
+	// Recurse into directly nested blocks (if/loop/while/for/unsafe bodies).
 	for Stmt in &Block.stmts {
-		if let Some(NestedBlock) = StmtNestedBlock(Stmt) {
-			if let Some(Result) = TryInlineInBlock(NestedBlock, Working, Options)? {
-				return Ok(Some(Result));
+		if let Some(Nested) = StmtNestedBlock(Stmt) {
+			if let Some(R) = TryInlineInBlock(Nested, Working, LineStarts, Options)? {
+				return Ok(Some(R));
 			}
 		}
 	}
@@ -241,60 +246,55 @@ fn TryInlineInBlock(
 // Span helpers
 // ---------------------------------------------------------------------------
 
-/// Return the `[start, end)` byte range of a `syn::Stmt` within the source
-/// string that was most recently parsed by proc_macro2.
-fn SpanByteRange(Stmt:&syn::Stmt) -> std::ops::Range<usize> {
+/// Return the `[start, end)` byte range of `Stmt` within `Working`, using
+/// `proc_macro2::Span::start()`/`end()` (1-based line, 0-based column) and
+/// the pre-built `LineStarts` table.
+///
+/// We collect the first and last token spans via `ToTokens` and take the
+/// outer envelope, which is reliable for all concrete statement kinds.
+fn StmtByteRange(Stmt:&syn::Stmt, LineStarts:&[usize], Source:&str) -> std::ops::Range<usize> {
 	use quote::ToTokens;
 
 	let mut Tokens = proc_macro2::TokenStream::new();
-
 	Stmt.to_tokens(&mut Tokens);
 
-	let Spans: Vec<proc_macro2::Span> = Tokens.into_iter().map(|T| T.span()).collect();
+	let AllSpans:Vec<proc_macro2::Span> = Tokens.into_iter().map(|T| T.span()).collect();
 
-	if Spans.is_empty() {
+	if AllSpans.is_empty() {
 		return 0..0;
 	}
 
-	let First = Spans.first().unwrap().byte_range();
-	let Last = Spans.last().unwrap().byte_range();
+	let Start = LcToByte(AllSpans.first().unwrap().start(), LineStarts, Source);
+	let End = LcToByte(AllSpans.last().unwrap().end(), LineStarts, Source);
 
-	First.start..Last.end
+	Start..End
 }
 
-/// Render a single `syn::Stmt` to a source string via prettyplease,
-/// by wrapping it in a dummy function body and extracting the inner text.
+/// Render a single `syn::Stmt` to a source string.
+///
+/// We wrap it in a dummy function, pretty-print via `prettyplease`, then strip
+/// the wrapper indentation so the result matches the surrounding style.
 fn StmtToSource(Stmt:&syn::Stmt) -> String {
 	use quote::quote;
 
-	// Wrap in a function so prettyplease can parse the file.
-	let Wrapped:syn::File = syn::parse_quote! {
-		fn __dummy__() { #Stmt }
-	};
-
+	let Wrapped:syn::File = syn::parse_quote! { fn __dummy__() { #Stmt } };
 	let Full = prettyplease::unparse(&Wrapped);
 
-	// Extract the inner statement text: everything between the first `{\n`
-	// and the last `\n}`, then strip one level of leading whitespace.
-	if let Some(Start) = Full.find('{') {
-		if let Some(End) = Full.rfind('}') {
-			let Inner = Full[Start + 1..End].trim_matches('\n');
+	if let (Some(Open), Some(Close)) = (Full.find('{'), Full.rfind('}')) {
+		let Inner = Full[Open + 1..Close].trim_matches('\n');
 
-			// Strip one leading tab or 4 spaces added by the dummy wrapper.
-			return Inner
-				.lines()
-				.map(|L| L.strip_prefix('\t').or_else(|| L.strip_prefix("    ")).unwrap_or(L))
-				.collect::<Vec<_>>()
-				.join("\n");
-		}
+		// Strip one level of wrapper indentation (tab or 4 spaces).
+		return Inner
+			.lines()
+			.map(|L| L.strip_prefix('\t').or_else(|| L.strip_prefix("    ")).unwrap_or(L))
+			.collect::<Vec<_>>()
+			.join("\n");
 	}
 
-	// Fallback: return the pretty-printed full file (should not happen).
 	Full
 }
 
-/// Extract a directly nested `Block` from a statement, if any, so the
-/// outer loop can recurse into it.
+/// Extract a directly nested `Block` from a statement for recursion.
 fn StmtNestedBlock(Stmt:&syn::Stmt) -> Option<&syn::Block> {
 	if let syn::Stmt::Expr(Expr, _) = Stmt {
 		match Expr {
@@ -307,6 +307,5 @@ fn StmtNestedBlock(Stmt:&syn::Stmt) -> Option<&syn::Block> {
 			_ => {},
 		}
 	}
-
 	None
 }
