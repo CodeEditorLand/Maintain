@@ -18,6 +18,13 @@ use super::{Definition, Error, Transform};
 /// elimination transform on each, and write back the result unless
 /// `Options.DryRun` is set.
 ///
+/// When `Options.Reformat` is `false` (the default) the preserve-layout path
+/// is used: only the inlined binding sites are rewritten; comments, blank
+/// lines, and indentation style are kept verbatim.
+///
+/// When `Options.Reformat` is `true` the whole file is reformatted with
+/// `prettyplease` after inlining (the previous unconditional behaviour).
+///
 /// Returns aggregate [`Definition::Stats`] describing what was processed.
 pub fn Process(Root:&Path, Pattern:&str, Options:&Definition::Options) -> Error::Result<Definition::Stats> {
 	let mut Stats = Definition::Stats::default();
@@ -69,8 +76,16 @@ fn CollectFiles(Root:&Path, GlobMatcher:&GlobSet) -> Vec<PathBuf> {
 fn ProcessFile(FilePath:&Path, Options:&Definition::Options, Stats:&mut Definition::Stats) -> Error::Result<()> {
 	let Source = fs::read_to_string(FilePath)?;
 
-	let TransformResult = Transform::Run(&Source, Options).map_err(|E| {
-		if let Error::Error::Parse { Source: Src, .. } = E {
+	// Choose the transform path based on Options.Reformat.
+	// - Reformat:false (default): text-level substitution, layout preserved.
+	// - Reformat:true: full prettyplease reformat (previous behaviour).
+	let TransformResult = if Options.Reformat {
+		Transform::Run(&Source, Options)
+	} else {
+		Transform::RunPreserve(&Source, Options)
+	}
+	.map_err(|E| {
+		if let Error::Error::Parse { Source:Src, .. } = E {
 			Error::Error::Parse { Path:FilePath.display().to_string(), Source:Src }
 		} else {
 			E

@@ -3,22 +3,26 @@
 //=============================================================================//
 // Module: Transform - AST transformation pipeline
 //
-// Entry point: Run(source, options) parses the Rust source with syn, applies
-// iterative single-use-variable elimination, then attempts to reconstruct the
-// output by splicing only the changed byte ranges back into the original source
-// text (preserving inline comments, blank lines, and all formatting trivia).
+// Two entry points:
 //
-// Patch path (preferred):
-//   For each eliminated binding, Patch locates the byte span of the let
-//   statement and the byte span of the substitution site in the original source
-//   text via proc_macro2 Span offsets, and applies those as sorted
-//   non-overlapping replacements. The rest of the file is copied verbatim.
+//   Run(source, options)
+//     Original behaviour: parse with syn, run the VisitMut eliminator,
+//     then attempt span-based text patching to preserve comments and
+//     whitespace. Falls back to prettyplease::unparse when span data is
+//     unavailable. Used by the Reformat path and by all existing unit tests
+//     in Inline.rs (which compare output against prettyplease-normalised
+//     expected values).
 //
-// Fallback path:
-//   When span information is unavailable (proc_macro2 built without
-//   span-locations, or any span offset resolves to None), the pipeline falls
-//   back to prettyplease::unparse. This keeps behaviour no worse than before
-//   for environments where span data is stripped.
+//   RunPreserve(source, options)
+//     Preserve-layout behaviour (default when Options.Reformat == false):
+//     identifies inlinable bindings via the same Collect/Safe/Count pipeline,
+//     then applies targeted text substitutions to the original source string
+//     without touching anything outside the affected lines.  Comments, blank
+//     lines, section banners, and the original indentation style survive
+//     unchanged.  Uses NO proc_macro2 span APIs so no extra Cargo features
+//     are required.
+//
+// Returns `Ok(None)` when no bindings were eliminated.
 //=============================================================================//
 
 pub mod Collect;
@@ -29,11 +33,23 @@ pub mod Safe;
 
 use super::{Definition, Error};
 
-/// Parse Source, run up to MaxIterations elimination passes, then return the
-/// patched source text. Returns Ok(None) when no bindings were eliminated.
+// ---------------------------------------------------------------------------
+// Original entry point - span-based patch path with prettyplease fallback
+// (signature identical to Current; all Inline.rs tests call this function)
+// ---------------------------------------------------------------------------
+
+/// Parse `Source`, run up to [`super::Constant::MaxIterations`] elimination
+/// passes, then return the patched source text.
+///
+/// Preferred path: span-based text patching via `TryPatchSource` preserves
+/// inline comments and blank lines. Falls back to `prettyplease::unparse`
+/// when span-location data is unavailable.
+///
+/// Returns `Ok(None)` when no bindings were eliminated (caller can skip the
+/// write-back).
 pub fn Run(Source:&str, Options:&Definition::Options) -> Error::Result<Option<String>> {
-	let mut Ast:syn::File =
-		syn::parse_str(Source).map_err(|E| Error::Error::Parse { Path:String::new(), Source:E })?;
+	let mut Ast:syn::File = syn::parse_str(Source)
+		.map_err(|E| Error::Error::Parse { Path:String::new(), Source:E })?;
 
 	let mut AnyChanged = false;
 
@@ -183,186 +199,192 @@ fn StmtTokensMatch(A:&syn::Stmt, B:&syn::Stmt) -> bool {
 }
 
 // ---------------------------------------------------------------------------
-// Preserve-layout path (RunPreserve)
+// Preserve-layout entry point - span-free text substitution
 // ---------------------------------------------------------------------------
 
-/// Preserve-layout variant: inline single-use bindings with minimal textual
-/// rewriting. Only the `let` line and its single use-site are changed;
-/// all comments, blank lines, section banners, and original indentation are
-/// kept verbatim.
+/// Identify inlinable bindings via the same AST pipeline as `Run`, but apply
+/// the substitutions as targeted text edits so that every character outside
+/// the affected `let` binding and its single use-site is preserved verbatim.
 ///
-/// Uses `prettyplease` only to render individual expressions to text, never
-/// to reformat the whole file.
+/// Uses no `proc_macro2` span APIs; works on stable Rust with the dependency
+/// set already declared in `Cargo.toml`.
 ///
 /// Returns `Ok(None)` when no bindings were eliminated.
 pub fn RunPreserve(Source:&str, Options:&Definition::Options) -> Error::Result<Option<String>> {
-	use std::fmt::Write as _;
-
-	/// Render a `syn::Expr` to canonical text via prettyplease by wrapping it
-	/// in a throwaway function body, pretty-printing, then stripping the
-	/// wrapper. This avoids any span/proc-macro2 feature flags.
-	fn ExprText(E:&syn::Expr) -> Option<String> {
-		let Dummy = format!("fn __d() {{ let __v = {}; }}", quote::quote!(#E));
-
-		let Ast:syn::File = syn::parse_str(&Dummy).ok()?;
-
-		let Pretty = prettyplease::unparse(&Ast);
-
-		// Extract the initialiser from `    let __v = <expr>;\n`
-		let Start = Pretty.find("let __v = ")? + "let __v = ".len();
-
-		let End = Pretty[Start..].find(';').map(|I| Start + I)?;
-
-		Some(Pretty[Start..End].trim().to_string())
-	}
-
-	/// Render a `let <ident> = <init>;` binding to canonical text the same way.
-	fn LetText(Ident:&str, E:&syn::Expr) -> Option<String> {
-		let Dummy = format!("fn __d() {{ let {} = {}; }}", Ident, quote::quote!(#E));
-
-		let Ast:syn::File = syn::parse_str(&Dummy).ok()?;
-
-		let Pretty = prettyplease::unparse(&Ast);
-
-		let Marker = format!("let {} = ", Ident);
-
-		let Start = Pretty.find(&Marker)?;
-
-		let End = Pretty[Start..].find(';').map(|I| Start + I + 1)?;
-
-		Some(Pretty[Start..End].trim().to_string())
-	}
-
-	let mut Working = Source.to_string();
-
+	let mut Working = Source.to_owned();
 	let mut AnyChanged = false;
 
-	'outer: loop {
-		let Ast:syn::File = syn::parse_str(&Working)
-			.map_err(|E| Error::Error::Parse { Path:String::new(), Source:E })?;
+	for _ in 0..super::Constant::MaxIterations {
+		match PreservePass(&Working, Options)? {
+			Some(Next) => {
+				Working = Next;
+				AnyChanged = true;
+			},
 
-		// Walk every function body looking for single-use let bindings.
-		for Item in &Ast.items {
-			let Blocks = CollectBlocks(Item);
-
-			for Block in Blocks {
-				let Candidates = super::Transform::Collect::Collect(Block, Options.InlineComments);
-
-				for Candidate in &Candidates {
-					if !super::Transform::Safe::IsSafe(&Candidate.Init, Options.MaxSize) {
-						continue;
-					}
-
-					let (RefCount, InClosure, InLoop) = super::Transform::Count::CountReferences(
-						&Candidate.Ident,
-						&Block.stmts[Candidate.StmtIndex + 1..],
-					);
-
-					if RefCount != 1 || InClosure || InLoop {
-						continue;
-					}
-
-					let LetStr = match LetText(&Candidate.Ident, &Candidate.Init) {
-						Some(S) => S,
-						None => continue,
-					};
-
-					let InitStr = match ExprText(&Candidate.Init) {
-						Some(S) => S,
-						None => continue,
-					};
-
-					let IdentStr = &Candidate.Ident;
-
-					// Find and remove the let line, then replace the use-site.
-					if let Some(LetPos) = Working.find(&LetStr) {
-						// Find the full line span (including leading whitespace + trailing newline).
-						let LineStart = Working[..LetPos].rfind('\n').map(|I| I + 1).unwrap_or(0);
-
-						let LineEnd = Working[LetPos..]
-							.find('\n')
-							.map(|I| LetPos + I + 1)
-							.unwrap_or(Working.len());
-
-						// Find the use-site of the identifier after the let line.
-						let SearchFrom = LineEnd;
-
-						if let Some(RelPos) = find_word(&Working[SearchFrom..], IdentStr) {
-							let UsePos = SearchFrom + RelPos;
-							let UseEnd = UsePos + IdentStr.len();
-
-							// Replace use-site first (later in file, so offsets of let line unaffected).
-							Working.replace_range(UsePos..UseEnd, &InitStr);
-
-							// Now remove the let line.
-							Working.replace_range(LineStart..LineEnd, "");
-
-							AnyChanged = true;
-
-							continue 'outer;
-						}
-					}
-				}
-			}
+			None => break,
 		}
-
-		// No more candidates found in this pass.
-		break;
 	}
 
 	if AnyChanged { Ok(Some(Working)) } else { Ok(None) }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers for RunPreserve
-// ---------------------------------------------------------------------------
+/// One pass: parse `Working`, find the first inlinable binding, apply the
+/// text edit, return `Some(new_text)`. Returns `None` when nothing changed.
+fn PreservePass(Working:&str, Options:&Definition::Options) -> Error::Result<Option<String>> {
+	let Ast:syn::File = syn::parse_str(Working)
+		.map_err(|E| Error::Error::Parse { Path:String::new(), Source:E })?;
 
-/// Word-boundary-aware substring search: returns the byte offset of the first
-/// occurrence of `Word` in `Haystack` where the match is not immediately
-/// preceded or followed by an alphanumeric character or underscore.
-fn find_word(Haystack:&str, Word:&str) -> Option<usize> {
-	let Bytes = Haystack.as_bytes();
-	let Pat = Word.as_bytes();
-
-	let mut Pos = 0usize;
-
-	while Pos + Pat.len() <= Bytes.len() {
-		if Bytes[Pos..].starts_with(Pat) {
-			let Before = Pos > 0 && (Bytes[Pos - 1].is_ascii_alphanumeric() || Bytes[Pos - 1] == b'_');
-
-			let After = Bytes
-				.get(Pos + Pat.len())
-				.map_or(false, |&B| B.is_ascii_alphanumeric() || B == b'_');
-
-			if !Before && !After {
-				return Some(Pos);
-			}
+	for Item in &Ast.items {
+		if let Some(Result) = TryItemPreserve(Item, Working, Options)? {
+			return Ok(Some(Result));
 		}
-
-		Pos += 1;
 	}
 
-	None
+	Ok(None)
 }
 
-/// Collect all `syn::Block` references reachable from a top-level `Item`.
-/// Only descends into function bodies (free functions and impl methods).
-fn CollectBlocks(Item:&syn::Item) -> Vec<&syn::Block> {
-	let mut Out = Vec::new();
-
+fn TryItemPreserve(
+	Item:&syn::Item,
+	Working:&str,
+	Options:&Definition::Options,
+) -> Error::Result<Option<String>> {
 	match Item {
-		syn::Item::Fn(F) => Out.push(F.block.as_ref()),
+		syn::Item::Fn(F) => TryBlockPreserve(&F.block, Working, Options),
 
-		syn::Item::Impl(Impl) => {
-			for ImplItem in &Impl.items {
+		syn::Item::Impl(I) => {
+			for ImplItem in &I.items {
 				if let syn::ImplItem::Fn(M) = ImplItem {
-					Out.push(&M.block);
+					if let Some(R) = TryBlockPreserve(&M.block, Working, Options)? {
+						return Ok(Some(R));
+					}
 				}
 			}
+
+			Ok(None)
 		},
 
-		_ => {},
+		_ => Ok(None),
+	}
+}
+
+fn TryBlockPreserve(
+	Block:&syn::Block,
+	Working:&str,
+	Options:&Definition::Options,
+) -> Error::Result<Option<String>> {
+	let Candidates = Collect::Collect(Block, Options.InlineComments);
+
+	for Candidate in &Candidates {
+		if !Safe::IsSafe(&Candidate.Init, Options.MaxSize) {
+			continue;
+		}
+
+		let (RefCount, InClosure, InLoop) =
+			Count::CountReferences(&Candidate.Ident, &Block.stmts[Candidate.StmtIndex + 1..]);
+
+		if RefCount != 1 || InClosure || InLoop {
+			continue;
+		}
+
+		// Clone downstream statements; substitute in-memory.
+		let mut UseStmts:Vec<syn::Stmt> = Block.stmts[Candidate.StmtIndex + 1..].to_vec();
+
+		if !Inline::SubstituteRef(&mut UseStmts, &Candidate.Ident, &Candidate.Init) {
+			continue;
+		}
+
+		// Render the ORIGINAL let-stmt and use-stmt to canonical text so we
+		// can locate them in `Working` by plain string search.
+		let LetText = StmtToText(&Block.stmts[Candidate.StmtIndex]);
+		let UseOrigText = StmtToText(&Block.stmts[Candidate.StmtIndex + 1]);
+		let UseNewText = StmtToText(&UseStmts[0]);
+
+		// Locate the original let-stmt text in Working.
+		let Some(LetPos) = Working.find(&LetText) else {
+			continue;
+		};
+
+		// Locate the original use-stmt text - must appear AFTER the let.
+		let SearchFrom = LetPos + LetText.len();
+		let Some(UseOffset) = Working[SearchFrom..].find(&UseOrigText) else {
+			continue;
+		};
+
+		let UsePos = SearchFrom + UseOffset;
+
+		// Apply edits in reverse order (use comes later, so edit it first so
+		// the let-stmt byte positions remain valid).
+		let mut Out = Working.to_owned();
+
+		// 1. Replace the use-stmt with the substituted version.
+		Out.replace_range(UsePos..UsePos + UseOrigText.len(), &UseNewText);
+
+		// 2. Remove the let-stmt line (expand to include trailing newline).
+		let LetEnd = LetPos + LetText.len();
+		let ExpandedLetEnd = if LetEnd < Out.len() && Out.as_bytes()[LetEnd] == b'\n' {
+			LetEnd + 1
+		} else {
+			LetEnd
+		};
+
+		Out.replace_range(LetPos..ExpandedLetEnd, "");
+
+		return Ok(Some(Out));
 	}
 
-	Out
+	// Recurse into directly nested blocks.
+	for Stmt in &Block.stmts {
+		if let Some(Nested) = StmtNestedBlock(Stmt) {
+			if let Some(R) = TryBlockPreserve(Nested, Working, Options)? {
+				return Ok(Some(R));
+			}
+		}
+	}
+
+	Ok(None)
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Render a single `syn::Stmt` to its canonical text representation by
+/// wrapping it in a dummy function body and extracting the inner line(s).
+/// The wrapper indentation (one tab or 4 spaces from prettyplease) is
+/// stripped so the result is indentation-relative.
+fn StmtToText(Stmt:&syn::Stmt) -> String {
+	use quote::quote;
+
+	let Wrapped:syn::File = syn::parse_quote! { fn __d() { #Stmt } };
+	let Full = prettyplease::unparse(&Wrapped);
+
+	// Full looks like "fn __d() {\n    <stmt>\n}\n".
+	// Extract between first '{' and last '}'.
+	if let (Some(Open), Some(Close)) = (Full.find('{'), Full.rfind('}')) {
+		let Inner = Full[Open + 1..Close].trim_matches('\n');
+
+		return Inner
+			.lines()
+			.map(|L| L.strip_prefix('\t').or_else(|| L.strip_prefix("    ")).unwrap_or(L))
+			.collect::<Vec<_>>()
+			.join("\n");
+	}
+
+	Full
+}
+
+/// Extract a directly nested `Block` from a statement for recursion.
+fn StmtNestedBlock(Stmt:&syn::Stmt) -> Option<&syn::Block> {
+	if let syn::Stmt::Expr(Expr, _) = Stmt {
+		match Expr {
+			syn::Expr::Block(B) => return Some(&B.block),
+			syn::Expr::If(I) => return Some(&I.then_branch),
+			syn::Expr::Loop(L) => return Some(&L.body),
+			syn::Expr::While(W) => return Some(&W.body),
+			syn::Expr::ForLoop(F) => return Some(&F.body),
+			syn::Expr::Unsafe(U) => return Some(&U.block),
+			_ => {},
+		}
+	}
+	None
 }

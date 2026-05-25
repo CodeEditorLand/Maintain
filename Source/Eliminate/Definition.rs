@@ -23,6 +23,14 @@ pub struct Options {
 
 	/// When `true`, emit per-binding log lines.
 	pub Verbose:bool,
+
+	/// When `true`, reformat the entire file with `prettyplease` after
+	/// inlining (the previous default behaviour).
+	///
+	/// Default `false` - only the inlined binding sites are rewritten;
+	/// all comments, blank lines, section banners, and the original
+	/// indentation style are preserved verbatim.
+	pub Reformat:bool,
 }
 
 impl Default for Options {
@@ -32,6 +40,7 @@ impl Default for Options {
 			InlineComments:false,
 			DryRun:false,
 			Verbose:false,
+			Reformat:false,
 		}
 	}
 }
