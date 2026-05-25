@@ -46,6 +46,12 @@ pub struct Cli {
 	/// Print a line for every binding that is inlined.
 	#[clap(long, short = 'v')]
 	pub Verbose:bool,
+
+	/// Reformat the entire file with prettyplease after inlining.
+	/// Default: only the inlined binding sites are rewritten; comments,
+	/// blank lines, and indentation are preserved verbatim.
+	#[clap(long, short = 'r')]
+	pub Reformat:bool,
 }
 
 impl Cli {
@@ -55,6 +61,7 @@ impl Cli {
 			InlineComments:self.InlineComments,
 			DryRun:self.DryRun,
 			Verbose:self.Verbose,
+			Reformat:self.Reformat,
 		};
 
 		let Stats = Process::Process(&self.Path, &self.Glob, &Options)?;
