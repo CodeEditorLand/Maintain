@@ -26,9 +26,13 @@
 //=============================================================================//
 
 pub mod Collect;
+
 pub mod Count;
+
 pub mod Inline;
+
 pub mod Patch;
+
 pub mod Safe;
 
 use super::{Definition, Error};
@@ -119,8 +123,11 @@ fn TryPatchSource(Source:&str, MutatedAst:&syn::File) -> Option<String> {
 /// statements that differ.
 fn CollectBlockPatches(
 	OrigBlock:&syn::Block,
+
 	MutBlock:&syn::Block,
+
 	Source:&str,
+
 	Patches:&mut Vec<Patch::Patch>,
 ) -> Option<()> {
 	// Walk MutBlock statements; for each one, find the corresponding
@@ -136,6 +143,7 @@ fn CollectBlockPatches(
 		// or we exhaust OrigBlock.
 		while OrigIdx < OrigBlock.stmts.len() {
 			let OrigStmt = &OrigBlock.stmts[OrigIdx];
+
 			OrigIdx += 1;
 
 			if StmtTokensMatch(OrigStmt, MutStmt) {
@@ -185,9 +193,11 @@ fn StmtTokensMatch(A:&syn::Stmt, B:&syn::Stmt) -> bool {
 	use quote::ToTokens;
 
 	let mut Ta = proc_macro2::TokenStream::new();
+
 	let mut Tb = proc_macro2::TokenStream::new();
 
 	A.to_tokens(&mut Ta);
+
 	B.to_tokens(&mut Tb);
 
 	Ta.to_string() == Tb.to_string()
@@ -207,12 +217,14 @@ fn StmtTokensMatch(A:&syn::Stmt, B:&syn::Stmt) -> bool {
 /// Returns `Ok(None)` when no bindings were eliminated.
 pub fn RunPreserve(Source:&str, Options:&Definition::Options) -> Error::Result<Option<String>> {
 	let mut Working = Source.to_owned();
+
 	let mut AnyChanged = false;
 
 	for _ in 0..super::Constant::MaxIterations {
 		match PreservePass(&Working, Options)? {
 			Some(Next) => {
 				Working = Next;
+
 				AnyChanged = true;
 			},
 
@@ -273,7 +285,9 @@ fn TryBlockPreserve(Block:&syn::Block, Working:&str, Options:&Definition::Option
 		}
 
 		let StmtsAfter = &Block.stmts[Candidate.StmtIndex + 1..];
+
 		let SubstSiteOffset = Inline::FindSubstSite(StmtsAfter, &Candidate.Ident);
+
 		if !Safe::IsFreeVarSafe(&Candidate.Init, &StmtsAfter[..SubstSiteOffset]) {
 			continue;
 		}
@@ -288,7 +302,9 @@ fn TryBlockPreserve(Block:&syn::Block, Working:&str, Options:&Definition::Option
 		// Render the ORIGINAL let-stmt and use-stmt to canonical text so we
 		// can locate them in `Working` by plain string search.
 		let LetText = StmtToText(&Block.stmts[Candidate.StmtIndex]);
+
 		let UseOrigText = StmtToText(&Block.stmts[Candidate.StmtIndex + 1 + SubstSiteOffset]);
+
 		let UseNewText = StmtToText(&UseStmts[SubstSiteOffset]);
 
 		// Locate the original let-stmt text in Working.
@@ -298,6 +314,7 @@ fn TryBlockPreserve(Block:&syn::Block, Working:&str, Options:&Definition::Option
 
 		// Locate the original use-stmt text - must appear AFTER the let.
 		let SearchFrom = LetPos + LetText.len();
+
 		let Some(UseOffset) = Working[SearchFrom..].find(&UseOrigText) else {
 			continue;
 		};
@@ -313,6 +330,7 @@ fn TryBlockPreserve(Block:&syn::Block, Working:&str, Options:&Definition::Option
 
 		// 2. Remove the let-stmt line (expand to include trailing newline).
 		let LetEnd = LetPos + LetText.len();
+
 		let ExpandedLetEnd = if LetEnd < Out.len() && Out.as_bytes()[LetEnd] == b'\n' {
 			LetEnd + 1
 		} else {
@@ -348,6 +366,7 @@ fn StmtToText(Stmt:&syn::Stmt) -> String {
 	use quote::quote;
 
 	let Wrapped:syn::File = syn::parse_quote! { fn __d() { #Stmt } };
+
 	let Full = prettyplease::unparse(&Wrapped);
 
 	// Full looks like "fn __d() {\n    <stmt>\n}\n".
@@ -370,13 +389,20 @@ fn StmtNestedBlock(Stmt:&syn::Stmt) -> Option<&syn::Block> {
 	if let syn::Stmt::Expr(Expr, _) = Stmt {
 		match Expr {
 			syn::Expr::Block(B) => return Some(&B.block),
+
 			syn::Expr::If(I) => return Some(&I.then_branch),
+
 			syn::Expr::Loop(L) => return Some(&L.body),
+
 			syn::Expr::While(W) => return Some(&W.body),
+
 			syn::Expr::ForLoop(F) => return Some(&F.body),
+
 			syn::Expr::Unsafe(U) => return Some(&U.block),
+
 			_ => {},
 		}
 	}
+
 	None
 }

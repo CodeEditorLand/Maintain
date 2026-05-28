@@ -125,21 +125,27 @@ fn UrlPatternInlined() {
 	let Input = r#"
         pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideCodeLensesRequest,
         ) -> Result<Response<ProvideCodeLensesResponse>, Status> {
             let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+
             let DocumentURI = Url::parse(URI)
                 .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?;
+
             match Service.environment.ProvideCodeLenses(DocumentURI).await {
                 Ok(_) => Ok(Response::new(ProvideCodeLensesResponse::default())),
+
                 Err(Error) => Err(Status::internal(format!("Code lenses failed: {}", Error))),
             }
         }
+
     "#;
 
 	let Expected = r#"
         pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideCodeLensesRequest,
         ) -> Result<Response<ProvideCodeLensesResponse>, Status> {
             match Service
@@ -153,9 +159,11 @@ fn UrlPatternInlined() {
                 .await
             {
                 Ok(_) => Ok(Response::new(ProvideCodeLensesResponse::default())),
+
                 Err(Error) => Err(Status::internal(format!("Code lenses failed: {}", Error))),
             }
         }
+
     "#;
 
 	assert_eq!(transform(Input), norm(Expected));
@@ -188,6 +196,7 @@ fn NestedScopeInlined() {
             let Outer = outer_val();
             {
                 let Inner = 42;
+
                 use_inner(Inner);
             }
             use_outer(Outer);
@@ -326,6 +335,7 @@ fn AttributedLetInlinedWhenOptIn() {
 	let Input = r#"fn f() {
         #[allow(unused)]
         let X = 5;
+
         g(X);
     }"#;
 
@@ -342,6 +352,7 @@ fn AttributedLetKeptByDefault() {
 	let Input = r#"fn f() {
         #[allow(unused)]
         let X = 5;
+
         g(X);
     }"#;
 
@@ -363,23 +374,28 @@ fn MountainDataStringIntoJsonMacro() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: AcceptTerminalProcessDataRequest,
         ) -> Result<Response<AcceptTerminalProcessDataResponse>, Status> {
             let DataString = String::from_utf8_lossy(&Request.data).to_string();
+
             let _ = Service
                 .environment
                 .ApplicationHandle
                 .emit("sky://terminal/data", json!({ "id": Request.terminal_id, "data": DataString }));
+
             Ok(Response::new(AcceptTerminalProcessDataResponse {}))
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: AcceptTerminalProcessDataRequest,
         ) -> Result<Response<AcceptTerminalProcessDataResponse>, Status> {
             let _ = Service
                 .environment
                 .ApplicationHandle
                 .emit("sky://terminal/data", json!({ "id": Request.terminal_id, "data": String::from_utf8_lossy(&Request.data).to_string() }));
+
             Ok(Response::new(AcceptTerminalProcessDataResponse {}))
         }"#,
 	);
@@ -392,26 +408,35 @@ fn MountainContextDtoIntoFnArg() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideReferencesRequest,
         ) -> Result<Response<ProvideReferencesResponse>, Status> {
             let DocumentURI = parse_uri(&Request)?;
+
             let PositionDTO_ = build_position(&Request);
+
             let ContextDTO = json!({ "includeDeclaration": true });
+
             match Service.environment.ProvideReferences(DocumentURI, PositionDTO_, ContextDTO).await {
                 Ok(_) => Ok(Response::new(ProvideReferencesResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideReferencesRequest,
         ) -> Result<Response<ProvideReferencesResponse>, Status> {
             match Service.environment.ProvideReferences(
                 parse_uri(&Request)?,
+
                 build_position(&Request),
+
                 json!({ "includeDeclaration": true }),
             ).await {
                 Ok(_) => Ok(Response::new(ProvideReferencesResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
@@ -426,32 +451,42 @@ fn MountainPositionDtoInlined() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideDefinitionRequest,
         ) -> Result<Response<ProvideDefinitionResponse>, Status> {
             let Position_ = Request.position.as_ref();
+
             let DocumentURI = parse_uri(&Request)?;
+
             let PositionDTO_ = PositionDTO {
                 LineNumber: Position_.map(|P| P.line).unwrap_or(0),
+
                 Column: Position_.map(|P| P.character).unwrap_or(0),
             };
+
             match Service.environment.ProvideDefinition(DocumentURI, PositionDTO_).await {
                 Ok(_) => Ok(Response::new(ProvideDefinitionResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideDefinitionRequest,
         ) -> Result<Response<ProvideDefinitionResponse>, Status> {
             let Position_ = Request.position.as_ref();
+
             match Service.environment.ProvideDefinition(
                 parse_uri(&Request)?,
+
                 PositionDTO {
                     LineNumber: Position_.map(|P| P.line).unwrap_or(0),
                     Column: Position_.map(|P| P.character).unwrap_or(0),
                 },
             ).await {
                 Ok(_) => Ok(Response::new(ProvideDefinitionResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
@@ -542,6 +577,7 @@ fn MountainResourceStatesIntoJsonMacro() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: UpdateScmGroupRequest,
         ) -> Result<Response<UpdateScmGroupResponse>, Status> {
             let ResourceStates: Vec<serde_json::Value> = Request
@@ -549,24 +585,30 @@ fn MountainResourceStatesIntoJsonMacro() {
                 .iter()
                 .map(|RS| json!({ "uri": RS.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("") }))
                 .collect();
+
             let _ = Service.environment.ApplicationHandle.emit(
                 "sky://scm/updateGroup",
+
                 json!({ "groupId": Request.group_id, "resourceStates": ResourceStates }),
             );
+
             Ok(Response::new(UpdateScmGroupResponse {}))
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: UpdateScmGroupRequest,
         ) -> Result<Response<UpdateScmGroupResponse>, Status> {
             let _ = Service.environment.ApplicationHandle.emit(
                 "sky://scm/updateGroup",
+
                 json!({ "groupId": Request.group_id, "resourceStates": Request
                     .resource_states
                     .iter()
                     .map(|RS| json!({ "uri": RS.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("") }))
                     .collect() }),
             );
+
             Ok(Response::new(UpdateScmGroupResponse {}))
         }"#,
 	);
@@ -579,22 +621,31 @@ fn MountainUriDoubleUseKept() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideHoverRequest,
         ) -> Result<Response<ProvideHoverResponse>, Status> {
             let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+
             dev_log!("hover URI={}", URI);
+
             let DocumentURI = Url::parse(URI)
                 .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?;
+
             drop(DocumentURI);
+
             Ok(Response::new(ProvideHoverResponse::default()))
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideHoverRequest,
         ) -> Result<Response<ProvideHoverResponse>, Status> {
             let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+
             dev_log!("hover URI={}", URI);
+
             drop(Url::parse(URI).map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?);
+
             Ok(Response::new(ProvideHoverResponse::default()))
         }"#,
 	);
@@ -609,9 +660,11 @@ fn MountainSelectedIndicesInlined() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ShowQuickPickRequest,
         ) -> Result<Response<ShowQuickPickResponse>, Status> {
             let Selected = vec!["option_a".to_string()];
+
             let SelectedIndices: Vec<u32> = Selected
                 .iter()
                 .filter_map(|Label| {
@@ -622,10 +675,12 @@ fn MountainSelectedIndicesInlined() {
                         .map(|Index| Index as u32)
                 })
                 .collect();
+
             Ok(Response::new(ShowQuickPickResponse { selected_indices: SelectedIndices }))
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ShowQuickPickRequest,
         ) -> Result<Response<ShowQuickPickResponse>, Status> {
             Ok(Response::new(ShowQuickPickResponse {
@@ -664,12 +719,15 @@ fn MountainParametersIntoSendRequest() {
 		r#"pub async fn Fn() -> Result<String, String> {
             Ok(SendRequest(
                 "cocoon-main",
+
                 "$provideTreeChildren".to_string(),
+
                 json!({
                     "viewId": "explorer",
                     "treeItemHandle": "item_1",
                     "handle": get_handle(),
                 }),
+
                 5000,
             ).await?)
         }"#,
@@ -683,32 +741,41 @@ fn MountainContextDtoWithKeptRangeDto() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideCodeActionsRequest,
         ) -> Result<Response<ProvideCodeActionsResponse>, Status> {
             let R = Request.range.as_ref();
+
             let RangeDTO = json!({
                 "startLine": R.and_then(|R| R.start.as_ref()).map(|P| P.line).unwrap_or(0),
                 "endLine": R.and_then(|R| R.end.as_ref()).map(|P| P.line).unwrap_or(0),
             });
+
             let ContextDTO = json!({ "diagnostics": [], "only": null });
+
             match Service.environment.ProvideCodeActions(RangeDTO, ContextDTO).await {
                 Ok(_) => Ok(Response::new(ProvideCodeActionsResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideCodeActionsRequest,
         ) -> Result<Response<ProvideCodeActionsResponse>, Status> {
             let R = Request.range.as_ref();
+
             match Service.environment.ProvideCodeActions(
                 json!({
                     "startLine": R.and_then(|R| R.start.as_ref()).map(|P| P.line).unwrap_or(0),
                     "endLine": R.and_then(|R| R.end.as_ref()).map(|P| P.line).unwrap_or(0),
                 }),
+
                 json!({ "diagnostics": [], "only": null }),
             ).await {
                 Ok(_) => Ok(Response::new(ProvideCodeActionsResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
@@ -1001,18 +1068,23 @@ fn MountainDocumentSymbolsChain() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideDocumentSymbolsRequest,
         ) -> Result<Response<ProvideDocumentSymbolsResponse>, Status> {
             let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+
             let DocumentURI = Url::parse(URI)
                 .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?;
+
             match Service.environment.ProvideDocumentSymbols(DocumentURI).await {
                 Ok(_) => Ok(Response::new(ProvideDocumentSymbolsResponse::default())),
+
                 Err(E) => Err(Status::internal(format!("Symbols failed: {}", E))),
             }
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideDocumentSymbolsRequest,
         ) -> Result<Response<ProvideDocumentSymbolsResponse>, Status> {
             match Service.environment.ProvideDocumentSymbols(
@@ -1020,6 +1092,7 @@ fn MountainDocumentSymbolsChain() {
                     .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?,
             ).await {
                 Ok(_) => Ok(Response::new(ProvideDocumentSymbolsResponse::default())),
+
                 Err(E) => Err(Status::internal(format!("Symbols failed: {}", E))),
             }
         }"#,
@@ -1033,26 +1106,35 @@ fn MountainSignatureHelpContextDto() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideSignatureHelpRequest,
         ) -> Result<Response<ProvideSignatureHelpResponse>, Status> {
             let DocumentURI = parse_uri(&Request)?;
+
             let PositionDTO_ = build_position(&Request);
+
             let ContextDTO = json!({ "triggerKind": 1, "isRetrigger": false });
+
             match Service.environment.ProvideSignatureHelp(DocumentURI, PositionDTO_, ContextDTO).await {
                 Ok(_) => Ok(Response::new(ProvideSignatureHelpResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideSignatureHelpRequest,
         ) -> Result<Response<ProvideSignatureHelpResponse>, Status> {
             match Service.environment.ProvideSignatureHelp(
                 parse_uri(&Request)?,
+
                 build_position(&Request),
+
                 json!({ "triggerKind": 1, "isRetrigger": false }),
             ).await {
                 Ok(_) => Ok(Response::new(ProvideSignatureHelpResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
@@ -1066,34 +1148,49 @@ fn MountainUriAndLineMultiUseKept() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideHoverRequest,
         ) -> Result<Response<ProvideHoverResponse>, Status> {
             let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+
             let Line = Request.position.as_ref().map(|P| P.line).unwrap_or(0);
+
             let Character = Request.position.as_ref().map(|P| P.character).unwrap_or(0);
+
             dev_log!("hover pos={}:{} uri={}", Line, Character, URI);
+
             let DocumentURI = Url::parse(URI)
                 .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?;
+
             let PositionDTO_ = PositionDTO { LineNumber: Line, Column: Character };
+
             match Service.environment.ProvideHover(DocumentURI, PositionDTO_).await {
                 Ok(_) => Ok(Response::new(ProvideHoverResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideHoverRequest,
         ) -> Result<Response<ProvideHoverResponse>, Status> {
             let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+
             let Line = Request.position.as_ref().map(|P| P.line).unwrap_or(0);
+
             let Character = Request.position.as_ref().map(|P| P.character).unwrap_or(0);
+
             dev_log!("hover pos={}:{} uri={}", Line, Character, URI);
+
             match Service.environment.ProvideHover(
                 Url::parse(URI)
                     .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?,
+
                 PositionDTO { LineNumber: Line, Column: Character },
             ).await {
                 Ok(_) => Ok(Response::new(ProvideHoverResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
@@ -1346,7 +1443,9 @@ fn ClosureLocalBindingsInlined() {
                 .iter()
                 .map(|Item| {
                     let Handle = Item.get("handle").and_then(Value::as_str).unwrap_or("").to_string();
+
                     let Label  = Item.get("label").and_then(Value::as_str).unwrap_or("").to_string();
+
                     TreeItem { handle: Handle, label: Label }
                 })
                 .collect()
@@ -1382,7 +1481,9 @@ fn UrlEncodedPathInlined() {
 		r#"fn f(Origin: &str, PathStr: &str) -> String {
             format!(
                 "{}/?{}",
+
                 Origin,
+
                 url::form_urlencoded::Serializer::new(String::new())
                     .append_pair("folder", PathStr)
                     .finish()
@@ -1407,11 +1508,13 @@ fn CanonicalFileNameInlined() {
 		r#"fn f(Canonical: &PathBuf, Uri: Url) -> Option<WorkspaceFolder> {
             Some(WorkspaceFolder::new(
                 Uri,
+
                 Canonical
                     .file_name()
                     .and_then(|N| N.to_str())
                     .map(str::to_string)
                     .unwrap_or_else(|| Canonical.display().to_string()),
+
                 0,
             ))
         }"#,
@@ -1465,6 +1568,7 @@ fn LoopUriIntoIfLetParse() {
 		r#"fn f(Additions: &[Addition], Folders: &mut Vec<Folder>) {
             for Addition in Additions {
                 let URI = Addition.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+
                 if let Ok(Parsed) = url::Url::parse(URI) {
                     Folders.push(Folder::new(Parsed));
                 }
@@ -1491,6 +1595,7 @@ fn BlockExprIntoIfLetScrutinee() {
 		r#"fn f(Handle: String, State: &State) -> Option<String> {
             let MaybePrimary = {
                 let mut Map = State.handle_map.lock().unwrap();
+
                 Map.remove(&Handle)
             };
             if let Some(PrimaryHandle) = MaybePrimary {
@@ -1502,6 +1607,7 @@ fn BlockExprIntoIfLetScrutinee() {
 		r#"fn f(Handle: String, State: &State) -> Option<String> {
             if let Some(PrimaryHandle) = {
                 let mut Map = State.handle_map.lock().unwrap();
+
                 Map.remove(&Handle)
             } {
                 Some(PrimaryHandle)
@@ -1527,6 +1633,7 @@ fn TypeAnnotatedCollectIntoJsonMacro() {
 		r#"async fn f(Request: ApplyEditRequest, URI: &str, Handle: &AppHandle) {
             let _ = Handle.emit(
                 "sky://editor/applyEdits",
+
                 json!({
                     "uri": URI,
                     "edits": Request
@@ -1547,23 +1654,29 @@ fn HardcodedOptionsDtoInlined() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             DocumentURI: Url,
         ) -> Result<Response<FormatResponse>, Status> {
             let OptionsDTO = json!({ "tabSize": 4, "insertSpaces": true });
+
             match Service.environment.ProvideDocumentFormattingEdits(DocumentURI, OptionsDTO).await {
                 Ok(_) => Ok(Response::new(FormatResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             DocumentURI: Url,
         ) -> Result<Response<FormatResponse>, Status> {
             match Service.environment.ProvideDocumentFormattingEdits(
                 DocumentURI,
+
                 json!({ "tabSize": 4, "insertSpaces": true }),
             ).await {
                 Ok(_) => Ok(Response::new(FormatResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
@@ -1778,35 +1891,45 @@ fn MountainInlayHintsFullCollapse() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideInlayHintsRequest,
         ) -> Result<Response<ProvideInlayHintsResponse>, Status> {
             let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+
             let DocumentURI = Url::parse(URI)
                 .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?;
+
             let R = Request.range.as_ref();
+
             let RangeDTO = json!({
                 "startLine": R.and_then(|R| R.start.as_ref()).map(|P| P.line).unwrap_or(0),
                 "endLine":   R.and_then(|R| R.end.as_ref()).map(|P| P.line).unwrap_or(0),
             });
+
             match Service.environment.ProvideInlayHints(DocumentURI, RangeDTO).await {
                 Ok(_) => Ok(Response::new(ProvideInlayHintsResponse::default())),
+
                 Err(E) => Err(Status::internal(format!("InlayHints failed: {}", E))),
             }
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideInlayHintsRequest,
         ) -> Result<Response<ProvideInlayHintsResponse>, Status> {
             let R = Request.range.as_ref();
+
             match Service.environment.ProvideInlayHints(
                 Url::parse(Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or(""))
                     .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?,
+
                 json!({
                     "startLine": R.and_then(|R| R.start.as_ref()).map(|P| P.line).unwrap_or(0),
                     "endLine":   R.and_then(|R| R.end.as_ref()).map(|P| P.line).unwrap_or(0),
                 }),
             ).await {
                 Ok(_) => Ok(Response::new(ProvideInlayHintsResponse::default())),
+
                 Err(E) => Err(Status::internal(format!("InlayHints failed: {}", E))),
             }
         }"#,

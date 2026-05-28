@@ -10,7 +10,9 @@ fn ClosureLocalBindingsInlined() {
                 .iter()
                 .map(|val| {
                     let Handle = val.to_string();
+
                     let Label = format!("item-{}", val);
+
                     Item { handle: Handle, label: Label }
                 })
                 .collect()

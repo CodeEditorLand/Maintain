@@ -43,6 +43,7 @@ pub fn Collect(Block:&Block, InlineComments:bool) -> Vec<Candidate> {
 		.stmts
 		.iter()
 		.enumerate()
+
 		// Must have at least one subsequent statement to substitute into.
 		.filter(|(Index, _)| *Index + 1 < Len)
 		.filter_map(|(Index, Stmt)| {
@@ -84,8 +85,11 @@ pub fn Collect(Block:&Block, InlineComments:bool) -> Vec<Candidate> {
 			};
 
 			if PatIdent.by_ref.is_some()
+
 				|| PatIdent.mutability.is_some()
+
 				|| PatIdent.subpat.is_some()
+
 			{
 				return None;
 			}
@@ -105,6 +109,7 @@ pub fn Collect(Block:&Block, InlineComments:bool) -> Vec<Candidate> {
 
 #[cfg(test)]
 mod Tests {
+
 	use super::*;
 
 	fn CollectFrom(Src:&str) -> Vec<Candidate> {
@@ -213,6 +218,7 @@ mod Tests {
 
 		let Block = match &File.items[0] {
 			syn::Item::Fn(F) => &F.block,
+
 			_ => panic!(),
 		};
 

@@ -23,7 +23,9 @@ fn BorrowOfInlineExprCompiles() {
             use std::path::PathBuf;
             pub fn Fn(Base: &PathBuf) -> std::io::Result<()> {
                 let Dir = Base.join("window1");
+
                 std::fs::create_dir_all(&Dir)?;
+
                 Ok(())
             }
         "#,
@@ -31,6 +33,7 @@ fn BorrowOfInlineExprCompiles() {
             use std::path::PathBuf;
             pub fn Fn(Base: &PathBuf) -> std::io::Result<()> {
                 std::fs::create_dir_all(&Base.join("window1"))?;
+
                 Ok(())
             }
         "#,

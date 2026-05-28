@@ -125,21 +125,27 @@ fn UrlPatternInlined() {
 	let Input = r#"
         pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideCodeLensesRequest,
         ) -> Result<Response<ProvideCodeLensesResponse>, Status> {
             let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+
             let DocumentURI = Url::parse(URI)
                 .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?;
+
             match Service.environment.ProvideCodeLenses(DocumentURI).await {
                 Ok(_) => Ok(Response::new(ProvideCodeLensesResponse::default())),
+
                 Err(Error) => Err(Status::internal(format!("Code lenses failed: {}", Error))),
             }
         }
+
     "#;
 
 	let Expected = r#"
         pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideCodeLensesRequest,
         ) -> Result<Response<ProvideCodeLensesResponse>, Status> {
             match Service
@@ -153,9 +159,11 @@ fn UrlPatternInlined() {
                 .await
             {
                 Ok(_) => Ok(Response::new(ProvideCodeLensesResponse::default())),
+
                 Err(Error) => Err(Status::internal(format!("Code lenses failed: {}", Error))),
             }
         }
+
     "#;
 
 	assert_eq!(transform(Input), norm(Expected));
@@ -188,6 +196,7 @@ fn NestedScopeInlined() {
             let Outer = outer_val();
             {
                 let Inner = 42;
+
                 use_inner(Inner);
             }
             use_outer(Outer);
@@ -325,6 +334,7 @@ fn AttributedLetInlinedWhenOptIn() {
 	let Input = r#"fn f() {
         #[allow(unused)]
         let X = 5;
+
         g(X);
     }"#;
 
@@ -341,6 +351,7 @@ fn AttributedLetKeptByDefault() {
 	let Input = r#"fn f() {
         #[allow(unused)]
         let X = 5;
+
         g(X);
     }"#;
 
@@ -360,23 +371,28 @@ fn MountainDataStringIntoJsonMacro() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: AcceptTerminalProcessDataRequest,
         ) -> Result<Response<AcceptTerminalProcessDataResponse>, Status> {
             let DataString = String::from_utf8_lossy(&Request.data).to_string();
+
             let _ = Service
                 .environment
                 .ApplicationHandle
                 .emit("sky://terminal/data", json!({ "id": Request.terminal_id, "data": DataString }));
+
             Ok(Response::new(AcceptTerminalProcessDataResponse {}))
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: AcceptTerminalProcessDataRequest,
         ) -> Result<Response<AcceptTerminalProcessDataResponse>, Status> {
             let _ = Service
                 .environment
                 .ApplicationHandle
                 .emit("sky://terminal/data", json!({ "id": Request.terminal_id, "data": String::from_utf8_lossy(&Request.data).to_string() }));
+
             Ok(Response::new(AcceptTerminalProcessDataResponse {}))
         }"#,
 	);
@@ -387,26 +403,35 @@ fn MountainContextDtoIntoFnArg() {
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideReferencesRequest,
         ) -> Result<Response<ProvideReferencesResponse>, Status> {
             let DocumentURI = parse_uri(&Request)?;
+
             let PositionDTO_ = build_position(&Request);
+
             let ContextDTO = json!({ "includeDeclaration": true });
+
             match Service.environment.ProvideReferences(DocumentURI, PositionDTO_, ContextDTO).await {
                 Ok(_) => Ok(Response::new(ProvideReferencesResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
+
             Request: ProvideReferencesRequest,
         ) -> Result<Response<ProvideReferencesResponse>, Status> {
             match Service.environment.ProvideReferences(
                 parse_uri(&Request)?,
+
                 build_position(&Request),
+
                 json!({ "includeDeclaration": true }),
             ).await {
                 Ok(_) => Ok(Response::new(ProvideReferencesResponse::default())),
+
                 Err(E) => Err(Status::internal(E.to_string())),
             }
         }"#,
@@ -518,7 +543,9 @@ fn ClosureLocalBindingsInlined() {
                 .iter()
                 .map(|Item| {
                     let Handle = Item.get("handle").and_then(Value::as_str).unwrap_or("").to_string();
+
                     let Label  = Item.get("label").and_then(Value::as_str).unwrap_or("").to_string();
+
                     TreeItem { handle: Handle, label: Label }
                 })
                 .collect()

@@ -34,8 +34,10 @@ use syn::{Expr, Stmt, visit::Visit};
 pub struct Patch {
 	/// Start byte offset in the original source (inclusive).
 	pub Start:usize,
+
 	/// End byte offset in the original source (exclusive).
 	pub End:usize,
+
 	/// Replacement text. Empty string deletes the range.
 	pub Replacement:String,
 }
@@ -58,6 +60,7 @@ pub fn ApplyPatches(Source:&str, Patches:&[Patch]) -> Option<String> {
 	let Bytes = Source.as_bytes();
 
 	let mut Result = String::with_capacity(Source.len());
+
 	let mut Cursor = 0usize;
 
 	for P in Patches {
@@ -92,10 +95,12 @@ pub fn ApplyPatches(Source:&str, Patches:&[Patch]) -> Option<String> {
 /// indicates that span-locations are not compiled in).
 pub fn SpanBytes(Span:Span, Source:&str) -> Option<(usize, usize)> {
 	let Start = Span.start();
+
 	let End = Span.end();
 
 	// proc_macro2 LineColumn is 1-based. Convert to byte offsets.
 	let StartByte = LineColToByte(Source, Start.line, Start.column)?;
+
 	let EndByte = LineColToByte(Source, End.line, End.column)?;
 
 	if StartByte == 0 && EndByte == 0 {
@@ -114,6 +119,7 @@ pub fn LineColToByte(Source:&str, Line:usize, Col:usize) -> Option<usize> {
 	}
 
 	let mut CurrentLine = 1usize;
+
 	let mut LineStart = 0usize;
 
 	for (ByteIdx, Ch) in Source.char_indices() {
@@ -157,6 +163,7 @@ pub fn StmtLineRange(Stmt:&Stmt, Source:&str) -> Option<(usize, usize)> {
 
 	// Extend End forward to consume the trailing newline (and any\r).
 	let Bytes = Source.as_bytes();
+
 	let mut LineEnd = End;
 
 	while LineEnd < Bytes.len() && Bytes[LineEnd] != b'\n' {
@@ -194,6 +201,7 @@ fn StmtSpan(Stmt:&Stmt) -> Option<Span> {
 	}
 
 	let First = Trees.first()?.span();
+
 	let Last = Trees.last()?.span();
 
 	First.join(Last)
@@ -203,6 +211,7 @@ fn StmtSpan(Stmt:&Stmt) -> Option<Span> {
 /// within an expression tree.
 pub struct SpanCollector<'a> {
 	pub Target:&'a str,
+
 	pub Spans:Vec<Span>,
 }
 
@@ -224,6 +233,7 @@ impl<'a, 'ast> Visit<'ast> for SpanCollector<'a> {
 
 #[cfg(test)]
 mod Tests {
+
 	use super::*;
 
 	#[test]
@@ -290,6 +300,7 @@ mod Tests {
 		let Src = "hello\nworld";
 
 		assert_eq!(LineColToByte(Src, 1, 0), Some(0));
+
 		assert_eq!(LineColToByte(Src, 1, 5), Some(5));
 	}
 
@@ -298,6 +309,7 @@ mod Tests {
 		let Src = "hello\nworld";
 
 		assert_eq!(LineColToByte(Src, 2, 0), Some(6));
+
 		assert_eq!(LineColToByte(Src, 2, 5), Some(11));
 	}
 

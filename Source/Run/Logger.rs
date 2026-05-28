@@ -71,6 +71,7 @@ pub fn Logger() {
 			use colored::Colorize;
 
 			let level = record.level();
+
 			let level_str = match level {
 				log::Level::Error => "ERROR".red(),
 				log::Level::Warn => "WARN ".yellow(),
@@ -80,6 +81,7 @@ pub fn Logger() {
 			};
 
 			let target = record.target();
+
 			let module = target.split("::").last().unwrap_or("Run");
 
 			writeln!(buf, "{} [{}] {}", level_str, module.white().bold(), record.args())

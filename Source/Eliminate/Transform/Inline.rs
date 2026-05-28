@@ -37,6 +37,7 @@ use super::{Collect, Count, Safe};
 
 pub struct Eliminator<'a> {
 	pub Changed:bool,
+
 	Options:&'a crate::Eliminate::Definition::Options,
 }
 
@@ -151,8 +152,11 @@ pub fn FindSubstSite(Stmts:&[Stmt], Target:&str) -> usize {
 
 struct Substitutor<'a> {
 	Target:&'a str,
+
 	Replacement:&'a Expr,
+
 	Substituted:bool,
+
 	/// True when the current AST position is a direct operand of a binary or
 	/// unary expression - used to decide whether to wrap Replacement.
 	InBinaryOperandPosition:bool,
@@ -367,6 +371,7 @@ fn ClosureParamShadows(Closure:&syn::ExprClosure, Target:&str) -> bool {
 
 #[cfg(test)]
 mod Tests {
+
 	use super::*;
 
 	fn Transform(Src:&str) -> String {
@@ -518,10 +523,13 @@ mod Tests {
 			r#"
 				pub async fn get_file_info(request_id: String, path: String) -> Result<(), E> {
 					let path_display = path.clone();
+
 					client
 						.get_file_info(Request::new(FileInfoRequest { request_id, path }))
 						.await?;
+
 					devlog!("{}", path_display, path.clone());
+
 					Ok(())
 				}
 			"#,
@@ -536,10 +544,13 @@ mod Tests {
 			r#"
 				pub async fn get_configuration(request_id: String, section: String) -> Result<(), E> {
 					let section_display = section.clone();
+
 					client
 						.get_configuration(Request::new(ConfigurationRequest { request_id, section }))
 						.await?;
+
 					devlog!("{}", section_display, section.clone());
+
 					Ok(())
 				}
 			"#,
@@ -555,13 +566,16 @@ mod Tests {
 			r#"
 				pub async fn log_path(path: String) -> Result<(), E> {
 					let path_display = path.clone();
+
 					devlog!("{}", path_display);
+
 					Ok(())
 				}
 			"#,
 			r#"
 				pub async fn log_path(path: String) -> Result<(), E> {
 					devlog!("{}", path.clone());
+
 					Ok(())
 				}
 			"#,
@@ -575,21 +589,27 @@ mod Tests {
 		let Input = r#"
             pub async fn Fn(
                 Service: &CocoonServiceImpl,
+
                 Request: ProvideCodeLensesRequest,
             ) -> Result<Response<ProvideCodeLensesResponse>, Status> {
                 let URI = Request.uri.as_ref().map(|U| U.value.as_str()).unwrap_or("");
+
                 let DocumentURI = Url::parse(URI)
                     .map_err(|E| Status::invalid_argument(format!("Invalid URI: {}", E)))?;
+
                 match Service.environment.ProvideCodeLenses(DocumentURI).await {
                     Ok(_) => Ok(Response::new(ProvideCodeLensesResponse::default())),
+
                     Err(Error) => Err(Status::internal(format!("Code lenses failed: {}", Error))),
                 }
             }
+
         "#;
 
 		let Expected = r#"
             pub async fn Fn(
                 Service: &CocoonServiceImpl,
+
                 Request: ProvideCodeLensesRequest,
             ) -> Result<Response<ProvideCodeLensesResponse>, Status> {
                 match Service
@@ -603,13 +623,17 @@ mod Tests {
                     .await
                 {
                     Ok(_) => Ok(Response::new(ProvideCodeLensesResponse::default())),
+
                     Err(Error) => Err(Status::internal(format!("Code lenses failed: {}", Error))),
                 }
             }
+
         "#;
 
 		let Got = Transform(Input);
+
 		let Norm = Normalise(Expected);
+
 		assert_eq!(Got, Norm, "URL pattern not inlined as expected");
 	}
 

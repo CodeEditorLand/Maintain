@@ -58,9 +58,13 @@ impl Cli {
 	pub fn execute(&self) -> Error::Result<()> {
 		let Options = Definition::Options {
 			MaxSize:self.MaxSize,
+
 			InlineComments:self.InlineComments,
+
 			DryRun:self.DryRun,
+
 			Verbose:self.Verbose,
+
 			Reformat:self.Reformat,
 		};
 

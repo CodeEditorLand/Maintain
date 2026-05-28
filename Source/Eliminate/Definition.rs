@@ -37,9 +37,13 @@ impl Default for Options {
 	fn default() -> Self {
 		Self {
 			MaxSize:Constant::DefaultMaxSize,
+
 			InlineComments:false,
+
 			DryRun:false,
+
 			Verbose:false,
+
 			Reformat:false,
 		}
 	}
@@ -49,6 +53,8 @@ impl Default for Options {
 #[derive(Debug, Default)]
 pub struct Stats {
 	pub FilesProcessed:usize,
+
 	pub FilesModified:usize,
+
 	pub BindingsInlined:usize,
 }

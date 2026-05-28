@@ -7,13 +7,16 @@ fn QuestionMarkInlined() {
 		r#"
             async fn f() -> Result<(), String> {
                 let X = foo().map_err(|e: String| e)?;
+
                 bar(X);
+
                 Ok(())
             }
         "#,
 		r#"
             async fn f() -> Result<(), String> {
                 bar(foo().map_err(|e: String| e)?);
+
                 Ok(())
             }
         "#,

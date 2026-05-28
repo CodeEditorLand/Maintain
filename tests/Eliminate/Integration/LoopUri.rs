@@ -7,6 +7,7 @@ fn LoopUriIntoIfLetParse() {
 		r#"fn f(additions: &[String], folders: &mut Vec<String>) {
             for addition in additions {
                 let URI = addition.as_str();
+
                 if let Some(Parsed) = URI.strip_prefix("file://") {
                     folders.push(Parsed.to_string());
                 }

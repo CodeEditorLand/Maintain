@@ -8,6 +8,7 @@ fn NestedScopeInlined() {
             let Outer = 99i32;
             {
                 let Inner = 42i32;
+
                 use_inner(Inner);
             }
             use_outer(Outer);

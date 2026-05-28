@@ -42,42 +42,61 @@ use Maintain::Eliminate::{Definition::Options, Transform};
 // into the Integration/ subdirectory instead.
 #[path = "Integration/BinaryParens.rs"]
 mod BinaryParens;
+
 #[path = "Integration/BlockIntoIfLet.rs"]
 mod BlockIntoIfLet;
+
 #[path = "Integration/BorrowInline.rs"]
 mod BorrowInline;
+
 #[path = "Integration/CastExpr.rs"]
 mod CastExpr;
+
 #[path = "Integration/Chain.rs"]
 mod Chain;
+
 #[path = "Integration/ClosureCaptureKept.rs"]
 mod ClosureCaptureKept;
+
 #[path = "Integration/ClosureLocal.rs"]
 mod ClosureLocal;
+
 #[path = "Integration/Idempotent.rs"]
 mod Idempotent;
+
 #[path = "Integration/IfGuard.rs"]
 mod IfGuard;
+
 #[path = "Integration/LoopUri.rs"]
 mod LoopUri;
+
 #[path = "Integration/MatchScrutinee.rs"]
 mod MatchScrutinee;
+
 #[path = "Integration/MtimeChain.rs"]
 mod MtimeChain;
+
 #[path = "Integration/MultiUseKept.rs"]
 mod MultiUseKept;
+
 #[path = "Integration/NegatedBool.rs"]
 mod NegatedBool;
+
 #[path = "Integration/NestedScope.rs"]
 mod NestedScope;
+
 #[path = "Integration/QuestionMark.rs"]
 mod QuestionMark;
+
 #[path = "Integration/Shadow.rs"]
 mod Shadow;
+
 #[path = "Integration/Simple.rs"]
 mod Simple;
+
 #[path = "Integration/StructLiteral.rs"]
 mod StructLiteral;
+
 #[path = "Integration/TypeAnnotation.rs"]
 mod TypeAnnotation;
 

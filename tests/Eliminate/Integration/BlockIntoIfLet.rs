@@ -7,6 +7,7 @@ fn BlockExprIntoIfLetScrutinee() {
 		r#"fn f(key: &str) -> Option<String> {
             let MaybePrimary = {
                 let v = vec!["alpha".to_string(), "beta".to_string()];
+
                 v.iter().find(|s| s.as_str() == key).cloned()
             };
             if let Some(PrimaryHandle) = MaybePrimary {

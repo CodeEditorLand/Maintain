@@ -268,6 +268,7 @@ pub fn format_for_display(env:&HashMap<String, String>) -> String {
 		.iter()
 		.map(|(k, v)| {
 			let display_value = if v.is_empty() { "(empty)".to_string() } else { v.clone() };
+
 			format!("  {} = {}", k, display_value)
 		})
 		.collect();

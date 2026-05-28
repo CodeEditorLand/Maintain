@@ -43,7 +43,9 @@ use syn::{
 /// Counting stops when a top-level `let <target> = ...` shadow is encountered.
 pub fn CountReferences(Target:&str, Stmts:&[Stmt]) -> (usize, bool, bool) {
 	let mut TotalCount = 0usize;
+
 	let mut InClosure = false;
+
 	let mut InLoop = false;
 
 	for Stmt in Stmts {
@@ -85,11 +87,15 @@ fn IsTopLevelShadow(Stmt:&Stmt, Target:&str) -> bool {
 
 struct ExprCounter<'a> {
 	Target:&'a str,
+
 	Count:usize,
+
 	/// True when a reference to Target was found inside a closure body.
 	InClosure:bool,
+
 	/// True when a reference to Target was found inside a loop body.
 	InLoop:bool,
+
 	/// Internal flag: true when the visitor is currently descending inside
 	/// a for/while/loop body.
 	InsideLoop:bool,
@@ -215,8 +221,11 @@ pub fn CountIdentInFormatLiteral(Lit:&str, Target:&str) -> usize {
 	let SearchFor = format!("{{{Target}");
 
 	let mut Count = 0;
+
 	let Bytes = Inner.as_bytes();
+
 	let PatBytes = SearchFor.as_bytes();
+
 	let mut Pos = 0usize;
 
 	while Pos + PatBytes.len() <= Bytes.len() {
@@ -253,6 +262,7 @@ fn ClosureParamShadows(Closure:&syn::ExprClosure, Target:&str) -> bool {
 
 #[cfg(test)]
 mod Tests {
+
 	use super::*;
 
 	fn Stmts(Src:&str) -> Vec<Stmt> {
@@ -268,37 +278,49 @@ mod Tests {
 	#[test]
 	fn SingleUse() {
 		let S = Stmts("fn f() { let X = 1; g(X); }");
+
 		let (Count, InClosure, InLoop) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 1);
+
 		assert!(!InClosure);
+
 		assert!(!InLoop);
 	}
 
 	#[test]
 	fn MultiUse() {
 		let S = Stmts("fn f() { let X = foo(); bar(X); baz(X); }");
+
 		let (Count, ..) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 2);
 	}
 
 	#[test]
 	fn ZeroUse() {
 		let S = Stmts("fn f() { let X = 1; g(1); }");
+
 		let (Count, ..) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 0);
 	}
 
 	#[test]
 	fn ShadowStops() {
 		let S = Stmts("fn f() { let X = 1; f(X); let X = 2; g(X); }");
+
 		let (Count, ..) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 1);
 	}
 
 	#[test]
 	fn MacroCountsAsUse() {
 		let S = Stmts(r#"fn f() { let URI = "x"; dev_log!("{}", URI); }"#);
+
 		let (Count, ..) = CountReferences("URI", &S[1..]);
+
 		assert_eq!(Count, 1);
 	}
 
@@ -311,7 +333,9 @@ mod Tests {
                 let _ = Url::parse(URI);
             }"#,
 		);
+
 		let (Count, ..) = CountReferences("URI", &S[1..]);
+
 		assert_eq!(Count, 2, "URI used in macro + expression must count as 2");
 	}
 
@@ -323,7 +347,9 @@ mod Tests {
                 emit(json!({ "data": DataString }));
             }"#,
 		);
+
 		let (Count, ..) = CountReferences("DataString", &S[1..]);
+
 		assert_eq!(Count, 1);
 	}
 
@@ -335,15 +361,20 @@ mod Tests {
                 json!({ "a": X, "b": X });
             }"#,
 		);
+
 		let (Count, ..) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 2);
 	}
 
 	#[test]
 	fn ClosureCaptureDetected() {
 		let S = Stmts("fn f() { let X = heavy(); let F = move || X; call(F); }");
+
 		let (Count, InClosure, _) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 1);
+
 		assert!(InClosure, "X used inside closure should set InClosure");
 	}
 
@@ -355,15 +386,20 @@ mod Tests {
                 { let X = 2; g(X); }
             }"#,
 		);
+
 		let (Count, ..) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 0);
 	}
 
 	#[test]
 	fn ClosureParamShadowSkipped() {
 		let S = Stmts("fn f() { let X = 5; let _ = |X| X + 1; g(0); }");
+
 		let (Count, InClosure, _) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 0);
+
 		assert!(!InClosure);
 	}
 
@@ -380,8 +416,11 @@ mod Tests {
                 for _ in &v { process(X); }
             }"#,
 		);
+
 		let (Count, _, InLoop) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 1);
+
 		assert!(InLoop, "X used inside for body must set InLoop");
 	}
 
@@ -393,8 +432,11 @@ mod Tests {
                 while cond { process(X); }
             }"#,
 		);
+
 		let (Count, _, InLoop) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 1);
+
 		assert!(InLoop, "X used inside while body must set InLoop");
 	}
 
@@ -406,8 +448,11 @@ mod Tests {
                 loop { process(X); break; }
             }"#,
 		);
+
 		let (Count, _, InLoop) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 1);
+
 		assert!(InLoop, "X used inside loop body must set InLoop");
 	}
 
@@ -415,7 +460,9 @@ mod Tests {
 	#[test]
 	fn OutsideLoopNotFlagged() {
 		let S = Stmts("fn f() { let X = 1; g(X); }");
+
 		let (_, _, InLoop) = CountReferences("X", &S[1..]);
+
 		assert!(!InLoop);
 	}
 
@@ -430,8 +477,11 @@ mod Tests {
                 for _ in &v { h(X); }
             }"#,
 		);
+
 		let (Count, _, InLoop) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 2);
+
 		assert!(InLoop);
 	}
 
@@ -475,7 +525,9 @@ mod Tests {
 	#[test]
 	fn ImplicitCaptureSingleUse() {
 		let S = Stmts(r#"fn f() { let X = 5; println!("{X}"); }"#);
+
 		let (Count, ..) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 1, "implicit capture {X} must count as one use");
 	}
 
@@ -488,7 +540,9 @@ mod Tests {
                 println!("{X}");
             }"#,
 		);
+
 		let (Count, ..) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 2, "old-style + implicit capture must count as 2");
 	}
 
@@ -501,7 +555,9 @@ mod Tests {
                 log!("{X}");
             }"#,
 		);
+
 		let (Count, ..) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 2);
 	}
 
@@ -514,21 +570,27 @@ mod Tests {
                 Url::parse(URI);
             }"#,
 		);
+
 		let (Count, ..) = CountReferences("URI", &S[1..]);
+
 		assert_eq!(Count, 2);
 	}
 
 	#[test]
 	fn TwoSeparateStmtsMultiUse() {
 		let S = Stmts("fn f() { let X = foo(); bar(X); baz(X); }");
+
 		let (Count, ..) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 2);
 	}
 
 	#[test]
 	fn TwoUsesInSameCall() {
 		let S = Stmts("fn f() { let X = foo(); bar(X, X); }");
+
 		let (Count, ..) = CountReferences("X", &S[1..]);
+
 		assert_eq!(Count, 2);
 	}
 }

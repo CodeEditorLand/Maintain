@@ -72,6 +72,7 @@ impl<'ast> Visit<'ast> for FreeIdentCollector {
 		if Node.qself.is_none() {
 			if let Some(Ident) = Node.path.get_ident() {
 				let Name = Ident.to_string();
+
 				if !self.Idents.contains(&Name) {
 					self.Idents.push(Name);
 				}
@@ -116,6 +117,7 @@ fn IsMovedInStmts(Target:&str, Stmts:&[Stmt]) -> bool {
 
 struct MoveDetector<'a> {
 	Target:&'a str,
+
 	Found:bool,
 }
 
@@ -206,6 +208,7 @@ pub fn ContainsUnsafe(E:&Expr) -> bool {
 
 #[cfg(test)]
 mod Tests {
+
 	use super::*;
 
 	fn ParseExpr(Src:&str) -> Expr { syn::parse_str(Src).expect("parse expression") }
