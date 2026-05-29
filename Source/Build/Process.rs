@@ -159,10 +159,10 @@ use crate::Build::{
 /// - **Build Flags**: Bundle, Clean, Browser, Compile, Debug
 ///
 /// Example product name:
-/// `Development_GenDependency_22NodeVersion_Debug_Mountain`
+/// `Development_GenDependency_24NodeVersion_Debug_Mountain`
 ///
 /// Example bundle identifier:
-/// `land.editor.binary.development.generic.node.22.debug.mountain`
+/// `land.editor.binary.development.generic.node.24.debug.mountain`
 ///
 /// # Node.js Sidecar Bundling
 ///

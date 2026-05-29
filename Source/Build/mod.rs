@@ -87,7 +87,7 @@
 /// export MOUNTAIN_ORIGINAL_BASE_NAME="MyApp"
 /// export MOUNTAIN_BUNDLE_ID_PREFIX="com.mycompany.app"
 /// export NODE_ENV="development"
-/// export NODE_VERSION="22"
+/// export NODE_VERSION="24"
 /// export RUST_LOG="debug"
 /// ./build-orchestrator pnpm tauri build
 /// ```
