@@ -13,11 +13,13 @@
 use std::{collections::HashMap, path::Path};
 
 use serde::Deserialize;
+
 use rhai::{AST, Dynamic, Engine, Scope};
 
 // Configuration types (mirrored from ConfigLoader.rs)
 #[derive(Debug, Deserialize, Clone)]
 struct LandConfig {
+
 	pub version:String,
 
 	pub profiles:HashMap<String, Profile>,
@@ -33,6 +35,7 @@ struct LandConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 struct Profile {
+
 	pub description:Option<String>,
 
 	pub env:Option<HashMap<String, String>>,
@@ -43,26 +46,40 @@ struct Profile {
 
 #[derive(Debug, Deserialize, Clone)]
 struct Templates {
+
 	pub env:HashMap<String, String>,
 }
 
 // Expected environment variables for each profile
 fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)> {
+
 	match profile_name {
 		"debug" => {
 			vec![
 				("Debug", "true"),
+
 				("Browser", "true"),
+
 				("Bundle", "true"),
+
 				("Clean", "true"),
+
 				("Compile", "false"),
+
 				("NODE_ENV", "development"),
+
 				("NODE_VERSION", "22"),
+
 				("NODE_OPTIONS", "--max-old-space-size=16384"),
+
 				("RUST_LOG", "debug"),
+
 				("AIR_LOG_JSON", "false"),
+
 				("AIR_LOG_FILE", ""),
+
 				("Dependency", "Microsoft/VSCode"),
+
 				("Level", "silent"),
 			]
 		},
@@ -70,15 +87,25 @@ fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)>
 		"production" => {
 			vec![
 				("Debug", "false"),
+
 				("Browser", "false"),
+
 				("Bundle", "true"),
+
 				("Clean", "true"),
+
 				("Compile", "true"),
+
 				("NODE_ENV", "production"),
+
 				("NODE_VERSION", "22"),
+
 				("NODE_OPTIONS", "--max-old-space-size=8192"),
+
 				("RUST_LOG", "info"),
+
 				("AIR_LOG_JSON", "false"),
+
 				("Dependency", "Microsoft/VSCode"),
 			]
 		},
@@ -86,15 +113,25 @@ fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)>
 		"release" => {
 			vec![
 				("Debug", "false"),
+
 				("Browser", "false"),
+
 				("Bundle", "true"),
+
 				("Clean", "true"),
+
 				("Compile", "true"),
+
 				("NODE_ENV", "production"),
+
 				("NODE_VERSION", "22"),
+
 				("NODE_OPTIONS", "--max-old-space-size=8192"),
+
 				("RUST_LOG", "warn"),
+
 				("AIR_LOG_JSON", "false"),
+
 				("Dependency", "Microsoft/VSCode"),
 			]
 		},
@@ -104,6 +141,7 @@ fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)>
 }
 
 fn load_config(workspace_root:&str) -> Result<LandConfig, String> {
+
 	let config_path = Path::new(workspace_root).join(".vscode").join("land-config.json");
 
 	println!("Loading config from: {}", config_path.display());
@@ -120,6 +158,7 @@ fn load_config(workspace_root:&str) -> Result<LandConfig, String> {
 }
 
 fn load_and_compile_script(engine:&Engine, script_path:&str) -> Result<AST, String> {
+
 	println!("  Loading script: {}", script_path);
 
 	if !Path::new(script_path).exists() {
@@ -138,6 +177,7 @@ fn load_and_compile_script(engine:&Engine, script_path:&str) -> Result<AST, Stri
 }
 
 fn execute_get_env_vars(engine:&Engine, ast:&AST) -> Result<HashMap<String, String>, String> {
+
 	let scope = Scope::new();
 
 	let result = engine.call_fn(scope, ast, "get_env_vars", ());
@@ -158,6 +198,7 @@ fn execute_get_env_vars(engine:&Engine, ast:&AST) -> Result<HashMap<String, Stri
 }
 
 fn extract_env_map(dynamic:Dynamic) -> HashMap<String, String> {
+
 	let mut env_map = HashMap::new();
 
 	// Try to convert to a map
@@ -181,6 +222,7 @@ fn validate_expected_vars(
 
 	profile_name:&str,
 ) -> Vec<String> {
+
 	println!("  Validating expected environment variables...");
 
 	let mut issues = Vec::new();
@@ -222,6 +264,7 @@ fn validate_expected_vars(
 }
 
 fn run_tests() {
+
 	println!("╔═════════════════════════════════════════════════════════════════════╗");
 
 	println!("║     RHAI Configuration Test Suite                                    ║");
@@ -234,10 +277,15 @@ fn run_tests() {
 
 	let profiles_to_test = vec![
 		"debug",
+
 		"production",
+
 		"release",
+
 		"bundler-preparation",
+
 		"swc-bundle",
+
 		"oxc-bundle",
 	];
 
