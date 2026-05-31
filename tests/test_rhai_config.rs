@@ -17,34 +17,21 @@ use std::collections::HashMap;
 
 /// Expected environment variables for each profile
 fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)> {
-
 	match profile_name {
 		"debug" => {
 			vec![
 				("Debug", "true"),
-
 				("Browser", "true"),
-
 				("Bundle", "true"),
-
 				("Clean", "true"),
-
 				("Compile", "false"),
-
 				("NODE_ENV", "development"),
-
 				("NODE_VERSION", "22"),
-
 				("NODE_OPTIONS", "--max-old-space-size=16384"),
-
 				("RUST_LOG", "debug"),
-
 				("AIR_LOG_JSON", "false"),
-
 				("AIR_LOG_FILE", ""),
-
 				("Dependency", "Microsoft/VSCode"),
-
 				("Level", "silent"),
 			]
 		},
@@ -52,25 +39,15 @@ fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)>
 		"production" => {
 			vec![
 				("Debug", "false"),
-
 				("Browser", "false"),
-
 				("Bundle", "true"),
-
 				("Clean", "true"),
-
 				("Compile", "true"),
-
 				("NODE_ENV", "production"),
-
 				("NODE_VERSION", "22"),
-
 				("NODE_OPTIONS", "--max-old-space-size=8192"),
-
 				("RUST_LOG", "info"),
-
 				("AIR_LOG_JSON", "false"),
-
 				("Dependency", "Microsoft/VSCode"),
 			]
 		},
@@ -78,25 +55,15 @@ fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)>
 		"release" => {
 			vec![
 				("Debug", "false"),
-
 				("Browser", "false"),
-
 				("Bundle", "true"),
-
 				("Clean", "true"),
-
 				("Compile", "true"),
-
 				("NODE_ENV", "production"),
-
 				("NODE_VERSION", "22"),
-
 				("NODE_OPTIONS", "--max-old-space-size=8192"),
-
 				("RUST_LOG", "warn"),
-
 				("AIR_LOG_JSON", "false"),
-
 				("Dependency", "Microsoft/VSCode"),
 			]
 		},
@@ -107,7 +74,6 @@ fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)>
 
 /// Extract Rhai map to HashMap<String, String>
 fn extract_env_map(dynamic:rhai::Dynamic) -> HashMap<String, String> {
-
 	let mut env_map = HashMap::new();
 
 	if let Some(map) = dynamic.try_cast::<rhai::Map>() {
@@ -129,16 +95,13 @@ fn extract_env_map(dynamic:rhai::Dynamic) -> HashMap<String, String> {
 
 #[test]
 fn test_config_loader_load() {
-
 	use crate::Source::Build::Rhai::ConfigLoader::load;
 
 	let result = load(".");
 
 	assert!(
 		result.is_ok(),
-
 		"ConfigLoader::load() should succeed but got error: {:?}",
-
 		result.err()
 	);
 
@@ -155,9 +118,7 @@ fn test_config_loader_load() {
 	for profile_name in expected_profiles {
 		assert!(
 			config.profiles.contains_key(profile_name),
-
 			"Profile '{}' should exist in configuration",
-
 			profile_name
 		);
 	}
@@ -169,7 +130,6 @@ fn test_config_loader_load() {
 
 	assert!(
 		!templates.env.is_empty(),
-
 		"Templates should have at least one environment variable"
 	);
 }
@@ -180,7 +140,6 @@ fn test_config_loader_load() {
 
 #[test]
 fn test_config_loader_get_profile_debug() {
-
 	use crate::Source::Build::Rhai::ConfigLoader::{get_profile, load};
 
 	let config = load(".").expect("Failed to load configuration");
@@ -195,13 +154,11 @@ fn test_config_loader_get_profile_debug() {
 
 	assert!(
 		debug_profile.env.is_some(),
-
 		"Debug profile should have environment variables defined"
 	);
 
 	assert!(
 		debug_profile.rhai_script.is_some(),
-
 		"Debug profile should have a Rhai script defined"
 	);
 
@@ -217,7 +174,6 @@ fn test_config_loader_get_profile_debug() {
 
 #[test]
 fn test_config_loader_get_profile_production() {
-
 	use crate::Source::Build::Rhai::ConfigLoader::{get_profile, load};
 
 	let config = load(".").expect("Failed to load configuration");
@@ -230,7 +186,6 @@ fn test_config_loader_get_profile_production() {
 
 	assert!(
 		prod_profile.description.is_some(),
-
 		"Production profile should have a description"
 	);
 
@@ -246,7 +201,6 @@ fn test_config_loader_get_profile_production() {
 
 #[test]
 fn test_config_loader_get_profile_release() {
-
 	use crate::Source::Build::Rhai::ConfigLoader::{get_profile, load};
 
 	let config = load(".").expect("Failed to load configuration");
@@ -259,7 +213,6 @@ fn test_config_loader_get_profile_release() {
 
 	assert!(
 		release_profile.description.is_some(),
-
 		"Release profile should have a description"
 	);
 
@@ -275,7 +228,6 @@ fn test_config_loader_get_profile_release() {
 
 #[test]
 fn test_config_loader_get_profile_nonexistent() {
-
 	use crate::Source::Build::Rhai::ConfigLoader::{get_profile, load};
 
 	let config = load(".").expect("Failed to load configuration");
@@ -291,7 +243,6 @@ fn test_config_loader_get_profile_nonexistent() {
 
 #[test]
 fn test_resolve_profile_env_debug() {
-
 	use crate::Source::Build::Rhai::ConfigLoader::{load, resolve_profile_env};
 
 	let config = load(".").expect("Failed to load configuration");
@@ -306,14 +257,12 @@ fn test_resolve_profile_env_debug() {
 	// Template variables should also be present
 	assert!(
 		env_vars.contains_key("MOUNTAIN_DIR"),
-
 		"Template variable MOUNTAIN_DIR should be present",
 	);
 }
 
 #[test]
 fn test_resolve_profile_env_production() {
-
 	use crate::Source::Build::Rhai::ConfigLoader::{load, resolve_profile_env};
 
 	let config = load(".").expect("Failed to load configuration");
@@ -332,7 +281,6 @@ fn test_resolve_profile_env_production() {
 
 #[test]
 fn test_execute_profile_script_debug() {
-
 	use crate::Source::Build::Rhai::{
 		ConfigLoader::{get_profile, load},
 		ScriptRunner::{ScriptContext, execute_profile_script},
@@ -368,9 +316,7 @@ fn test_execute_profile_script_debug() {
 
 	assert!(
 		result.is_ok(),
-
 		"Script execution should succeed but got error: {:?}",
-
 		result.err()
 	);
 
@@ -380,9 +326,7 @@ fn test_execute_profile_script_debug() {
 
 	assert!(
 		script_result.error.is_none(),
-
 		"Script execution should not have errors, but got: {:?}",
-
 		script_result.error
 	);
 
@@ -396,15 +340,10 @@ fn test_execute_profile_script_debug() {
 
 		assert_eq!(
 			actual_val,
-
 			Some(expected_val),
-
 			"Env var '{}' should be '{}', got {:?}",
-
 			key,
-
 			expected_val,
-
 			actual_val
 		);
 	}
@@ -412,7 +351,6 @@ fn test_execute_profile_script_debug() {
 
 #[test]
 fn test_execute_profile_script_production() {
-
 	use crate::Source::Build::Rhai::{
 		ConfigLoader::{get_profile, load},
 		ScriptRunner::{ScriptContext, execute_profile_script},
@@ -450,9 +388,7 @@ fn test_execute_profile_script_production() {
 
 	assert!(
 		result.is_ok(),
-
 		"Script execution should succeed but got error: {:?}",
-
 		result.err()
 	);
 
@@ -470,15 +406,10 @@ fn test_execute_profile_script_production() {
 
 		assert_eq!(
 			actual_val,
-
 			Some(expected_val),
-
 			"Env var '{}' should be '{}', got {:?}",
-
 			key,
-
 			expected_val,
-
 			actual_val
 		);
 	}
@@ -486,7 +417,6 @@ fn test_execute_profile_script_production() {
 
 #[test]
 fn test_execute_profile_script_release() {
-
 	use crate::Source::Build::Rhai::{
 		ConfigLoader::{get_profile, load},
 		ScriptRunner::{ScriptContext, execute_profile_script},
@@ -524,9 +454,7 @@ fn test_execute_profile_script_release() {
 
 	assert!(
 		result.is_ok(),
-
 		"Script execution should succeed but got error: {:?}",
-
 		result.err()
 	);
 
@@ -544,15 +472,10 @@ fn test_execute_profile_script_release() {
 
 		assert_eq!(
 			actual_val,
-
 			Some(expected_val),
-
 			"Env var '{}' should be '{}', got {:?}",
-
 			key,
-
 			expected_val,
-
 			actual_val
 		);
 	}
@@ -564,7 +487,6 @@ fn test_execute_profile_script_release() {
 
 #[test]
 fn test_env_var_structure_has_required_keys() {
-
 	use rhai::Scope;
 
 	use crate::Source::Build::Rhai::{
@@ -610,9 +532,7 @@ fn test_env_var_structure_has_required_keys() {
 
 		assert!(
 			!env_map.is_empty(),
-
 			"get_env_vars should return non-empty map for profile '{}'",
-
 			profile_name
 		);
 
@@ -628,7 +548,6 @@ fn test_env_var_structure_has_required_keys() {
 
 #[test]
 fn test_env_vars_match_static_config() {
-
 	use crate::Source::Build::Rhai::{
 		ConfigLoader::{get_profile, load, resolve_profile_env},
 		ScriptRunner::{ScriptContext, execute_profile_script},
@@ -675,11 +594,8 @@ fn test_env_vars_match_static_config() {
 
 			assert_eq!(
 				dynamic_debug,
-
 				Some(static_debug),
-
 				"Debug value should match between static config and Rhai script for profile '{}'",
-
 				profile_name
 			);
 		}
@@ -689,11 +605,8 @@ fn test_env_vars_match_static_config() {
 
 			assert_eq!(
 				dynamic_node_env,
-
 				Some(static_node_env),
-
 				"NODE_ENV value should match between static config and Rhai script for profile '{}'",
-
 				profile_name
 			);
 		}
