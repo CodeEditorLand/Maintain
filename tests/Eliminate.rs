@@ -1,14 +1,9 @@
 #![allow(
 	non_snake_case,
-
 	non_camel_case_types,
-
 	non_upper_case_globals,
-
 	dead_code,
-
 	unused_imports,
-
 	unused_variables
 )]
 //=============================================================================//
@@ -35,7 +30,6 @@ use Maintain::Eliminate::{Definition::Options, Transform};
 fn transform(Src:&str) -> String { transform_with(Src, Options::default()) }
 
 fn transform_with(Src:&str, Opts:Options) -> String {
-
 	Transform::Run(Src, &Opts).expect("transform failed").unwrap_or_else(|| {
 		let Ast:syn::File = syn::parse_str(Src).unwrap();
 
@@ -45,19 +39,16 @@ fn transform_with(Src:&str, Opts:Options) -> String {
 
 /// Normalise `Src` through prettyplease so whitespace differences are ignored.
 fn norm(Src:&str) -> String {
-
 	let Ast:syn::File = syn::parse_str(Src).unwrap();
 
 	prettyplease::unparse(&Ast)
 }
 
 fn assert_eliminates(Input:&str, Expected:&str) {
-
 	assert_eq!(transform(Input), norm(Expected));
 }
 
 fn assert_unchanged(Input:&str) {
-
 	let Opts = Options::default();
 
 	let Result = Transform::Run(Input, &Opts).expect("transform");
@@ -72,10 +63,8 @@ fn assert_unchanged(Input:&str) {
 /// (1) A plain literal is inlined at its single use site.
 #[test]
 fn SimpleInline() {
-
 	assert_eliminates(
 		r#"fn f() { let X = 5; println!("{}", X); }"#,
-
 		r#"fn f() { println!("{}", 5); }"#,
 	);
 }
@@ -88,14 +77,12 @@ fn ChainInline() { assert_eliminates("fn f() { let A = 1; let B = A + 1; g(B); }
 ///     after.  Both should be inlined independently.
 #[test]
 fn ShadowFirstThenInline() {
-
 	assert_eliminates("fn f() { let X = 1; f(X); let X = 2; g(X); }", "fn f() { f(1); g(2); }");
 }
 
 /// (9) Binary expression gets parentheses when placed as a binary operand.
 #[test]
 fn BinaryExprParens() {
-
 	assert_eliminates("fn f() { let X = A + B; let _ = Y * X; }", "fn f() { let _ = Y * (A + B); }");
 }
 
@@ -106,10 +93,8 @@ fn BinaryExprNoParensInFnArg() { assert_eliminates("fn f() { let X = A + B; foo(
 /// (10) The `?` operator in the initialiser is safely inlined.
 #[test]
 fn QuestionMarkInlined() {
-
 	assert_eliminates(
 		"async fn f() -> Result<(), E> { let X = foo().map_err(|e| e)?; bar(X); Ok(()) }",
-
 		"async fn f() -> Result<(), E> { bar(foo().map_err(|e| e)?); Ok(()) }",
 	);
 }
@@ -117,10 +102,8 @@ fn QuestionMarkInlined() {
 /// (11) Struct literal initialiser is inlined.
 #[test]
 fn StructInlined() {
-
 	assert_eliminates(
 		"fn f() { let Opts = MyOpts { a: 1, b: 2 }; call(Opts); }",
-
 		"fn f() { call(MyOpts { a: 1, b: 2 }); }",
 	);
 }
@@ -128,10 +111,8 @@ fn StructInlined() {
 /// (12) `json!` macro call is inlined.
 #[test]
 fn JsonMacroInlined() {
-
 	assert_eliminates(
 		r#"fn f() { let Dto = json!({ "k": val }); call(Dto); }"#,
-
 		r#"fn f() { call(json!({ "k": val })); }"#,
 	);
 }
@@ -141,7 +122,6 @@ fn JsonMacroInlined() {
 ///      Pass 2: DocumentURI (Url) → inlined into ProvideCodeLenses call.
 #[test]
 fn UrlPatternInlined() {
-
 	let Input = r#"
         pub async fn Fn(
             Service: &CocoonServiceImpl,
@@ -192,10 +172,8 @@ fn UrlPatternInlined() {
 /// (14) `match` expression initialiser is inlined.
 #[test]
 fn MatchExprInlined() {
-
 	assert_eliminates(
 		"fn f() { let R = match x { 1 => true, _ => false }; use_result(R); }",
-
 		"fn f() { use_result(match x { 1 => true, _ => false }); }",
 	);
 }
@@ -213,7 +191,6 @@ fn TypeAnnotationDropped() { assert_eliminates("fn f() { let X: i32 = 5; g(X); }
 ///      nested block, Outer in the outer scope.
 #[test]
 fn NestedScopeInlined() {
-
 	assert_eliminates(
 		r#"fn f() {
             let Outer = outer_val();
@@ -238,7 +215,6 @@ fn BorrowInlined() { assert_eliminates("fn f() { let X = &foo; bar(X); }", "fn f
 /// (21) Both `DocURI` and `PositionDTO_` are single-use - both are eliminated.
 #[test]
 fn PositionDtoInlined() {
-
 	assert_eliminates(
 		r#"async fn f() -> Result<(), E> {
             let DocURI = parse_uri()?;
@@ -272,7 +248,6 @@ fn DestructuringKept() { assert_unchanged("fn f() { let (A, B) = pair; g(A); }")
 /// (6) Identifier referenced inside a macro at a second site is kept.
 #[test]
 fn MacroDoubleReferenceKept() {
-
 	assert_unchanged(
 		r#"fn f() {
             let URI = "x";
@@ -286,10 +261,8 @@ fn MacroDoubleReferenceKept() {
 ///     the closure body) is conservatively kept.
 #[test]
 fn ClosureCaptureKept() {
-
 	assert_eliminates(
 		"fn f() { let X = heavy(); let F = move || X; call(F); }",
-
 		"fn f() { let X = heavy(); call(move || X); }",
 	);
 }
@@ -297,7 +270,6 @@ fn ClosureCaptureKept() {
 /// (22) Initialiser exceeding `MaxSize` is kept.
 #[test]
 fn SizeThresholdKept() {
-
 	// Build a source with a very large initialiser (> 5 nodes) and MaxSize=5.
 	let Input = "fn f() { let X = a + b + c + d + e + f + g + h + i + j; use_x(X); }";
 
@@ -315,7 +287,6 @@ fn UnsafeNotInlined() { assert_unchanged("fn f() { let X = unsafe { *ptr }; g(X)
 /// (24) `let … = … else { … }` (diverging let) is kept.
 #[test]
 fn LetElseKept() {
-
 	assert_unchanged(
 		r#"fn f() {
             let Ok(X) = foo() else { return; };
@@ -331,7 +302,6 @@ fn LetElseKept() {
 /// (17) A file with no single-use variables returns `None` (no write needed).
 #[test]
 fn AlreadyMinimalReturnsNone() {
-
 	let Opts = Options::default();
 
 	let Src = "fn f() { let X = foo(); bar(X); baz(X); }";
@@ -348,7 +318,6 @@ fn EmptyFnNoCrash() { assert_unchanged("fn foo() {}"); }
 /// (25) Applying the transform twice produces the same output (idempotent).
 #[test]
 fn Idempotent() {
-
 	let Opts = Options::default();
 
 	let Src = r#"fn f() { let X = 5; println!("{}", X); }"#;
@@ -363,7 +332,6 @@ fn Idempotent() {
 /// `InlineComments = true` allows a binding with an attribute to be inlined.
 #[test]
 fn AttributedLetInlinedWhenOptIn() {
-
 	let Input = r#"fn f() {
         #[allow(unused)]
         let X = 5;
@@ -381,7 +349,6 @@ fn AttributedLetInlinedWhenOptIn() {
 /// `InlineComments = false` (default) keeps a binding with an attribute.
 #[test]
 fn AttributedLetKeptByDefault() {
-
 	let Input = r#"fn f() {
         #[allow(unused)]
         let X = 5;
@@ -404,7 +371,6 @@ fn AttributedLetKeptByDefault() {
 /// macro - must be inlined into the macro token stream.
 #[test]
 fn MountainDataStringIntoJsonMacro() {
-
 	assert_eliminates(
 		r#"pub async fn Fn(
             Service: &CocoonServiceImpl,
@@ -922,7 +888,6 @@ fn LoopBodySingleUseInlined() {
 fn ChainOfThreeInlined() {
 	assert_eliminates(
 		"fn f() { let A = 1; let B = A + 1; let C = B * 2; use_it(C); }",
-
 		"fn f() { use_it((1 + 1) * 2); }",
 	);
 }
@@ -932,7 +897,6 @@ fn ChainOfThreeInlined() {
 fn BlockExprAsInitInlined() {
 	assert_eliminates(
 		"fn f() { let X = { compute() }; consume(X); }",
-
 		"fn f() { consume({ compute() }); }",
 	);
 }
@@ -942,7 +906,6 @@ fn BlockExprAsInitInlined() {
 fn IfExprAsInitInlined() {
 	assert_eliminates(
 		"fn f() { let X = if ready { 1 } else { 0 }; set(X); }",
-
 		"fn f() { set(if ready { 1 } else { 0 }); }",
 	);
 }
@@ -1275,7 +1238,6 @@ fn IdempotentWithImplicitCapture() { assert_unchanged(r#"fn f() { let X = 5; pri
 fn CastExprInlined() {
 	assert_eliminates(
 		"fn f() { let Code = raw_val() as i32; app_exit(Code); }",
-
 		"fn f() { app_exit(raw_val() as i32); }",
 	);
 }
@@ -1286,7 +1248,6 @@ fn CastExprInlined() {
 fn CastExprNeedsParen() {
 	assert_eliminates(
 		"fn f() { let X = val() as u16; let _ = X + 1; }",
-
 		"fn f() { let _ = (val() as u16) + 1; }",
 	);
 }
