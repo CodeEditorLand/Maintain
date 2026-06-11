@@ -290,9 +290,9 @@ Build.execute()?;
 
 ## See Also
 
-- [Maintain Documentation](https://editor.land/Doc/maintain)
-- [Architecture Overview](https://editor.land/Doc/architecture)
-- [Why Rust](https://editor.land/Doc/why-rust)
+- [Maintain Documentation](https://Editor.Land/Doc/maintain)
+- [Architecture Overview](https://Editor.Land/Doc/architecture)
+- [Why Rust](https://Editor.Land/Doc/why-rust)
 - [Mountain](https://github.com/CodeEditorLand/Mountain)
 - [Rest](https://github.com/CodeEditorLand/Rest)
 - [Output](https://github.com/CodeEditorLand/Output)
