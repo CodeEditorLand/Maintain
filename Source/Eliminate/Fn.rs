@@ -1,8 +1,4 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Fn.rs
-//=============================================================================//
-// Module: Fn - Top-level entry point for the Eliminate module
-//=============================================================================//
+//! Top-level entry point for the Eliminate module.
 
 use clap::Parser;
 

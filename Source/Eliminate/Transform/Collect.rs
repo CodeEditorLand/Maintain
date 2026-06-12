@@ -1,12 +1,8 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Transform/Collect.rs
-//=============================================================================//
-// Module: Collect - Candidate let-binding discovery
-//
-// Scans a block's statement list for `let` bindings that are structurally
-// eligible for inlining: simple (non-destructured) identifier pattern, no
-// `mut` / `ref` qualifiers, has an initialiser, and no `else` branch.
-//=============================================================================//
+//! Candidate let-binding discovery.
+//!
+//! Scans a block's statement list for `let` bindings that are structurally
+//! eligible for inlining: simple (non-destructured) identifier pattern, no
+//! `mut` / `ref` qualifiers, has an initialiser, and no `else` branch.
 
 use syn::{Block, Pat, Stmt};
 

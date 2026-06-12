@@ -1,25 +1,14 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Transform/Inline.rs
-//=============================================================================//
-// Module: Inline - VisitMut transformer that eliminates single-use bindings
-//
-// Algorithm (per block, bottom-up):
-//   1. Collect structurally eligible let-binding candidates (Collect).
-//   2. For each candidate (in declaration order): a. Count references in
-//      subsequent statements (Count). This includes references inside macro
-//      token streams (json!, dev_log!, format!, etc.) so that multi-use
-//      variables are never misidentified as single-use. b. Skip if count != 1,
-//      used-in-closure, used-in-loop-body, or initialiser is unsafe/large. c.
-//      Skip if any free variable inside the initialiser is moved by value in
-//      the statements between the candidate declaration and the substitution
-//      site (IsFreeVarSafe). This prevents E0382 borrow-of- moved-value errors
-//      introduced by inlining clone() helpers. d. Substitute the single
-//      reference with the initialiser (SubstituteRef). Handles both plain
-//      expression positions AND macro token streams. e. Remove the let
-//      statement. f. Set Changed = true and restart candidate collection.
-//   3. Wrap substituted binary/range expressions in parentheses when placed as
-//      a direct operand of a binary or unary expression (precedence safety).
-//=============================================================================//
+//! VisitMut transformer that eliminates single-use bindings.
+//!
+//! Algorithm (per block, bottom-up):
+//! 1. Collect structurally eligible let-binding candidates.
+//! 2. For each candidate (in declaration order): count references, skip if
+//!    count != 1, used-in-closure, used-in-loop-body, or initialiser is
+//!    unsafe/large.
+//! 3. Substitute the single reference with the initialiser.
+//! 4. Remove the let statement.
+//! 5. Wrap substituted expressions in parentheses when needed (precedence
+//!    safety).
 
 use proc_macro2::{Group, TokenStream, TokenTree};
 use quote::ToTokens;

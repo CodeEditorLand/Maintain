@@ -1,25 +1,8 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Transform/Patch.rs
-//=============================================================================//
-// Module: Patch - Span-based source text patching
-//
-// After the AST eliminator runs, Patch locates the byte ranges of the
-// removed let-statements and their substitution sites in the ORIGINAL source
-// text (using proc_macro2 Span offsets) and splices only those ranges,
-// preserving every other byte including inline comments and blank lines.
-//
-// Design constraints:
-//   - proc_macro2 span byte offsets are only reliable when the crate is built
-//     with the "span-locations" feature (which is the default for proc-macro
-//     contexts).  When offsets are unavailable (start == end == 0 for a
-//     non-empty token), ApplyPatches returns None and the caller falls back to
-//     prettyplease.
-//   - Patches must be non-overlapping and sorted by start offset.  If two edits
-//     would overlap (should never happen given the eliminator logic but
-//     defended against) the function returns None.
-//   - A removed let-statement line is deleted including its trailing newline so
-//     blank lines are not left behind.
-//=============================================================================//
+//! Span-based source text patching.
+//!
+//! After the AST eliminator runs, locates the byte ranges of the removed
+//! let-statements and their substitution sites in the original source text,
+//! splicing only those ranges while preserving every other byte.
 
 use proc_macro2::Span;
 use quote::ToTokens;

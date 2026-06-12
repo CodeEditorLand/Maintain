@@ -1,29 +1,28 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Transform/mod.rs
-//=============================================================================//
-// Module: Transform - AST transformation pipeline
-//
-// Two entry points:
-//
-//   Run(source, options)
-//     Original behaviour: parse with syn, run the VisitMut eliminator,
-//     then attempt span-based text patching to preserve comments and
-//     whitespace. Falls back to prettyplease::unparse when span data is
-//     unavailable. Used by the Reformat path and by all existing unit tests
-//     in Inline.rs (which compare output against prettyplease-normalised
-//     expected values).
-//
-//   RunPreserve(source, options)
-//     Preserve-layout behaviour (default when Options.Reformat == false):
-//     identifies inlinable bindings via the same Collect/Safe/Count pipeline,
-//     then applies targeted text substitutions to the original source string
-//     without touching anything outside the affected lines.  Comments, blank
-//     lines, section banners, and the original indentation style survive
-//     unchanged.  Uses NO proc_macro2 span APIs so no extra Cargo features
-//     are required.
-//
-// Returns `Ok(None)` when no bindings were eliminated.
-//=============================================================================//
+//! # Transform - AST Transformation Pipeline
+//!
+//! Two entry points for inlining single-use `let` bindings:
+//!
+//! - **`Run(source, options)`**: Parse with `syn`, run the `VisitMut`
+//!   eliminator, then attempt span-based text patching to preserve comments and
+//!   whitespace. Falls back to `prettyplease::unparse` when span data is
+//!   unavailable.
+//!
+//! - **`RunPreserve(source, options)`**: Preserve-layout behaviour (default
+//!   when `Options.Reformat == false`). Identifies inlinable bindings via the
+//!   same Collect/Safe/Count pipeline, then applies targeted text substitutions
+//!   without touching anything outside the affected lines.
+//!
+//! Returns `Ok(None)` when no bindings were eliminated.
+//!
+//! ## Submodules
+//!
+//! | Module | Purpose |
+//! |--------|---------|
+//! | [`crate::Eliminate::Transform::Collect`] | Candidate let-binding discovery |
+//! | [`crate::Eliminate::Transform::Count`] | Reference counting for candidates |
+//! | [`crate::Eliminate::Transform::Inline`] | VisitMut transformer that eliminates single-use bindings |
+//! | [`crate::Eliminate::Transform::Patch`] | Span-based source text patching |
+//! | [`crate::Eliminate::Transform::Safe`] | Safety predicates for inlinable initialisers |
 
 pub mod Collect;
 

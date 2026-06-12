@@ -1,12 +1,8 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/CLI.rs
-//=============================================================================//
-// Module: CLI - Command-line interface for the Eliminate module
-//
-// Usage:
-//   cargo run --bin Maintain -- eliminate --path ./Source --glob "**/*.rs"
-//   cargo run --bin Maintain -- eliminate --path ./Source/Foo.rs --dry-run
-//=============================================================================//
+//! CLI - Command-line interface for the Eliminate module.
+//!
+//! Usage:
+//!   cargo run --bin Maintain -- eliminate --path ./Source --glob "**/*.rs"
+//!   cargo run --bin Maintain -- eliminate --path ./Source/Foo.rs --dry-run
 
 use std::path::PathBuf;
 

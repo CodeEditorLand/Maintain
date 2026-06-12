@@ -1,8 +1,4 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Process.rs
-//=============================================================================//
-// Module: Process - File discovery and transformation orchestration
-//=============================================================================//
+//! File discovery and transformation orchestration.
 
 use std::{
 	fs,

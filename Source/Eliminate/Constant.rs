@@ -1,8 +1,4 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Constant.rs
-//=============================================================================//
-// Module: Constant - Named literals for the Eliminate module
-//=============================================================================//
+//! Named literals for the Eliminate module.
 
 /// Glob pattern used when no explicit pattern is supplied.
 pub const DefaultGlob:&str = "**/*.rs";

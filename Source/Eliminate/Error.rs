@@ -1,8 +1,4 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Error.rs
-//=============================================================================//
-// Module: Error - Error types for the Eliminate module
-//=============================================================================//
+//! Error types for the Eliminate module.
 
 /// All errors that can occur during elimination.
 #[derive(thiserror::Error, Debug)]

@@ -1,8 +1,4 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Logger.rs
-//=============================================================================//
-// Module: Logger - Logging initialisation for the Eliminate module
-//=============================================================================//
+//! Logging initialisation for the Eliminate module.
 
 use colored::Colorize;
 

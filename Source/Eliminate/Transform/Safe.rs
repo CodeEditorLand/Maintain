@@ -1,21 +1,11 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Transform/Safe.rs
-//=============================================================================//
-// Module: Safe - Safety predicates for inlinable initialisers
-//
-// An initialiser is "safe to inline" when:
-//   1. Its AST node count does not exceed MaxSize.
-//   2. It does not contain an unsafe { } block.
-//   3. Every plain-identifier free variable in the initialiser is not moved
-//      (consumed by value) in the statements between the candidate declaration
-//      and the substitution site (IsFreeVarSafe).
-//
-// Notable inclusions (expressions that ARE safe in Rust):
-//   - ? operator  (Expr::Try)    - propagates the error, context unchanged.
-//   - .await      (Expr::Await)  - async context is caller-determined.
-//   - Closures    (Expr::Closure)- safe when the closure does not capture the
-//     candidate binding (checked by Count, not here).
-//=============================================================================//
+//! Safety predicates for inlinable initialisers.
+//!
+//! An initialiser is "safe to inline" when:
+//! 1. Its AST node count does not exceed MaxSize.
+//! 2. It does not contain an unsafe { } block.
+//! 3. Every plain-identifier free variable in the initialiser is not moved
+//!    (consumed by value) in the statements between the candidate declaration
+//!    and the substitution site.
 
 use syn::{
 	Expr,

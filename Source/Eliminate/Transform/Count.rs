@@ -1,22 +1,15 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Transform/Count.rs
-//=============================================================================//
-// Module: Count - Reference counting for let-binding candidates
-//
-// Counts how many times a named identifier is referenced in a slice of
-// statements, respecting:
-//   - Top-level shadowing: a second `let <target> = ...` at the same scope
-//     depth stops the count.
-//   - Inner-block shadowing: if an inner block re-introduces the name, all
-//     references inside that block are excluded (conservative).
-//   - Macro token streams: identifiers inside json!(), dev_log!(), and other
-//     macro invocations are counted via raw token-tree scanning.
-//   - Closure captures: references inside a closure body set InClosure.
-//   - Loop bodies: references inside for/while/loop bodies set InLoop. Callers
-//     treat such bindings as non-inlinable because inlining would move the
-//     initialiser expression inside the loop, changing evaluation semantics
-//     (runs N times instead of once).
-//=============================================================================//
+//! Reference counting for let-binding candidates.
+//!
+//! Counts how many times a named identifier is referenced in a slice of
+//! statements, respecting:
+//! - Top-level shadowing: a second `let <target> = ...` at the same scope depth
+//!   stops the count.
+//! - Inner-block shadowing: if an inner block re-introduces the name, all
+//!   references inside that block are excluded (conservative).
+//! - Macro token streams: identifiers inside json!(), dev_log!(), and other
+//!   macro invocations are counted via raw token-tree scanning.
+//! - Closure captures: references inside a closure body set InClosure.
+//! - Loop bodies: references inside for/while/loop bodies set InLoop.
 
 use proc_macro2::{TokenStream, TokenTree};
 use syn::{

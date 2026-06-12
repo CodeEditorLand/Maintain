@@ -1,8 +1,4 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Eliminate/Definition.rs
-//=============================================================================//
-// Module: Definition - Data structures for the Eliminate module
-//=============================================================================//
+//! Data structures for the Eliminate module.
 
 use super::Constant;
 
