@@ -1,3 +1,3 @@
 {
-	"Message": "style(Maintain): Alphabetise imports in Eliminator.rs and Substitutor.rs\n\nReformat import statements in both atomised Inline submodule files to use alphabetical ordering consistent with project conventions.\n\nEliminator.rs: Flatten `syn` import from double-brace to single-namespace form and reorder super-import items (FindSubstSite before Safe).\nSubstitutor.rs: Expand single-line super-import into multi-line block with alphabetically sorted identifiers.\n\nNo behavioural changes — pure style alignment."
+	"Message": "chore(Maintain): Stage generated commit message artifact\n\nAdd the generated .commit_message.json file produced by the commit message generation pipeline. This artifact captures the formatted commit message from the previous style(refactor) operation and is intended for downstream automation or review workflows.\n\nNo behavioural changes — pure housekeeping."
 }
