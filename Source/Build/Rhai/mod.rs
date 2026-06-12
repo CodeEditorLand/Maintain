@@ -1,12 +1,16 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Build/Rhai/mod.rs
-//=============================================================================//
-// Module: Rhai - Dynamic Script Configuration
-//
-// This module integrates Rhai scripting language for dynamic environment
-// variable configuration, allowing build processes to be customized without
-// recompiling the Rust maintain crate.
-//=============================================================================//
+//! # Rhai - Dynamic Script Configuration
+//!
+//! Integrates the Rhai scripting language for dynamic environment variable
+//! configuration, allowing build processes to be customized without
+//! recompiling the Rust maintain crate.
+//!
+//! ## Submodules
+//!
+//! | Module | Purpose |
+//! |--------|---------|
+//! | [`crate::Build::Rhai::ConfigLoader`] | Loads and parses `land-config.json` configuration |
+//! | [`crate::Build::Rhai::ScriptRunner`] | Executes Rhai scripts for dynamic configuration |
+//! | [`crate::Build::Rhai::EnvironmentResolver`] | Resolves final environment variables |
 
 pub mod ConfigLoader;
 

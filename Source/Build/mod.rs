@@ -1,102 +1,41 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Build/mod.rs
-//=============================================================================//
-// Module: Build
-//
-// Brief Description: Dynamic Build Orchestrator Module.
-//
-// RESPONSIBILITIES:
-// ================
-//
-// Primary:
-// - Orchestrate the build process from start to finish
-// - Generate unique product names and bundle identifiers
-// - Dynamically modify project configuration files
-// - Stage and bundle Node.js sidecar binaries
-// - Execute final build commands
-// - Restore original configuration files (Guard pattern)
-//
-// Secondary:
-// - Provide comprehensive logging
-// - Handle various build flavors (debug, browser, clean, compile, bundle)
-// - Support dependency-specific builds
-// - Ensure file safety through RAII pattern
-//
-// ARCHITECTURAL ROLE:
-// ===================
-//
-// Position:
-// - Infrastructure/Build orchestration layer
-// - Pre-build step for Tauri applications
-//
-// Dependencies (What this module requires):
-// - External crates: clap, colored, env_logger, json5, log, serde, serde_json,
-// thiserror, toml, toml_edit
-// - Internal modules: None
-// - Traits implemented: None
-//
-// Dependents (What depends on this module):
-// - Element/Maintain/Source/Library.rs
-// - Maintain/Release.sh
-// - Maintain/Debug.sh
-// - Other build scripts
-//
-// IMPLEMENTATION DETAILS:
-// =======================
-//
-// Design Patterns:
-// - RAII/Scope guard pattern (for file backup/restoration)
-// - Configuration object pattern (Argument struct)
-// - Error handling with thiserror
-// - Builder pattern (via clap and toml_edit)
-//
-// Performance Considerations:
-// - Complexity: O(n) - file I/O operations dominate
-// - Memory usage patterns: Moderate (stores configuration in memory)
-// - Hot path optimizations: None needed (build time is user-facing)
-//
-// Thread Safety:
-// - Thread-safe: No (not designed for concurrent execution)
-// - Synchronization mechanisms used: Guard ensures file safety
-// - Interior mutability considerations: None
-//
-// Error Handling:
-// - Error types returned: Error (comprehensive error enum)
-// - Recovery strategies: Guard restores files on error
-//
-// EXAMPLES:
-// =========
-//
-// Example 1: Basic build orchestration
-/// ```rust
-/// use crate::Maintain::Source::Build::Fn;
-/// Fn();
-/// ```
-// Example 2: Using the orchestrator from command line
-/// ```sh
-/// # Debug build with Node.js version 22
-/// ./build-orchestrator --directory Element/Mountain --debug --node-version 22 pnpm tauri build
-///
-/// # Production build with dependency flavor
-/// export NODE_ENV=production
-/// ./build-orchestrator --dependency tauri-apps/tauri --bundle true pnpm tauri build
-/// ```
-// Example 3: Environment variable configuration
-/// ```sh
-/// export MOUNTAIN_DIR="Element/Custom"
-/// export MOUNTAIN_ORIGINAL_BASE_NAME="MyApp"
-/// export MOUNTAIN_BUNDLE_ID_PREFIX="com.mycompany.app"
-/// export NODE_ENV="development"
-/// export NODE_VERSION="24"
-/// export RUST_LOG="debug"
-/// ./build-orchestrator pnpm tauri build
-/// ```
-//
-//=============================================================================//
-// IMPLEMENTATION
-//=============================================================================//
+//! # Build - Dynamic Build Orchestrator Module
+//!
+//! Orchestrates the build process from start to finish, including:
+//! - Generating unique product names and bundle identifiers
+//! - Dynamically modifying project configuration files (JSON5, TOML, plist)
+//! - Staging and bundling Node.js sidecar binaries
+//! - Executing final build commands
+//! - Restoring original configuration files via RAII guard pattern
+//!
+//! ## Submodules
+//!
+//! | Module | Purpose |
+//! |--------|---------|
+//! | [`crate::Build::CLI`] | Command-line interface for configuration-based builds |
+//! | [`crate::Build::Constant`] | Build system constants and configuration values |
+//! | [`crate::Build::Definition`] | Type definitions and data structures |
+//! | [`crate::Build::Error`] | Comprehensive error types |
+//! | [`crate::Build::Fn`] | Main entry point |
+//! | [`crate::Build::GetTauriTargetTriple`] | Tauri target triple detection |
+//! | [`crate::Build::JsonEdit`] | JSON/JSON5 file editing |
+//! | [`crate::Build::Logger`] | Colored logging initialization |
+//! | [`crate::Build::Pascalize`] | PascalCase string conversion |
+//! | [`crate::Build::PlistEdit`] | Apple Info.plist editing |
+//! | [`crate::Build::Process`] | Build orchestration logic |
+//! | [`crate::Build::Rhai`] | Rhai scripting engine integration |
+//! | [`crate::Build::TomlEdit`] | TOML file editing |
+//! | [`crate::Build::WordsFromPascal`] | PascalCase word splitting |
+//!
+//! ## Usage
+//!
+//! ```rust
+//! use crate::Build::Fn;
+//! Fn();
+//! ```
+//!
+//! For more details, see the [deep-dive
+//! documentation](../../Documentation/GitHub/DeepDive.md).
 
-// Module declarations - flattened structure
 pub mod CLI;
 
 pub mod Constant;

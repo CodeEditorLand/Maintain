@@ -1,80 +1,12 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Build/Fn.rs
-//=============================================================================//
-// Module: Fn
-//
-// Brief Description: The main entry point for the build orchestrator.
-//
-// RESPONSIBILITIES:
-// ================
-//
-// Primary:
-// - Initialize the logger
-// - Parse command-line arguments
-// - Execute the build orchestration process
-// - Handle success and error conditions appropriately
-//
-// Secondary:
-// - Provide a clean interface for calling the build system
-// - Exit with appropriate status codes
-//
-// ARCHITECTURAL ROLE:
-// ===================
-//
-// Position:
-// - Interface/Entry point layer
-// - Main public API
-//
-// Dependencies (What this module requires):
-// - External crates: log
-// - Internal modules: Definition::Argument, Function::{Process, Logger}
-// - Traits implemented: None
-//
-// Dependents (What depends on this module):
-// - Application entry point (main function)
-//
-// IMPLEMENTATION DETAILS:
-// =======================
-//
-// Design Patterns:
-// - Entry point pattern
-// - Early exit on error pattern
-//
-// Performance Considerations:
-// - Complexity: O(1) - delegates to Process function
-// - Memory usage patterns: Minimal overhead
-// - Hot path optimizations: None
-//
-// Thread Safety:
-// - Thread-safe: No (called only once at program start)
-// - Synchronization mechanisms used: None
-// - Interior mutability considerations: None
-//
-// Error Handling:
-// - Error types returned: None (logs and exits)
-// - Recovery strategies: Exit with status code 1 on error
-//
-// EXAMPLES:
-// =========
-//
-// Example 1: Direct invocation
+//! Main entry point for the build orchestrator.
+//!
+//! Initializes the logger, parses command-line arguments, and executes the
+//! build orchestration process, handling success and error conditions.
+
 use clap::Parser;
 use log::{error, info};
 
-/// ```rust
-/// use crate::Maintain::Source::Build::Fn;
-/// Fn();
-/// ```
-// Example 2: Usage in main function
-/// ```rust
-/// fn main() { crate::Maintain::Source::Build::Fn(); }
-/// ```
-//
-//=============================================================================//
-// IMPLEMENTATION
-//=============================================================================//
-use crate::Build::Definition::Argument;
-use crate::Build::{Logger::Logger, Process::Process};
+use crate::Build::{Definition::Argument, Logger::Logger, Process::Process};
 
 /// The main entry point of the binary.
 ///
