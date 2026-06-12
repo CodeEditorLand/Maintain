@@ -9,9 +9,11 @@ fn Idempotent() {
 
 	let Src = r#"fn f() { let X = 5i32; println!("{}", X); }"#;
 
-	let First = Transform::Run(Src, &Opts).unwrap().expect("first pass should produce a change");
+	let First = Transform::Run::Fn(Src, &Opts)
+		.unwrap()
+		.expect("first pass should produce a change");
 
-	let Second = Transform::Run(&First, &Opts).unwrap();
+	let Second = Transform::Run::Fn(&First, &Opts).unwrap();
 
 	assert!(Second.is_none(), "second pass must be a no-op:\n{}", First);
 

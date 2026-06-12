@@ -8,7 +8,7 @@ mod Tests {
 	fn Transform(Src:&str) -> String {
 		let Opts = crate::Eliminate::Definition::Options::default();
 
-		crate::Eliminate::Transform::Run(Src, &Opts)
+		crate::Eliminate::Transform::Run::Fn(Src, &Opts)
 			.expect("transform failed")
 			.unwrap_or_else(|| {
 				let Ast:syn::File = syn::parse_str(Src).unwrap();
@@ -30,7 +30,7 @@ mod Tests {
 	fn AssertUnchanged(Input:&str) {
 		let Opts = crate::Eliminate::Definition::Options::default();
 
-		let Result = crate::Eliminate::Transform::Run(Input, &Opts).expect("transform");
+		let Result = crate::Eliminate::Transform::Run::Fn(Input, &Opts).expect("transform");
 
 		assert!(Result.is_none(), "expected no change but got:\n{}", Result.unwrap());
 	}
@@ -292,11 +292,11 @@ mod Tests {
 
 		let Src = r#"fn f() { let X = 5; println!("{}", X); }"#;
 
-		let First = crate::Eliminate::Transform::Run(Src, &Opts)
+		let First = crate::Eliminate::Transform::Run::Fn(Src, &Opts)
 			.unwrap()
 			.expect("first pass should change");
 
-		let Second = crate::Eliminate::Transform::Run(&First, &Opts).unwrap();
+		let Second = crate::Eliminate::Transform::Run::Fn(&First, &Opts).unwrap();
 
 		assert!(Second.is_none(), "second pass must be a no-op:\n{}", First);
 	}

@@ -6,7 +6,7 @@
 use clap::Parser;
 use log::{error, info};
 
-use crate::Build::{Definition::Argument, Logger::Logger, Process::Process};
+use crate::Build::{Definition::Argument, Logger::Logger, Process::Process::Fn as Process};
 
 /// The main entry point of the binary.
 ///

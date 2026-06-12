@@ -11,6 +11,8 @@
 //! | [`crate::Build::Rhai::ConfigLoader`] | Loads and parses `land-config.json` configuration |
 //! | [`crate::Build::Rhai::ScriptRunner`] | Executes Rhai scripts for dynamic configuration |
 //! | [`crate::Build::Rhai::EnvironmentResolver`] | Resolves final environment variables |
+//! | [`crate::Build::Rhai::CreateEngine`] | Creates and configures Rhai engine |
+//! | [`crate::Build::Rhai::RegisterUtilityFunctions`] | Registers utility functions for scripts |
 
 pub mod ConfigLoader;
 
@@ -18,69 +20,23 @@ pub mod ScriptRunner;
 
 pub mod EnvironmentResolver;
 
-use rhai::Engine;
+#[path = "CreateEngine.rs"]
+pub mod CreateEngine;
 
-//=============================================================================
-// Public API
-//=============================================================================
-
-/// Creates and configures a new Rhai engine with all necessary modules and
-/// functions.
-pub fn create_engine() -> Engine {
-	let mut engine = Engine::new();
-
-	// Optimize engine for script execution
-	engine.set_max_expr_depths(0, 0);
-
-	engine.set_max_operations(0);
-
-	engine.set_allow_shadowing(true);
-
-	// Register utility functions for scripts
-	register_utility_functions(&mut engine);
-
-	engine
-}
-
-/// Registers utility functions that can be called from Rhai scripts.
-fn register_utility_functions(engine:&mut Engine) {
-	// System information
-	engine.register_fn("get_os_type", || std::env::consts::OS.to_string());
-
-	engine.register_fn("get_arch", || std::env::consts::ARCH.to_string());
-
-	engine.register_fn("get_family", || std::env::consts::FAMILY.to_string());
-
-	// Environment access (read-only for safety)
-	engine.register_fn("get_env", |name:&str| -> String { std::env::var(name).unwrap_or_default() });
-
-	// File system utilities
-	engine.register_fn("path_exists", |path:&str| -> bool { std::path::Path::new(path).exists() });
-
-	// Time utilities
-	engine.register_fn("timestamp", || -> i64 {
-		std::time::SystemTime::now()
-			.duration_since(std::time::UNIX_EPOCH)
-			.unwrap_or_default()
-			.as_secs() as i64
-	});
-
-	// Logging functions
-	engine.register_fn("print", |s:&str| {
-		println!("[Rhai] {}", s);
-	});
-}
-
-//=============================================================================
-// Tests
-//=============================================================================
+#[path = "RegisterUtilityFunctions.rs"]
+pub mod RegisterUtilityFunctions;
 
 #[cfg(test)]
 mod tests {
 
 	use std::collections::HashMap;
 
-	use super::*;
+	use super::{
+		ConfigLoader,
+		CreateEngine::Fn as create_engine,
+		RegisterUtilityFunctions::Fn as register_utility_functions,
+		ScriptRunner,
+	};
 
 	/// Expected environment variables for each profile
 	fn get_expected_env_vars(profile_name:&str) -> Vec<(&'static str, &'static str)> {

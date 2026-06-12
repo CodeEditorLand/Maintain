@@ -30,7 +30,7 @@ use Maintain::Eliminate::{Definition::Options, Transform};
 fn transform(Src:&str) -> String { transform_with(Src, Options::default()) }
 
 fn transform_with(Src:&str, Opts:Options) -> String {
-	Transform::Run(Src, &Opts).expect("transform failed").unwrap_or_else(|| {
+	Transform::Run::Fn(Src, &Opts).expect("transform failed").unwrap_or_else(|| {
 		let Ast:syn::File = syn::parse_str(Src).unwrap();
 
 		prettyplease::unparse(&Ast)
@@ -51,7 +51,7 @@ fn assert_eliminates(Input:&str, Expected:&str) {
 fn assert_unchanged(Input:&str) {
 	let Opts = Options::default();
 
-	let Result = Transform::Run(Input, &Opts).expect("transform");
+	let Result = Transform::Run::Fn(Input, &Opts).expect("transform");
 
 	assert!(Result.is_none(), "expected no change but got:\n{}", Result.unwrap());
 }
@@ -274,7 +274,7 @@ fn SizeThresholdKept() {
 
 	let Opts = Options { MaxSize:5, ..Options::default() };
 
-	let Result = Transform::Run(Input, &Opts).expect("transform");
+	let Result = Transform::Run::Fn(Input, &Opts).expect("transform");
 
 	assert!(Result.is_none(), "oversized initialiser should not be inlined");
 }
@@ -305,7 +305,7 @@ fn AlreadyMinimalReturnsNone() {
 
 	let Src = "fn f() { let X = foo(); bar(X); baz(X); }";
 
-	let Result = Transform::Run(Src, &Opts).unwrap();
+	let Result = Transform::Run::Fn(Src, &Opts).unwrap();
 
 	assert!(Result.is_none());
 }
@@ -321,9 +321,9 @@ fn Idempotent() {
 
 	let Src = r#"fn f() { let X = 5; println!("{}", X); }"#;
 
-	let First = Transform::Run(Src, &Opts).unwrap().expect("first pass should change");
+	let First = Transform::Run::Fn(Src, &Opts).unwrap().expect("first pass should change");
 
-	let Second = Transform::Run(&First, &Opts).unwrap();
+	let Second = Transform::Run::Fn(&First, &Opts).unwrap();
 
 	assert!(Second.is_none(), "second pass must be a no-op:\n{}", First);
 }
@@ -357,7 +357,7 @@ fn AttributedLetKeptByDefault() {
 
 	let Opts = Options::default();
 
-	let Result = Transform::Run(Input, &Opts).unwrap();
+	let Result = Transform::Run::Fn(Input, &Opts).unwrap();
 
 	assert!(Result.is_none(), "attributed let should not be inlined by default");
 }

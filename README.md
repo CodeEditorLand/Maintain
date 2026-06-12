@@ -521,7 +521,7 @@ Maintain is designed to be compatible with:
 - [Output](https://github.com/CodeEditorLand/Output) - Build Output & Artifact
   Management for Land
 - [CHANGELOG.md](https://github.com/CodeEditorLand/Maintain/blob/Current/CHANGELOG.md)
-  - Version history and release notes
+    - Version history and release notes
 
 ---
 

@@ -76,9 +76,9 @@ fn ProcessFile(FilePath:&Path, Options:&Definition::Options, Stats:&mut Definiti
 	// - Reformat:false (default): text-level substitution, layout preserved.
 	// - Reformat:true: full prettyplease reformat (previous behaviour).
 	let TransformResult = if Options.Reformat {
-		Transform::Run(&Source, Options)
+		Transform::Run::Fn(&Source, Options)
 	} else {
-		Transform::RunPreserve(&Source, Options)
+		Transform::RunPreserve::Fn(&Source, Options)
 	}
 	.map_err(|E| {
 		if let Error::Error::Parse { Source: Src, .. } = E {

@@ -109,7 +109,7 @@ mod TypeAnnotation;
 pub fn transform(Src:&str) -> String { transform_with(Src, Options::default()) }
 
 pub fn transform_with(Src:&str, Opts:Options) -> String {
-	Transform::Run(Src, &Opts).expect("transform failed").unwrap_or_else(|| {
+	Transform::Run::Fn(Src, &Opts).expect("transform failed").unwrap_or_else(|| {
 		let Ast:syn::File = syn::parse_str(Src).unwrap();
 
 		prettyplease::unparse(&Ast)
@@ -132,7 +132,7 @@ pub fn assert_eliminates(Input:&str, Expected:&str) {
 pub fn assert_unchanged(Input:&str) {
 	let Opts = Options::default();
 
-	let Result = Transform::Run(Input, &Opts).expect("transform");
+	let Result = Transform::Run::Fn(Input, &Opts).expect("transform");
 
 	assert!(Result.is_none(), "expected no change but got:\n{}", Result.unwrap());
 }

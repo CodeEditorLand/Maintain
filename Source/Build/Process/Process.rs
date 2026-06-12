@@ -1,67 +1,8 @@
-//=============================================================================//
-// File Path: Element/Maintain/Source/Build/Process.rs
-//=============================================================================//
-// Module: Process
-//
-// Brief Description: Main orchestration logic for preparing and executing the
-// build.
-//
-// RESPONSIBILITIES:
-// ================
-//
-// Primary:
-// - Orchestrate the entire build process from start to finish
-// - Generate product names and bundle identifiers
-// - Modify configuration files for specific build flavors
-// - Stage and bundle Node.js sidecar binaries if needed
-// - Execute the final build command
-//
-// Secondary:
-// - Provide detailed logging of build orchestration steps
-// - Ensure cleanup of temporary files
-//
-// ARCHITECTURAL ROLE:
-// ===================
-//
-// Position:
-// - Core/Orchestration layer
-// - Build process coordination
-//
-// Dependencies (What this module requires):
-// - External crates: std (env, fs, path, process, os), log, toml
-// - Internal modules: Constant::*, Definition::*, Error::BuildError,
-//   Function::*
-// - Traits implemented: None
-//
-// Dependents (What depends on this module):
-// - Main entry point
-// - Fn function
-//
-// IMPLEMENTATION DETAILS:
-// =======================
-//
-// Design Patterns:
-// - Orchestration pattern
-// - Guard pattern (for file backup/restoration)
-//
-// Performance Considerations:
-// - Complexity: O(n) - file I/O operations dominate
-// - Memory usage patterns: Moderate (stores configuration data in memory)
-// - Hot path optimizations: None needed (build time is user-facing)
-//
-// Thread Safety:
-// - Thread-safe: No (not designed for concurrent execution)
-// - Synchronization mechanisms used: None
-// - Interior mutability considerations: None
-//
-// Error Handling:
-// - Error types returned: BuildError (various)
-// - Recovery strategies: Guard restores files on error
-//
-// EXAMPLES:
-// =========
-//
-// Example 1: Basic build orchestration
+//! Build orchestration logic - main entry point.
+//!
+//! Coordinates all aspects of preparing, building, and restoring project
+//! configurations.
+
 use std::{
 	collections::BTreeMap,
 	env,
@@ -73,24 +14,6 @@ use std::{
 use log::info;
 use toml;
 
-/// ```rust
-/// use crate::Maintain::Source::Build::{Argument, Process};
-/// let argument = Argument::parse();
-/// Process(&argument)?;
-/// ```
-// Example 2: Handling build errors
-/// ```rust
-/// use crate::Maintain::Source::Build::Process;
-/// match Process(&argument) {
-/// 	Ok(_) => println!("Build succeeded"),
-/// 	Err(e) => println!("Build failed: {}", e),
-/// }
-/// ```
-//
-//=============================================================================//
-// IMPLEMENTATION
-//=============================================================================//
-use crate::Build::Error::Error as BuildError;
 use crate::Build::{
 	Constant::{
 		CargoFile,
@@ -106,6 +29,7 @@ use crate::Build::{
 		PlistFile,
 	},
 	Definition::{Argument, Guard, Manifest},
+	Error::Error as BuildError,
 	GetTauriTargetTriple::GetTauriTargetTriple,
 	JsonEdit::JsonEdit,
 	Pascalize::Pascalize,
@@ -113,8 +37,9 @@ use crate::Build::{
 	TomlEdit::TomlEdit,
 	WordsFromPascal::WordsFromPascal,
 };
+use super::BuildPlistEnvironment::Fn as BuildPlistEnvironment;
 
-/// Main orchestration logic for preparing and executing the build.
+/// Orchestrates the entire build process from start to finish.
 ///
 /// This function is the core of the build system, coordinating all aspects
 /// of preparing, building, and restoring project configurations. It:
@@ -164,40 +89,18 @@ use crate::Build::{
 /// Example bundle identifier:
 /// `land.editor.binary.development.generic.node.24.debug.mountain`
 ///
-/// # Node.js Sidecar Bundling
-///
-/// If `NodeVersion` is specified:
-/// - The Node.js binary is copied from
-///   `Element/SideCar/{triple}/NODE/{version}/`
-/// - The binary is staged in the project's `Binary/` directory
-/// - The Tauri configuration is updated to include the sidecar
-/// - The binary is given appropriate permissions on Unix-like systems
-/// - The temporary directory is cleaned up after successful build
-///
 /// # File Safety
 ///
 /// All configuration file modifications are protected by the Guard pattern:
 /// - Files are backed up before modification
 /// - Files are automatically restored on error or when the guard drops
 /// - This ensures the original state is preserved regardless of build outcome
-///
-/// # Example
-///
-/// ```no_run
-/// use crate::Maintain::Source::Build::{Argument, Process};
-/// let argument = Argument::parse();
-/// Process(&argument)?;
-/// ```
-pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
+pub fn Fn(Argument:&Argument) -> Result<(), BuildError> {
 	info!(target: "Build", "Starting build orchestration...");
 
 	log::debug!(target: "Build", "Argument: {:?}", Argument);
 
-	// Tier fan-out observability. The shell helper
-	// `Maintain/Script/TierEnvironment.sh` exports `CargoFeatures` and
-	// `CocoonEsbuildDefine`; surface them here so a build transcript shows
-	// which tier set shipped into the binary without having to replay the
-	// shell environment.
+	// Tier fan-out observability.
 	if let Some(Features) = Argument.CargoFeatures.as_deref().filter(|v| !v.is_empty()) {
 		info!(target: "Build", "Cargo features: {}", Features);
 	}
@@ -323,12 +226,6 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 		NamePartsForId.push("debug".to_string());
 	}
 
-	// Workbench-profile suffixes. These are what keep `debug-mountain` and
-	// `debug-electron` binaries separated on disk. Without them, both
-	// profiles would compile into the same `Target/debug/<LongName>_Mountain`
-	// binary (because the Cargo bin name is "Mountain"), so switching
-	// profiles couldn't run side-by-side and the bundler would thrash the
-	// same artefacts every rebuild.
 	if Argument.Mountain.as_ref().map_or(false, |v| v == "true") {
 		NamePartsForProductName.push("MountainProfile".to_string());
 
@@ -345,9 +242,6 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 		NamePartsForId.push("profile".to_string());
 	}
 
-	// Compiler variant (e.g. "Rest") - distinguishes the OXC build path
-	// from the default TypeScript compiler path so two binaries with the
-	// same workbench flavour but different compilers don't collide.
 	if let Some(Variant) = &Argument.Compiler {
 		if !Variant.is_empty() {
 			let PascalCompiler = Pascalize(Variant);
@@ -462,11 +356,6 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	)?;
 
 	// On macOS, inject dev-control environment variables into Info.plist.
-	// Tauri uses the project Info.plist as a template; when the .app is
-	// launched via LaunchServices (Finder double-click, open, Spotlight),
-	// keys under LSEnvironment are injected into the process environment.
-	// We only do this if an Info.plist exists in the project directory and
-	// we're running on macOS. Skip on Linux/Windows.
 	#[cfg(target_os = "macos")]
 	{
 		let PlistPath = ProjectDir.join(PlistFile);
@@ -489,11 +378,6 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 		return Err(BuildError::NoCommand);
 	}
 
-	// Materialise the command into an owned Vec so we can append
-	// `--features <list>` to `pnpm tauri build [--debug]` invocations
-	// without mutating the parsed `Argument`. The guard below keeps the
-	// append scoped to tauri builds - other commands (e.g. cargo, direct
-	// tooling) pass through unchanged.
 	let mut CommandArguments:Vec<String> = Argument.Command.clone();
 
 	let IsTauriBuild = CommandArguments.len() >= 3
@@ -535,10 +419,6 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 		Command
 	};
 
-	// Re-assert `CocoonEsbuildDefine` on the child environment so Cocoon's
-	// esbuild step sees the tier `define` blob even if a wrapper ever calls
-	// `.env_clear()` on our `ProcessCommand`. `ProcessCommand` inherits the
-	// parent env by default, so without a clear this is belt-and-braces.
 	if let Some(Defines) = Argument.CocoonEsbuildDefine.as_deref().filter(|v| !v.is_empty()) {
 		ShellCommand.env(CocoonEsbuildDefineEnv, Defines);
 	}
@@ -572,9 +452,7 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	}
 
 	// Guards drop here, restoring Cargo.toml and tauri.conf.json to their
-	// original state and deleting the .Backup files.  The binary has already
-	// been compiled with the generated product name so restoring the source
-	// files is safe and required for the next build to succeed.
+	// original state and deleting the .Backup files.
 	drop(CargoGuard);
 
 	drop(ConfigGuard);
@@ -582,71 +460,4 @@ pub fn Process(Argument:&Argument) -> Result<(), BuildError> {
 	info!(target: "Build", "Build orchestration completed successfully.");
 
 	Ok(())
-}
-
-/// Collects environment variables from `.env.Land` for injection into
-/// Info.plist LSEnvironment so the bundled .app works standalone.
-///
-/// Sources from the `.env.Land` file in the repo root (where Maintain
-/// runs from). This ensures every runtime-relevant variable -- Product*,
-/// Tier*, Network*, Trace, Record, Inspect, Disable, etc. -- is
-/// available when the .app is launched via LaunchServices.
-///
-/// Build-time-only flags (CargoFeatures, CocoonEsbuildDefine, NODE_ENV)
-/// are excluded because they have no meaning at runtime inside the .app.
-fn BuildPlistEnvironment() -> BTreeMap<String, String> {
-	let mut EnvVars = BTreeMap::new();
-
-	// Build-time / Maintain-control keys that should NOT leak into the
-	// bundled .app's LSEnvironment.
-	let SkipKeys = ["CargoFeatures", "CocoonEsbuildDefine", "NODE_ENV"];
-
-	// Primary source: the .env.Land file at the repo root (Maintain's
-	// working directory).
-	for Source in [".env.Land", ".env.Land.Sample"] {
-		let Path = PathBuf::from(Source);
-
-		if Path.exists() {
-			if let Ok(Content) = fs::read_to_string(&Path) {
-				info!(target: "Build::Plist", "Loading LSEnvironment vars from {}", Source);
-
-				for Line in Content.lines() {
-					let Trimmed = Line.trim();
-
-					if Trimmed.is_empty() || Trimmed.starts_with('#') {
-						continue;
-					}
-
-					if let Some((Key, Value)) = Trimmed.split_once('=') {
-						let CleanKey = Key.trim();
-
-						let CleanValue = Value.trim().trim_matches('"').trim_matches('\'');
-
-						// Skip build-time-only keys.
-						if SkipKeys.contains(&CleanKey) {
-							continue;
-						}
-
-						EnvVars.insert(CleanKey.to_string(), CleanValue.to_string());
-					}
-				}
-			}
-
-			break;
-		}
-	}
-
-	// Supplement from the current process environment for dev-control
-	// knobs that live outside .env.Land (Trace, Record, Inspect, Disable).
-	// These may have been overridden by the user before invoking Maintain.
-	// Only add if not already populated from .env.Land.
-	for Key in [LandTraceEnv, LandRecordEnv, LandInspectEnv, LandDisableEnv] {
-		if !EnvVars.contains_key(Key) {
-			if let Ok(Value) = env::var(Key) {
-				EnvVars.insert(Key.to_string(), Value);
-			}
-		}
-	}
-
-	EnvVars
 }
