@@ -1,6 +1,6 @@
 # Maintain: Deep Dive
 
-This document provides the technical foundation for the Maintain build system
+Maintain provides the technical foundation build system
 and CI/CD toolkit within the Land ecosystem. **Maintain** orchestrates builds
 across all Land elements, embeds a Rhai scripting engine for flexible
 automation, and provides type-safe TOML/JSON5 configuration editing.
@@ -148,3 +148,10 @@ sequenceDiagram
 | `Profile.sh`      | Release build with profiling instrumentation |
 | `Debug/All.sh`    | Debug all components including frontend      |
 | `Debug/Wind.sh`   | Debug Wind TypeScript service layer only     |
+
+---
+
+**Project Maintainers:** Source Open
+([Source/Open@Editor.Land](mailto:Source/Open@Editor.Land)) |
+[GitHub Repository](https://github.com/CodeEditorLand/Land) |
+[Report an Issue](https://github.com/CodeEditorLand/Land/issues)
