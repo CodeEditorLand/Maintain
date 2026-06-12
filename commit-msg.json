@@ -1,0 +1,3 @@
+{
+	"Message": "docs(Maintain): Fix typo, update Rest/Output descriptions, and add CHANGELOG link\n\nFix the typo \"pipeliens\" to \"pipelines\" in the determinism rationale section of the README.\n\nUpdate the Rest project link description from \"TypeScript compiler\" to \"HTTP/REST API Server for Land\" to accurately reflect Rest's role as an OXC-based JS bundler that serves bundled VS Code platform code to Cocoon.\n\nUpdate the Output link description from \"Build artifact pipeline\" to \"Build Output & Artifact Management for Land\" and add a direct link to CHANGELOG.md in the Related Documentation section for easy access to version history."
+}

@@ -90,7 +90,7 @@ pub fn main() {
 
 	if args.len() == 1 {
 		// No arguments - show build help (default)
-		let _ = Build::CLI::Cli::try_parse();
+		let _ = Build::CLI::Cli::Cli::try_parse();
 
 		return;
 	}
@@ -177,7 +177,7 @@ pub fn main() {
 		args.remove(1);
 
 		// Use try_parse_from with our modified args
-		match Build::CLI::Cli::try_parse_from(args) {
+		match Build::CLI::Cli::Cli::try_parse_from(args) {
 			Ok(cli) => {
 				if let Err(e) = cli.execute() {
 					eprintln!("Error: {}", e);
@@ -194,7 +194,7 @@ pub fn main() {
 		}
 	} else if is_build_cli_mode {
 		// Use Build CLI mode (configuration based)
-		match Build::CLI::Cli::try_parse() {
+		match Build::CLI::Cli::Cli::try_parse() {
 			Ok(cli) => {
 				if let Err(e) = cli.execute() {
 					eprintln!("Error: {}", e);

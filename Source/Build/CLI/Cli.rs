@@ -1,55 +1,14 @@
 //=============================================================================//
-// File Path: Element/Maintain/Source/Build/CLI/mod.rs
+// File Path: Element/Maintain/Source/Build/CLI/Cli.rs
 //=============================================================================//
-// Module: CLI - Command Line Interface for Configuration-Based Builds
-//
-// This module provides the cargo-first CLI interface that enables triggering
-// builds directly with the Cargo utility instead of shell scripts.
-//
-// RESPONSIBILITIES:
-// ================
-//
-// Primary:
-// - Parse command-line arguments for profile-based builds
-// - Load and validate configuration from land-config.json
-// - Resolve environment variables from configuration
-// - Execute builds with resolved configuration
-//
-// Secondary:
-// - Provide utility commands (--list-profiles, --show-profile)
-// - Support dry-run mode for configuration preview
-// - Enable profile aliases for quick access
-//
-// USAGE:
-// ======
-//
-// Basic usage:
-// ```bash
-// cargo run --bin Maintain -- --profile debug-mountain
-// ```
-//
-// List profiles:
-// ```bash
-// cargo run --bin Maintain -- --list-profiles
-// ```
-//
-// Dry run:
-// ```bash
-// cargo run --bin Maintain -- --profile debug --dry-run
-// ```
-//
-//===================================================================================
 
 use std::{collections::HashMap, path::PathBuf};
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::Parser;
 use colored::Colorize;
 
 use crate::Build::Rhai::ConfigLoader::{LandConfig, Profile, load_config};
-
-//=============================================================================
-// CLI Argument Definitions
-//=============================================================================
+use super::Commands::Commands;
 
 /// Land Build System - Configuration-based builds via Cargo
 #[derive(Parser, Debug, Clone)]
@@ -67,7 +26,7 @@ pub struct Cli {
 	pub command:Option<Commands>,
 
 	/// Build profile to use (shortcut for 'build' subcommand)
-	#[clap(long, short = 'p', value_parser = parse_profile_name)]
+	#[clap(long, short = 'p', value_parser = super::parse_profile_name)]
 	pub profile:Option<String>,
 
 	/// Configuration file path (default: .vscode/land-config.json)
@@ -91,7 +50,7 @@ pub struct Cli {
 	pub dependency:Option<String>,
 
 	/// Override environment variables (key=value pairs)
-	#[clap(long = "env", value_parser = parse_key_val::<String, String>, global = true, action = clap::ArgAction::Append)]
+	#[clap(long = "env", value_parser = super::parse_key_val::<String, String>, global = true, action = clap::ArgAction::Append)]
 	pub env_override:Vec<(String, String)>,
 
 	/// Enable dry-run mode (show config without building)
@@ -109,73 +68,6 @@ pub struct Cli {
 	/// Additional build arguments (passed through to build command)
 	#[clap(last = true)]
 	pub build_args:Vec<String>,
-}
-
-/// Available subcommands
-#[derive(Subcommand, Debug, Clone)]
-pub enum Commands {
-	/// Execute a build with the specified profile
-	Build {
-		/// Build profile to use
-		#[clap(long, short = 'p', value_parser = parse_profile_name)]
-		profile:String,
-
-		/// Enable dry-run mode
-		#[clap(long)]
-		dry_run:bool,
-	},
-
-	/// List all available build profiles
-	ListProfiles {
-		/// Show detailed information for each profile
-		#[clap(long, short = 'v')]
-		verbose:bool,
-	},
-
-	/// Show details for a specific profile
-	ShowProfile {
-		/// Profile name to show
-		profile:String,
-	},
-
-	/// Validate a build profile
-	ValidateProfile {
-		/// Profile name to validate
-		profile:String,
-	},
-
-	/// Show current environment variable resolution
-	Resolve {
-		/// Profile name to resolve
-		#[clap(long, short = 'p')]
-		profile:String,
-
-		/// Output format
-		#[clap(long, short = 'f', default_value = "table")]
-		format:OutputFormat,
-	},
-}
-
-/// Output format options
-#[derive(Debug, Clone, ValueEnum)]
-pub enum OutputFormat {
-	Table,
-
-	Json,
-
-	Env,
-}
-
-impl std::fmt::Display for OutputFormat {
-	fn fmt(&self, f:&mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			OutputFormat::Table => write!(f, "table"),
-
-			OutputFormat::Json => write!(f, "json"),
-
-			OutputFormat::Env => write!(f, "env"),
-		}
-	}
 }
 
 //=============================================================================
@@ -621,21 +513,6 @@ fn print_resolved_environment(env:&HashMap<String, String>) {
 	}
 }
 
-/// Parse and validate profile name
-fn parse_profile_name(s:&str) -> Result<String, String> {
-	let name = s.trim().to_lowercase();
-
-	if name.is_empty() {
-		return Err("Profile name cannot be empty".to_string());
-	}
-
-	if name.contains(' ') {
-		return Err("Profile name cannot contain spaces".to_string());
-	}
-
-	Ok(name)
-}
-
 /// Resolve profile name (handle aliases)
 fn resolve_profile_name(name:&str, config:&LandConfig) -> String {
 	if let Some(cli_config) = &config.cli {
@@ -767,21 +644,6 @@ fn is_build_env_var(key:&str) -> bool {
 	)
 }
 
-/// Parse a key=value pair from command line.
-fn parse_key_val<K, V>(s:&str) -> Result<(K, V), String>
-where
-	K: std::str::FromStr,
-	V: std::str::FromStr,
-	K::Err: std::fmt::Display,
-	V::Err: std::fmt::Display, {
-	let pos = s.find('=').ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
-
-	Ok((
-		s[..pos].parse().map_err(|e| format!("key parse error: {e}"))?,
-		s[pos + 1..].parse().map_err(|e| format!("value parse error: {e}"))?,
-	))
-}
-
 /// Apply CLI overrides to environment
 fn apply_overrides(
 	mut env:HashMap<String, String>,
@@ -897,11 +759,6 @@ fn execute_build_command(
 	let maintain_binary = find_maintain_binary();
 
 	// Execute the Maintain binary with merged environment variables
-	// The Maintain binary will:
-	// 1. Parse environment variables via clap (Argument struct)
-	// 2. Generate the extensive product name in Process()
-	// 3. Update tauri.conf.json with productName and identifier
-	// 4. Execute the actual build command
 	let mut cmd = StdCommand::new(&maintain_binary);
 
 	cmd.args(&maintain_args);
@@ -955,13 +812,4 @@ fn find_maintain_binary() -> String {
 
 	// Fallback to "maintain" in PATH
 	"maintain".to_string()
-}
-
-/// List all available profiles (avoids Self)
-pub fn get_all_profiles(config:&LandConfig) -> Vec<&str> {
-	let mut profiles:Vec<&str> = config.profiles.keys().map(|s| s.as_str()).collect();
-
-	profiles.sort();
-
-	profiles
 }
