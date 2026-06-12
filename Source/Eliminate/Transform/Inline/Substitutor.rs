@@ -8,7 +8,14 @@ use syn::{
 	visit_mut::{VisitMut, visit_expr_mut},
 };
 
-use super::{IsTargetIdent, NeedsParen, BlockShadowsTarget, ClosureParamShadows, ExprToTokenStream, SubstituteInTokenStream};
+use super::{
+	BlockShadowsTarget,
+	ClosureParamShadows,
+	ExprToTokenStream,
+	IsTargetIdent,
+	NeedsParen,
+	SubstituteInTokenStream,
+};
 
 // ---------------------------------------------------------------------------
 // Internal: Substitutor

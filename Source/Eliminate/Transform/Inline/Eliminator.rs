@@ -10,11 +10,9 @@
 //! 5. Wrap substituted expressions in parentheses when needed (precedence
 //!    safety).
 
-use syn::{
-	visit_mut::{VisitMut, visit_block_mut},
-};
+use syn::visit_mut::{VisitMut, visit_block_mut};
 
-use super::{Collect::Collect, Count::CountReferences, Safe, SubstituteRef, FindSubstSite};
+use super::{Collect::Collect, Count::CountReferences, FindSubstSite, Safe, SubstituteRef};
 
 // ---------------------------------------------------------------------------
 // Public: Eliminator
