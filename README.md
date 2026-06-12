@@ -1,115 +1,28 @@
-<table>
-	<tr>
-		<td align="left" valign="middle">
-			<h3 align="left">
-				Maintain&#x2001;💪🏻
-			</h3>
-		</td>
-		<td align="left" valign="middle">
-			<h3 align="left">
-				+
-			</h3>
-		</td>
-		<td align="left" valign="middle">
-			<h3 align="left">
-				<a href="https://editor.land" target="_blank">
-					<picture>
-						<source media="(prefers-color-scheme: dark)" srcset="https://editor.land/Dark/Image/GitHub/Land.svg" />
-						<source media="(prefers-color-scheme: light)" srcset="https://editor.land/Image/GitHub/Land.svg" />
-						<img width="28" alt="Land Logo" src="https://editor.land/Image/GitHub/Land.svg" />
-					</picture>
-				</a>
-			</h3>
-		</td>
-		<td align="left" valign="middle">
-			<h3 align="left">
-				<a href="https://editor.land" target="_blank">
-					Land&#x2001;🏞️
-				</a>
-			</h3>
-		</td>
-	</tr>
-</table>
+# **Maintain** 🔧
 
----
+The Build System & CI/CD Toolkit for Land 🏞️
 
-# **Maintain**&#x2001;💪🏻
-
-The Build System & CI/CD Toolkit for Land &#x2001;🏞️
-
-> **Build pipelines that change behavior based on environment variables,
-> implicit tool versions, or undeclared dependencies make debugging production
-> issues impossible. The same commit produces different output on different
-> machines.**
-
-_"Deterministic builds. Same commit, same output, guaranteed."_
-
-[![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](https://github.com/CodeEditorLand/Maintain/tree/Current/LICENSE)
-[<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/)&#x2001;[![Crates.io](https://img.shields.io/crates/v/Maintain.svg)](https://crates.io/crates/Maintain)
-[<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/)&#x2001;[![Rust Version](https://img.shields.io/badge/Rust-1.75+-orange.svg)](https://www.rust-lang.org/)
+[![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](https://github.com/CodeEditorLand/Maintain/blob/Current/LICENSE)
+[<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/) [![Crates.io](https://img.shields.io/crates/v/Maintain.svg)](https://crates.io/crates/Maintain)
+[<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/) [![Rust Version](https://img.shields.io/badge/Rust-1.75+-orange.svg)](https://www.rust-lang.org/)
 [![Rhai Version](https://img.shields.io/badge/Rhai-latest-blue.svg)](https://rhai.rs/)
 
-&#x2001;📖
 **[Rust API Documentation](https://Rust.Documentation.editor.land/Maintain/)**
 
-Welcome to **Maintain**, the Rust-based build system and CI/CD toolkit for the
-**Land Code Editor** ecosystem. Maintain provides comprehensive build
-orchestration, Rhai scripting capabilities, and configuration management for
-TOML and JSON5 files.
-
-**Maintain** is engineered to:
-
-1. **Orchestrate Builds:** Provide a central build system for the entire Land
-   ecosystem with configurable build groups.
-2. **Enable Scripting:** Embed the Rhai scripting language for flexible build
-   logic and custom automation.
-3. **Manage Configuration:** Offer type-safe TOML and JSON5 editing capabilities
-   for Cargo.toml and other configuration files.
-4. **Provide CLI Interface:** Deliver a command-line interface for build
-   operations with environment variable resolution.
-
 ---
 
-## Key Features&#x2001;🔐
+## Overview
 
-- **Rhai Scripting Engine:** Embedded Rhai interpreter for flexible build
-  configuration and custom automation logic.
-- **Configuration Editing:** Type-safe TOML and JSON5 editing for Cargo.toml and
-  other configuration files with validation.
-- **Environment Resolution:** Dynamic environment variable handling with
-  scriptable resolvers for build-time configuration.
-- **CLI Interface:** Comprehensive command-line interface with subcommands for
-  build, debug, release, and profile operations.
-- **Build Orchestration:** Central coordination of multi-stage builds across the
-  Land ecosystem.
+Maintain is the Rust-based build system and CI/CD toolkit for the Land Code Editor ecosystem. It provides comprehensive build orchestration, Rhai scripting capabilities, and configuration management for TOML and JSON5 files. Build pipelines that change behavior based on environment variables, implicit tool versions, or undeclared dependencies make debugging production issues impossible — the same commit produces different output on different machines. Maintain ensures deterministic builds: same commit, same output, guaranteed.
 
----
+**Maintain is engineered to:**
 
-## Core Architecture Principles&#x2001;🏗️
+1. **Orchestrate Builds:** Provide a central build system for the entire Land ecosystem with configurable build groups.
+2. **Enable Scripting:** Embed the Rhai scripting language for flexible build logic and custom automation.
+3. **Manage Configuration:** Offer type-safe TOML and JSON5 editing capabilities for Cargo.toml and other configuration files.
+4. **Provide CLI Interface:** Deliver a command-line interface for build operations with environment variable resolution.
 
-| Principle                 | Description                                                                               | Key Components Involved                  |
-| :------------------------ | :---------------------------------------------------------------------------------------- | :--------------------------------------- |
-| **Scriptability**         | Enable flexible build logic through embedded Rhai scripting with full environment access. | `Rhai/ConfigLoader`, `Rhai/ScriptRunner` |
-| **Type Safety**           | Provide compile-time checked configuration access with validation for TOML/JSON5.         | `toml_edit`, `json5` crates              |
-| **Modularity**            | Separate concerns between CLI, scripting, and configuration editing components.           | `CLI.rs`, `Rhai/`, `Build/*`             |
-| **Environment Awareness** | Dynamic resolution of environment variables for flexible build configurations.            | `EnvironmentResolver.rs`                 |
-
----
-
-## `Maintain` in the Land Ecosystem 💪🏻 + 🏞️
-
-| Component                 | Role & Key Responsibilities                                  |
-| :------------------------ | :----------------------------------------------------------- |
-| **Build Orchestrator**    | Central coordination of builds across all Land elements.     |
-| **Scripting Host**        | Rhai engine for custom build logic and automation.           |
-| **Configuration Manager** | TOML/JSON5 editing for Cargo.toml and project configuration. |
-| **CLI Provider**          | Command-line interface for developers and CI/CD pipelines.   |
-
----
-
-## System Architecture Diagram&#x2001;🏗️
-
-This diagram illustrates `Maintain`'s build orchestration architecture.
+## Architecture
 
 ```mermaid
 graph LR
@@ -118,7 +31,7 @@ graph LR
     classDef config   fill:#fff3c0,stroke:#f39c12,stroke-width:1px,color:#5a3e00;
     classDef artifact fill:#d4f5d4,stroke:#27ae60,stroke-width:1px,color:#0a3a0a;
 
-    subgraph MAINTAIN["Maintain 💪🏻 - Rust Build System + CI/CD Toolkit"]
+    subgraph MAINTAIN["Maintain 🔧 - Rust Build System + CI/CD Toolkit"]
         direction TB
         subgraph BUILD["Source/Build/ - Core Logic"]
             CLI["Build/CLI.rs\n(clap - subcommands:\nbuild · debug · release · profile)"]:::maintain
@@ -175,9 +88,34 @@ graph LR
     PlistEdit --> PlistFile
 ```
 
----
+## Key Components
 
-## Project Structure&#x2001;🗺️
+| Component | Path | Description |
+| --------- | ---- | ----------- |
+| Library (Entry) | `Source/Library.rs` | Main entry point and module declarations |
+| CLI | `Source/Build/CLI.rs` | Command-line interface with clap (subcommands: build, debug, release, profile) |
+| Build Functions | `Source/Build/Fn.rs` | Build functions |
+| Constants | `Source/Build/Constant.rs` | Build constants |
+| Definitions | `Source/Build/Definition.rs` | Build definitions |
+| JSON5 Editor | `Source/Build/JsonEdit.rs` | JSON5 configuration editing |
+| TOML Editor | `Source/Build/TomlEdit.rs` | Cargo.toml editing |
+| Plist Editor | `Source/Build/PlistEdit.rs` | Info.plist editing |
+| Pascalize | `Source/Build/Pascalize.rs` / `WordsFromPascal.rs` | String conversion utilities |
+| Get Triple | `Source/Build/GetTauriTargetTriple.rs` | Target triple resolution |
+| Rhai Config Loader | `Source/Build/Rhai/ConfigLoader.rs` | Configuration file loading |
+| Rhai Env Resolver | `Source/Build/Rhai/EnvironmentResolver.rs` | Dynamic environment variable resolution |
+| Rhai Script Runner | `Source/Build/Rhai/ScriptRunner.rs` | Script execution engine |
+| Run CLI | `Source/Run/CLI.rs` | Dev server, hot reload |
+| Run Process | `Source/Run/Process.rs` | Process management |
+| Profile | `Source/Run/Profile.rs` | Performance profiling |
+
+## In the Land Project
+
+Maintain orchestrates builds across all Land elements. Its CLI invokes shell scripts (Debug/Build.sh, Release/Build.sh) which compile the Mountain binary with code signing and entitlements. The Rhai engine enables custom build automation scripts. Configuration editors modify Cargo.toml (version bumps, dependency updates), JSON5 configs, and Info.plist/Entitlements.plist files. Maintain resolves environment variables dynamically for build-time configuration.
+
+**Architecture Principles:** Scriptability (embedded Rhai scripting with full environment access), Type Safety (compile-time checked config with `toml_edit`/`json5`), Modularity (separate CLI, scripting, and config editing), Environment Awareness (dynamic resolution of environment variables).
+
+### Project Structure
 
 ```
 Element/Maintain/
@@ -198,40 +136,28 @@ Element/Maintain/
 │   ├── Build.sh
 │   ├── Run.sh
 │   └── Wind.sh
+├── Release/              # Release scripts
+├── Script/               # Shared scripts (SignBundle.sh, etc.)
+├── Build/
+│   ├── Brotli/           # Brotli compression for bundles
+│   └── ...
 ├── Debug.sh              # Debug mode execution
 ├── Dev-Mountain.sh       # Mountain development mode
 ├── Profile.sh            # Performance profiling
 └── Release.sh            # Release build
 ```
 
----
+### Key Features
 
-## Deep Dive & Component Breakdown&#x2001;🔬
+- **Rhai Scripting Engine:** Embedded Rhai interpreter for flexible build configuration and custom automation logic.
+- **Configuration Editing:** Type-safe TOML and JSON5 editing for Cargo.toml and other configuration files with validation.
+- **Environment Resolution:** Dynamic environment variable handling with scriptable resolvers for build-time configuration.
+- **CLI Interface:** Comprehensive command-line interface with subcommands for build, debug, release, and profile operations.
+- **Build Orchestration:** Central coordination of multi-stage builds across the Land ecosystem.
 
-To understand how `Maintain`'s internal components interact to provide the build
-orchestration functionality, see the following source files:
+## Getting Started
 
-- **[`Source/Library.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Library.rs)** -
-  Main entry point and module declarations
-- **[`Source/Build/CLI.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/CLI.rs)** -
-  Command-line interface with clap
-- **[`Source/Build/Rhai/`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/)** -
-  Rhai scripting engine integration
-    - [`ConfigLoader.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/ConfigLoader.rs) -
-      Configuration file loading
-    - [`EnvironmentResolver.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/EnvironmentResolver.rs) -
-      Environment variable resolution
-    - [`ScriptRunner.rs`](https://github.com/CodeEditorLand/Maintain/tree/Current/Source/Build/Rhai/ScriptRunner.rs) -
-      Script execution engine
-
-The source files explain the Rhai scripting integration, TOML/JSON5 editing
-capabilities, and the build orchestration patterns.
-
----
-
-## Getting Started&#x2001;🚀
-
-### Installation&#x2001;📥
+### Installation
 
 To add `Maintain` as a dependency:
 
@@ -246,7 +172,7 @@ Or install the CLI globally:
 cargo install Maintain
 ```
 
-**Key Dependencies:**
+### Key Dependencies
 
 - `rhai`: Embedded scripting engine
 - `clap`: CLI argument parsing
@@ -256,7 +182,7 @@ cargo install Maintain
 - `colored`: Colored terminal output
 - `log` / `env_logger`: Logging framework
 
-### Usage Pattern&#x2001;🚀
+### Usage Pattern
 
 `Maintain` is typically invoked through its included shell scripts:
 
@@ -286,105 +212,27 @@ let Build = Build::new();
 Build.execute()?;
 ```
 
----
+## API Reference
 
-## See Also
+- [Rust API Documentation](https://Rust.Documentation.editor.land/Maintain/)
 
-- [Maintain Documentation](https://Editor.Land/Doc/maintain)
+## Related Documentation
+
 - [Architecture Overview](https://Editor.Land/Doc/architecture)
 - [Why Rust](https://Editor.Land/Doc/why-rust)
-- [Mountain](https://github.com/CodeEditorLand/Mountain)
-- [Rest](https://github.com/CodeEditorLand/Rest)
-- [Output](https://github.com/CodeEditorLand/Output)
+- [Mountain](https://github.com/CodeEditorLand/Mountain) — Native desktop shell
+- [Rest](https://github.com/CodeEditorLand/Rest) — TypeScript compiler
+- [Output](https://github.com/CodeEditorLand/Output) — Build artifact pipeline
 
 ---
 
-## License&#x2001;⚖️
+## Funding
 
-This project is released into the public domain under the **Creative Commons CC0
-Universal** license. You are free to use, modify, distribute, and build upon
-this work for any purpose, without any restrictions. For the full legal text,
-see the [`LICENSE`](https://github.com/CodeEditorLand/Maintain/tree/Current/LICENSE)
-file.
+This project is funded through [NGI0 Commons Fund](https://NLnet.NL/commonsfund), a fund established by [NLnet](https://NLnet.NL) with financial support from the European Commission's Next Generation Internet program, under grant agreement No 101135429.
 
----
+The project is operated by PlayForm, based in Sofia, Bulgaria. PlayForm acts as the open-source steward for Code Editor Land under the NGI0 Commons Fund grant.
 
-## Changelog&#x2001;📜
-
-Stay updated with our progress! See
-[`CHANGELOG.md`](https://github.com/CodeEditorLand/Maintain/tree/Current/CHANGELOG.md) for a
-history of changes specific to **Maintain**.
-
----
-
-## Funding & Acknowledgements&#x2001;🙏🏻
-
-**Maintain** is a core element of the **Land** ecosystem. This project is funded
-through [NGI0 Commons Fund](https://NLnet.NL/commonsfund), a fund established by
-[NLnet](https://NLnet.NL) with financial support from the European Commission's
-[Next Generation Internet](https://ngi.eu) program. Learn more at the
-[NLnet project page](https://NLnet.NL/project/Land).
-
-The project is operated by PlayForm, based in Sofia, Bulgaria.
-
-PlayForm acts as the open-source steward for Code Editor Land under the NGI0
-Commons Fund grant.
-
-<table>
-	<thead>
-		<tr>
-			<th align="left">
-				<strong>
-					Land
-				</strong>
-			</th>
-			<th align="left">
-				<strong>
-					PlayForm
-				</strong>
-			</th>
-			<th align="left">
-				<strong>
-					NLnet
-				</strong>
-			</th>
-			<th align="left">
-				<strong>
-					NGI0 Commons Fund
-				</strong>
-			</th>
-		</tr>
-	</thead>
-	<tbody>
-		<tr>
-			<td align="left" valign="middle">
-				<a href="https://editor.land">
-					<img width="60" src="https://raw.githubusercontent.com/CodeEditorLand/Asset/refs/heads/Current/Logo/Land.svg" alt="Land" />
-				</a>
-			</td>
-			<td align="left" valign="middle">
-				<a href="https://PlayForm.Cloud">
-					<img width="76" src="https://raw.githubusercontent.com/PlayForm/Asset/refs/heads/Current/Logo/PlayForm.svg" alt="PlayForm" />
-				</a>
-			</td>
-			<td align="left" valign="middle">
-				<a href="https://NLnet.NL">
-					<img width="240" src="https://NLnet.NL/logo/banner.svg" alt="NLnet" />
-				</a>
-			</td>
-			<td align="left" valign="middle">
-				<a href="https://NLnet.NL/commonsfund">
-					<img width="240" src="https://NLnet.NL/image/logos/NGI0CommonsFund_tag_black_mono.svg" alt="NGI0 Commons Fund" />
-				</a>
-			</td>
-		</tr>
-	</tbody>
-</table>
-
----
-
-**Project Maintainers**: Source Open
-([Source/Open@editor.land](mailto:Source/Open@editor.land)) |
-[GitHub Repository](https://github.com/CodeEditorLand/Maintain) |
-[Report an Issue](https://github.com/CodeEditorLand/Maintain/issues) |
-[Security Policy](https://github.com/CodeEditorLand/Maintain/security/policy)
+| | |
+| --- | --- |
+| [![Land](https://raw.githubusercontent.com/CodeEditorLand/Asset/refs/heads/Current/Logo/Dual/Land.svg)](https://Editor.Land) | [![PlayForm](https://raw.githubusercontent.com/PlayForm/Asset/refs/heads/Current/Logo/PlayForm.svg)](https://PlayForm.Cloud) |
+| [![NLnet](https://raw.githubusercontent.com/CodeEditorLand/Asset/refs/heads/Current/Logo/NLnet.svg)](https://NLnet.NL) | [![NGI0](https://raw.githubusercontent.com/CodeEditorLand/Asset/refs/heads/Current/Logo/NGI0.svg)](https://NLnet.NL/commonsfund) |
