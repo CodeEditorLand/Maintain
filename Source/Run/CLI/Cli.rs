@@ -7,7 +7,7 @@ use std::{collections::HashMap, path::PathBuf};
 use clap::Parser;
 use colored::Colorize;
 
-use super::{Commands, OutputFormat};
+use super::{Commands::Commands, OutputFormat::OutputFormat};
 use crate::Build::Rhai::ConfigLoader::{LandConfig, Profile, load_config};
 
 //=============================================================================
