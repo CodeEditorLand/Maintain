@@ -155,7 +155,7 @@ pub fn main() {
 		// Use Run mode (development workflow)
 		// Use try_parse_from with our modified args, not try_parse() which reads from
 		// env::args()
-		match Run::CLI::Cli::try_parse_from(args) {
+		match Run::CLI::Cli::Cli::try_parse_from(args) {
 			Ok(cli) => {
 				if let Err(e) = cli.execute() {
 					eprintln!("Error: {}", e);
