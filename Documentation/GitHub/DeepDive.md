@@ -1,9 +1,9 @@
 # Maintain: Deep Dive
 
-Maintain provides the technical foundation build system
-and CI/CD toolkit within the Land ecosystem. **Maintain** orchestrates builds
-across all Land elements, embeds a Rhai scripting engine for flexible
-automation, and provides type-safe TOML/JSON5 configuration editing.
+Maintain provides the technical foundation build system and CI/CD toolkit within
+the Land ecosystem. **Maintain** orchestrates builds across all Land elements,
+embeds a Rhai scripting engine for flexible automation, and provides type-safe
+TOML/JSON5 configuration editing.
 
 ---
 

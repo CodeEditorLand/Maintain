@@ -42,10 +42,10 @@
 The Build System, Dead-Code Eliminator & Development Runner for Land&#x2001;🏞️
 
 > **Build pipelines that change behavior based on environment variables,
-> implicit tool versions, or undeclared dependencies make debugging
-> production issues impossible — the same commit produces different output
-> on different machines. Maintain ensures deterministic builds: same commit,
-> same output, guaranteed.**
+> implicit tool versions, or undeclared dependencies make debugging production
+> issues impossible — the same commit produces different output on different
+> machines. Maintain ensures deterministic builds: same commit, same output,
+> guaranteed.**
 
 _"Deterministic builds and tooling for a reproducible ecosystem."_
 
@@ -61,10 +61,9 @@ _"Deterministic builds and tooling for a reproducible ecosystem."_
 ## Overview
 
 **Maintain** is the `Rust`-based project maintenance toolkit for the **Land**
-Code Editor ecosystem. It provides three core capabilities: deterministic
-build orchestration with `Rhai` scripting, dead-code elimination through
-`AST`-level single-use variable inlining, and a development runner with
-hot-reload support.
+Code Editor ecosystem. It provides three core capabilities: deterministic build
+orchestration with `Rhai` scripting, dead-code elimination through `AST`-level
+single-use variable inlining, and a development runner with hot-reload support.
 
 Build pipelines that change behavior based on environment variables, implicit
 tool versions, or undeclared dependencies make debugging production issues
@@ -82,8 +81,8 @@ Maintain ensures deterministic builds: same commit, same output, guaranteed.
    closure-capture semantics — producing cleaner, more readable code without
    manual refactoring.
 3. **Run with Hot-Reload** — Manage the development server lifecycle with
-   profile-based configurations, environment variable resolution, and
-   process management for rapid iteration.
+   profile-based configurations, environment variable resolution, and process
+   management for rapid iteration.
 4. **Provide a Unified CLI** — Deliver a single command-line interface with
    subcommands for `build`, `eliminate`, and `run` operations, making the
    toolkit accessible from shell scripts and CI pipelines alike.
@@ -102,40 +101,40 @@ builds across the Land ecosystem. The same commit produces the same output on
 every machine. Build groups, profile-based configurations, and environment
 variable resolution ensure reproducibility.
 
-**`AST`-Level Dead-Code Elimination** — Analyses `Rust` source files with
-`syn` and inlines single-use `let` bindings that meet strict safety criteria
+**`AST`-Level Dead-Code Elimination** — Analyses `Rust` source files with `syn`
+and inlines single-use `let` bindings that meet strict safety criteria
 (non-mutated, no closure captures). Operates in dry-run mode for preview,
-supports glob-based file selection, and preserves comments and formatting
-with `prettyplease` reflow.
+supports glob-based file selection, and preserves comments and formatting with
+`prettyplease` reflow.
 
 **Type-Safe Configuration Editing** — Compile-time checked editing of
-`Cargo.toml` (via `toml_edit`), `JSON5` configuration files (via `json5`),
-and `Info.plist` files (via `plist`). Supports version bumps, dependency
-updates, and bundle identifier management.
+`Cargo.toml` (via `toml_edit`), `JSON5` configuration files (via `json5`), and
+`Info.plist` files (via `plist`). Supports version bumps, dependency updates,
+and bundle identifier management.
 
 **Development Runner with Hot-Reload** — Profile-based dev server management
 with environment variable integration, process lifecycle management, and
 `Mountain` development mode support.
 
 **Target Triple Resolution** — Automatic detection of the current platform
-target triple (`aarch64-apple-darwin`, `x86_64-unknown-linux-gnu`, etc.)
-for cross-platform build configuration.
+target triple (`aarch64-apple-darwin`, `x86_64-unknown-linux-gnu`, etc.) for
+cross-platform build configuration.
 
 **Unified CLI** — Single binary (`Maintain`) with subcommands for all
-operations: `build` (debug/release/profile), `eliminate` (dead-code inline),
-and `run` (dev server, hot reload).
+operations: `build` (debug/release/profile), `eliminate` (dead-code inline), and
+`run` (dev server, hot reload).
 
 ---
 
 ## Core Architecture Principles&#x2001;🏗️
 
-| Principle | Description | Key Components |
-|-----------|-------------|----------------|
-| **Determinism** | Same commit, same output on every machine. Environment variables are explicit and declared, not implicit. | `Build/Constant`, `Build/Definition`, `Build/Fn` |
-| **Scriptability** | Embedded `Rhai` scripting with full environment access for custom build automation, not hard-coded logic. | `Build/Rhai/ScriptRunner`, `Build/Rhai/ConfigLoader`, `Build/Rhai/EnvironmentResolver` |
-| **Type Safety** | Compile-time checked configuration with `toml_edit`, `json5`, and `plist`. No runtime string manipulation of build configs. | `Build/TomlEdit`, `Build/JsonEdit`, `Build/PlistEdit` |
+| Principle                    | Description                                                                                                                   | Key Components                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Determinism**              | Same commit, same output on every machine. Environment variables are explicit and declared, not implicit.                     | `Build/Constant`, `Build/Definition`, `Build/Fn`                                        |
+| **Scriptability**            | Embedded `Rhai` scripting with full environment access for custom build automation, not hard-coded logic.                     | `Build/Rhai/ScriptRunner`, `Build/Rhai/ConfigLoader`, `Build/Rhai/EnvironmentResolver`  |
+| **Type Safety**              | Compile-time checked configuration with `toml_edit`, `json5`, and `plist`. No runtime string manipulation of build configs.   | `Build/TomlEdit`, `Build/JsonEdit`, `Build/PlistEdit`                                   |
 | **Safe Code Transformation** | `AST`-level inlining with strict safety checks — no mutation, no closure captures, single-use only. Dry-run mode for preview. | `Eliminate/Transform/Safe`, `Eliminate/Transform/Inline`, `Eliminate/Transform/Collect` |
-| **Modularity** | Separate CLI, build orchestration, eliminate engine, and run-mode logic. Each module compiles and tests independently. | `Source/Build/*`, `Source/Eliminate/*`, `Source/Run/*` |
+| **Modularity**               | Separate CLI, build orchestration, eliminate engine, and run-mode logic. Each module compiles and tests independently.        | `Source/Build/*`, `Source/Eliminate/*`, `Source/Run/*`                                  |
 
 ---
 
@@ -217,55 +216,55 @@ graph LR
 
 **Operation paths:**
 
-| Path | Module | Use Case |
-|------|--------|----------|
-| `Maintain build` | `Build/CLI` → `Build/Fn` → `Rhai` scripts | Orchestrate deterministic builds with `Rhai` scripting |
-| `Maintain eliminate` | `Eliminate/CLI` → `Eliminate/Fn` → `Transform` pipeline | Inline single-use `let` bindings across `Rust` source files |
-| `Maintain run` | `Run/CLI` → `Run/Process` → `Run/Profile` | Launch dev server with hot-reload and profile config |
-| `Build/Fn` → `TomlEdit` | `toml_edit` crate | Edit `Cargo.toml` with type-safe version bumps and dependency updates |
-| `Build/Fn` → `JsonEdit` | `json5` crate | Edit `tauri.conf.json5` configuration |
-| `Build/Fn` → `PlistEdit` | `plist` crate | Edit `Info.plist` and `Entitlements.plist` |
+| Path                     | Module                                                  | Use Case                                                              |
+| ------------------------ | ------------------------------------------------------- | --------------------------------------------------------------------- |
+| `Maintain build`         | `Build/CLI` → `Build/Fn` → `Rhai` scripts               | Orchestrate deterministic builds with `Rhai` scripting                |
+| `Maintain eliminate`     | `Eliminate/CLI` → `Eliminate/Fn` → `Transform` pipeline | Inline single-use `let` bindings across `Rust` source files           |
+| `Maintain run`           | `Run/CLI` → `Run/Process` → `Run/Profile`               | Launch dev server with hot-reload and profile config                  |
+| `Build/Fn` → `TomlEdit`  | `toml_edit` crate                                       | Edit `Cargo.toml` with type-safe version bumps and dependency updates |
+| `Build/Fn` → `JsonEdit`  | `json5` crate                                           | Edit `tauri.conf.json5` configuration                                 |
+| `Build/Fn` → `PlistEdit` | `plist` crate                                           | Edit `Info.plist` and `Entitlements.plist`                            |
 
 ---
 
 ## Key Components
 
-| Component | Path | Description |
-|-----------|------|-------------|
-| Library (Entry) | `Source/Library.rs` | Main entry point and module declarations |
-| Build CLI | `Source/Build/CLI.rs` | Command-line interface with clap (subcommands: build, debug, release, profile) |
-| Build Functions | `Source/Build/Fn.rs` | Build orchestration functions |
-| Build Constants | `Source/Build/Constant.rs` | Build system constants and env var names |
-| Build Definitions | `Source/Build/Definition.rs` | Build type definitions and data structures |
-| TOML Editor | `Source/Build/TomlEdit.rs` | Type-safe `Cargo.toml` editing via `toml_edit` |
-| JSON5 Editor | `Source/Build/JsonEdit.rs` | `JSON5` configuration editing via `json5` |
-| Plist Editor | `Source/Build/PlistEdit.rs` | `Info.plist` and entitlements editing via `plist` |
-| Pascalize | `Source/Build/Pascalize.rs` | String conversion utilities (snake_case → PascalCase) |
-| WordsFromPascal | `Source/Build/WordsFromPascal.rs` | Split PascalCase identifiers into words |
-| Target Triple | `Source/Build/GetTauriTargetTriple.rs` | Target triple resolution for cross-platform builds |
-| Architecture | `Source/Architecture.rs` | Platform detection (macOS/Linux/Windows, arch) |
-| Rhai Script Runner | `Source/Build/Rhai/ScriptRunner.rs` | Executes `.rhai` scripts for build automation |
-| Rhai Config Loader | `Source/Build/Rhai/ConfigLoader.rs` | Configuration file loading for `Rhai` scripts |
-| Rhai Env Resolver | `Source/Build/Rhai/EnvironmentResolver.rs` | Dynamic environment variable resolution for `Rhai` |
-| Eliminate CLI | `Source/Eliminate/CLI.rs` | CLI for batch dead-code elimination |
-| Eliminate Fn | `Source/Eliminate/Fn.rs` | Top-level entry point for elimination |
-| Eliminate Process | `Source/Eliminate/Process.rs` | File discovery and orchestration |
-| Eliminate Definition | `Source/Eliminate/Definition.rs` | Data structures and options (MaxSize, DryRun, etc.) |
-| Eliminate Error | `Source/Eliminate/Error.rs` | Error types for the elimination pipeline |
-| Eliminate Logger | `Source/Eliminate/Logger.rs` | Colored logging initialization |
-| Transform Safe | `Source/Eliminate/Transform/Safe.rs` | Safety checks (no mutation, no closure captures) |
-| Transform Inline | `Source/Eliminate/Transform/Inline.rs` | `AST`-level `let` binding inlining |
-| Transform Collect | `Source/Eliminate/Transform/Collect.rs` | Usage-site collection and counting |
-| Transform Count | `Source/Eliminate/Transform/Count.rs` | `AST` node counting for initialiser size limits |
-| Transform Patch | `Source/Eliminate/Transform/Patch.rs` | Precise file rewrites (comment-preserving) |
-| Run CLI | `Source/Run/CLI.rs` | CLI for profile-based development runs |
-| Run Process | `Source/Run/Process.rs` | Process management and lifecycle |
-| Run Profile | `Source/Run/Profile.rs` | Performance profiling and profile resolution |
-| Run Environment | `Source/Run/Environment.rs` | Environment variable management for dev runs |
-| Run Fn | `Source/Run/Fn.rs` | Main entry point for run operations |
-| Run Definition | `Source/Run/Definition.rs` | Type definitions for run module |
-| Run Error | `Source/Run/Error.rs` | Error types for run operations |
-| Run Logger | `Source/Run/Logger.rs` | Logging utilities for run module |
+| Component            | Path                                       | Description                                                                    |
+| -------------------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| Library (Entry)      | `Source/Library.rs`                        | Main entry point and module declarations                                       |
+| Build CLI            | `Source/Build/CLI.rs`                      | Command-line interface with clap (subcommands: build, debug, release, profile) |
+| Build Functions      | `Source/Build/Fn.rs`                       | Build orchestration functions                                                  |
+| Build Constants      | `Source/Build/Constant.rs`                 | Build system constants and env var names                                       |
+| Build Definitions    | `Source/Build/Definition.rs`               | Build type definitions and data structures                                     |
+| TOML Editor          | `Source/Build/TomlEdit.rs`                 | Type-safe `Cargo.toml` editing via `toml_edit`                                 |
+| JSON5 Editor         | `Source/Build/JsonEdit.rs`                 | `JSON5` configuration editing via `json5`                                      |
+| Plist Editor         | `Source/Build/PlistEdit.rs`                | `Info.plist` and entitlements editing via `plist`                              |
+| Pascalize            | `Source/Build/Pascalize.rs`                | String conversion utilities (snake_case → PascalCase)                          |
+| WordsFromPascal      | `Source/Build/WordsFromPascal.rs`          | Split PascalCase identifiers into words                                        |
+| Target Triple        | `Source/Build/GetTauriTargetTriple.rs`     | Target triple resolution for cross-platform builds                             |
+| Architecture         | `Source/Architecture.rs`                   | Platform detection (macOS/Linux/Windows, arch)                                 |
+| Rhai Script Runner   | `Source/Build/Rhai/ScriptRunner.rs`        | Executes `.rhai` scripts for build automation                                  |
+| Rhai Config Loader   | `Source/Build/Rhai/ConfigLoader.rs`        | Configuration file loading for `Rhai` scripts                                  |
+| Rhai Env Resolver    | `Source/Build/Rhai/EnvironmentResolver.rs` | Dynamic environment variable resolution for `Rhai`                             |
+| Eliminate CLI        | `Source/Eliminate/CLI.rs`                  | CLI for batch dead-code elimination                                            |
+| Eliminate Fn         | `Source/Eliminate/Fn.rs`                   | Top-level entry point for elimination                                          |
+| Eliminate Process    | `Source/Eliminate/Process.rs`              | File discovery and orchestration                                               |
+| Eliminate Definition | `Source/Eliminate/Definition.rs`           | Data structures and options (MaxSize, DryRun, etc.)                            |
+| Eliminate Error      | `Source/Eliminate/Error.rs`                | Error types for the elimination pipeline                                       |
+| Eliminate Logger     | `Source/Eliminate/Logger.rs`               | Colored logging initialization                                                 |
+| Transform Safe       | `Source/Eliminate/Transform/Safe.rs`       | Safety checks (no mutation, no closure captures)                               |
+| Transform Inline     | `Source/Eliminate/Transform/Inline.rs`     | `AST`-level `let` binding inlining                                             |
+| Transform Collect    | `Source/Eliminate/Transform/Collect.rs`    | Usage-site collection and counting                                             |
+| Transform Count      | `Source/Eliminate/Transform/Count.rs`      | `AST` node counting for initialiser size limits                                |
+| Transform Patch      | `Source/Eliminate/Transform/Patch.rs`      | Precise file rewrites (comment-preserving)                                     |
+| Run CLI              | `Source/Run/CLI.rs`                        | CLI for profile-based development runs                                         |
+| Run Process          | `Source/Run/Process.rs`                    | Process management and lifecycle                                               |
+| Run Profile          | `Source/Run/Profile.rs`                    | Performance profiling and profile resolution                                   |
+| Run Environment      | `Source/Run/Environment.rs`                | Environment variable management for dev runs                                   |
+| Run Fn               | `Source/Run/Fn.rs`                         | Main entry point for run operations                                            |
+| Run Definition       | `Source/Run/Definition.rs`                 | Type definitions for run module                                                |
+| Run Error            | `Source/Run/Error.rs`                      | Error types for run operations                                                 |
+| Run Logger           | `Source/Run/Logger.rs`                     | Logging utilities for run module                                               |
 
 ---
 
@@ -367,26 +366,25 @@ Element/Maintain/
 ## In the Land Project
 
 Maintain serves as the project maintenance toolkit for the entire Land
-ecosystem, providing three complementary capabilities that span the
-development lifecycle:
+ecosystem, providing three complementary capabilities that span the development
+lifecycle:
 
-| Capability | Module | Role in Land |
-|------------|--------|--------------|
-| **Build Orchestration** | `Source/Build` | Compiles all Land elements (`Mountain`, `Grove`, `Cocoon`, etc.) with deterministic builds, `Rhai`-scripted automation, and type-safe config editing |
-| **Dead-Code Elimination** | `Source/Eliminate` | Analyses and cleans up `Rust` source across all elements by inlining single-use `let` bindings — reducing manual refactoring burden |
-| **Development Runner** | `Source/Run` | Launches `Mountain` in development mode with hot-reload, profile-based configuration, and environment variable integration |
+| Capability                | Module             | Role in Land                                                                                                                                         |
+| ------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Build Orchestration**   | `Source/Build`     | Compiles all Land elements (`Mountain`, `Grove`, `Cocoon`, etc.) with deterministic builds, `Rhai`-scripted automation, and type-safe config editing |
+| **Dead-Code Elimination** | `Source/Eliminate` | Analyses and cleans up `Rust` source across all elements by inlining single-use `let` bindings — reducing manual refactoring burden                  |
+| **Development Runner**    | `Source/Run`       | Launches `Mountain` in development mode with hot-reload, profile-based configuration, and environment variable integration                           |
 
 Maintain orchestrates builds across all Land elements. Its CLI invokes shell
-scripts which compile the `Mountain` binary with code signing and
-entitlements. The `Rhai` engine enables custom build automation scripts.
-Configuration editors modify `Cargo.toml` (version bumps, dependency
-updates), `JSON5` configs, and `Info.plist`/`Entitlements.plist` files.
-Maintain resolves environment variables dynamically for build-time
-configuration.
+scripts which compile the `Mountain` binary with code signing and entitlements.
+The `Rhai` engine enables custom build automation scripts. Configuration editors
+modify `Cargo.toml` (version bumps, dependency updates), `JSON5` configs, and
+`Info.plist`/`Entitlements.plist` files. Maintain resolves environment variables
+dynamically for build-time configuration.
 
 The `Eliminate` module operates independently on any `Rust` source tree,
-providing `AST`-level dead-code removal with a dry-run mode for preview.
-It is designed to be idempotent — running it twice produces the same output.
+providing `AST`-level dead-code removal with a dry-run mode for preview. It is
+designed to be idempotent — running it twice produces the same output.
 
 ---
 
@@ -413,8 +411,8 @@ cargo install Maintain
 
 ### Usage
 
-`Maintain` is typically invoked through its included shell scripts or
-as a binary:
+`Maintain` is typically invoked through its included shell scripts or as a
+binary:
 
 ```sh
 # Debug build
@@ -431,7 +429,7 @@ As a binary with subcommands:
 
 ```sh
 # Build operations
-Maintain build [--debug | --release | --profile <name>]
+Maintain build [--debug | --release | --profile < name > ]
 
 # Dead-code elimination
 Maintain eliminate --path ./Source --glob "**/*.rs"
@@ -443,19 +441,19 @@ Maintain run --profile dev
 
 ### Key Dependencies
 
-| Crate | Purpose |
-|-------|---------|
-| `rhai` | Embedded scripting engine for build automation |
-| `clap` | CLI argument parsing with subcommands |
-| `syn` | `Rust` `AST` parsing (full syntax, visitor, fold) |
-| `toml_edit` | Type-safe `TOML` parsing and editing |
-| `json5` | `JSON5` configuration support |
-| `plist` | `Info.plist` and entitlements editing |
-| `prettyplease` | `AST` → source code pretty-printing |
-| `proc-macro2` / `quote` | Token stream manipulation for code generation |
-| `chrono` | Date/time handling for logging |
-| `colored` | Colored terminal output |
-| `log` / `env_logger` | Logging framework |
+| Crate                   | Purpose                                           |
+| ----------------------- | ------------------------------------------------- |
+| `rhai`                  | Embedded scripting engine for build automation    |
+| `clap`                  | CLI argument parsing with subcommands             |
+| `syn`                   | `Rust` `AST` parsing (full syntax, visitor, fold) |
+| `toml_edit`             | Type-safe `TOML` parsing and editing              |
+| `json5`                 | `JSON5` configuration support                     |
+| `plist`                 | `Info.plist` and entitlements editing             |
+| `prettyplease`          | `AST` → source code pretty-printing               |
+| `proc-macro2` / `quote` | Token stream manipulation for code generation     |
+| `chrono`                | Date/time handling for logging                    |
+| `colored`               | Colored terminal output                           |
+| `log` / `env_logger`    | Logging framework                                 |
 
 ### As a Library
 
@@ -481,13 +479,13 @@ Run::start(&profile)?;
 
 Maintain enforces safety at multiple layers:
 
-| Layer | Mechanism |
-|-------|-----------|
-| **Deterministic builds** | Explicit environment variable declarations — no implicit tool versions or undeclared dependencies |
-| **AST transformation** | `Eliminate/Transform/Safe` enforces strict safety checks: no mutation, no closure captures, single-use only before inlining |
-| **Dry-run mode** | `--dry-run` flag previews all elimination changes without writing files |
-| **Type safety** | Compile-time checked configuration editing via `toml_edit`, `json5`, and `plist` |
-| **CI reproducibility** | Same commit produces the same output on every machine — guaranteed by design |
+| Layer                    | Mechanism                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| **Deterministic builds** | Explicit environment variable declarations — no implicit tool versions or undeclared dependencies                           |
+| **AST transformation**   | `Eliminate/Transform/Safe` enforces strict safety checks: no mutation, no closure captures, single-use only before inlining |
+| **Dry-run mode**         | `--dry-run` flag previews all elimination changes without writing files                                                     |
+| **Type safety**          | Compile-time checked configuration editing via `toml_edit`, `json5`, and `plist`                                            |
+| **CI reproducibility**   | Same commit produces the same output on every machine — guaranteed by design                                                |
 
 ---
 
@@ -495,13 +493,13 @@ Maintain enforces safety at multiple layers:
 
 Maintain is designed to be compatible with:
 
-| Target | Integration |
-|--------|-------------|
-| **Mountain** | Builds and code-signs the `Mountain` native desktop shell binary |
-| **All Land Elements** | `Eliminate` operates on any `Rust` source tree in the Land monorepo |
-| **CI Pipelines** | Unified CLI with subcommands for build, eliminate, and run — suitable for GitHub Actions and other CI systems |
-| **Shell Scripts** | Invokes external shell scripts for platform-specific build steps (code signing, bundling) |
-| **Rhai Ecosystem** | Runs standard `.rhai` scripts for custom build automation |
+| Target                | Integration                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Mountain**          | Builds and code-signs the `Mountain` native desktop shell binary                                              |
+| **All Land Elements** | `Eliminate` operates on any `Rust` source tree in the Land monorepo                                           |
+| **CI Pipelines**      | Unified CLI with subcommands for build, eliminate, and run — suitable for GitHub Actions and other CI systems |
+| **Shell Scripts**     | Invokes external shell scripts for platform-specific build steps (code signing, bundling)                     |
+| **Rhai Ecosystem**    | Runs standard `.rhai` scripts for custom build automation                                                     |
 
 ---
 
@@ -513,13 +511,17 @@ Maintain is designed to be compatible with:
 
 ## Related Documentation
 
-- [Architecture Overview](https://Editor.Land/Doc/architecture) — Land system architecture
+- [Architecture Overview](https://Editor.Land/Doc/architecture) — Land system
+  architecture
 - [Why Rust](https://Editor.Land/Doc/why-rust) — Why `Rust` for build tooling
 - [Mountain](https://github.com/CodeEditorLand/Mountain) — Native desktop shell
-- [Grove](https://github.com/CodeEditorLand/Grove) — `Rust`/`WASM` extension host
+- [Grove](https://github.com/CodeEditorLand/Grove) — `Rust`/`WASM` extension
+  host
 - [Rest](https://github.com/CodeEditorLand/Rest) — HTTP/REST API Server for Land
-- [Output](https://github.com/CodeEditorLand/Output) — Build Output & Artifact Management for Land
-- [CHANGELOG.md](https://github.com/CodeEditorLand/Maintain/blob/Current/CHANGELOG.md) — Version history and release notes
+- [Output](https://github.com/CodeEditorLand/Output) — Build Output & Artifact
+  Management for Land
+- [CHANGELOG.md](https://github.com/CodeEditorLand/Maintain/blob/Current/CHANGELOG.md)
+  — Version history and release notes
 
 ---
 
