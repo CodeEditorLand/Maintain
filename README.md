@@ -66,7 +66,7 @@ build orchestration with `Rhai` scripting, dead-code elimination through
 `AST`-level single-use variable inlining, and a development runner with
 hot-reload support.
 
-Build pipeliens that change behavior based on environment variables, implicit
+Build pipelines that change behavior based on environment variables, implicit
 tool versions, or undeclared dependencies make debugging production issues
 impossible — the same commit produces different output on different machines.
 Maintain ensures deterministic builds: same commit, same output, guaranteed.
@@ -517,8 +517,9 @@ Maintain is designed to be compatible with:
 - [Why Rust](https://Editor.Land/Doc/why-rust) — Why `Rust` for build tooling
 - [Mountain](https://github.com/CodeEditorLand/Mountain) — Native desktop shell
 - [Grove](https://github.com/CodeEditorLand/Grove) — `Rust`/`WASM` extension host
-- [Rest](https://github.com/CodeEditorLand/Rest) — `TypeScript` compiler
-- [Output](https://github.com/CodeEditorLand/Output) — Build artifact pipeline
+- [Rest](https://github.com/CodeEditorLand/Rest) — HTTP/REST API Server for Land
+- [Output](https://github.com/CodeEditorLand/Output) — Build Output & Artifact Management for Land
+- [CHANGELOG.md](https://github.com/CodeEditorLand/Maintain/blob/Current/CHANGELOG.md) — Version history and release notes
 
 ---
 
