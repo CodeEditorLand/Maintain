@@ -24,7 +24,7 @@
 				<picture>
 					<source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/github/stars/CodeEditorLand/Maintain?style=flat&label=Star&logo=github&color=black&labelColor=black&logoColor=white&logoWidth=0" />
 					<source media="(prefers-color-scheme: light)" srcset="https://img.shields.io/github/stars/CodeEditorLand/Maintain?style=flat&label=Star&logo=github&color=white&labelColor=white&logoColor=black&logoWidth=0" />
-					<img src="https://img.shields.io/github/stars/CodeEditorLand/Maintain?style=flat&label=Star&logo=github&color=black&labelColor=black&logoColor=white&logoWidth=0" alt="Star" />
+					<img src="https://img.shields.io/github/stars/CodeEditorLand/Maintain?style=flat&label=Star&logo=github&color=black&labelColor=black&logoColor=white&logoWidth=0" alt="Star" title="Star" />
 				</picture>
 			</a>
 			<br />
@@ -43,7 +43,7 @@ The Build System, Dead-Code Eliminator & Development Runner for Land&#x2001;🏞
 
 > **Build pipelines that change behavior based on environment variables,
 > implicit tool versions, or undeclared dependencies make debugging production
-> issues impossible — the same commit produces different output on different
+> issues impossible - the same commit produces different output on different
 > machines. Maintain ensures deterministic builds: same commit, same output,
 > guaranteed.**
 
@@ -67,23 +67,23 @@ single-use variable inlining, and a development runner with hot-reload support.
 
 Build pipelines that change behavior based on environment variables, implicit
 tool versions, or undeclared dependencies make debugging production issues
-impossible — the same commit produces different output on different machines.
+impossible - the same commit produces different output on different machines.
 Maintain ensures deterministic builds: same commit, same output, guaranteed.
 
 **Maintain is engineered to:**
 
-1. **Orchestrate Deterministic Builds** — Provide a central build system for the
+1. **Orchestrate Deterministic Builds** - Provide a central build system for the
    entire Land ecosystem with configurable build groups, `Rhai`-scripted
    automation, and type-safe configuration editing for `Cargo.toml`, `JSON5`,
    and `Info.plist` files.
-2. **Eliminate Dead Code** — Analyse `Rust` source files via `syn` and inline
+2. **Eliminate Dead Code** - Analyse `Rust` source files via `syn` and inline
    `let` bindings that are used exactly once, are non-mutated, and have no
-   closure-capture semantics — producing cleaner, more readable code without
+   closure-capture semantics - producing cleaner, more readable code without
    manual refactoring.
-3. **Run with Hot-Reload** — Manage the development server lifecycle with
+3. **Run with Hot-Reload** - Manage the development server lifecycle with
    profile-based configurations, environment variable resolution, and process
    management for rapid iteration.
-4. **Provide a Unified CLI** — Deliver a single command-line interface with
+4. **Provide a Unified CLI** - Deliver a single command-line interface with
    subcommands for `build`, `eliminate`, and `run` operations, making the
    toolkit accessible from shell scripts and CI pipelines alike.
 
@@ -91,36 +91,36 @@ Maintain ensures deterministic builds: same commit, same output, guaranteed.
 
 ## Key Features&#x2001;🔧
 
-**`Rhai` Scripting Engine** — Embedded `Rhai` interpreter for flexible build
+**`Rhai` Scripting Engine** - Embedded `Rhai` interpreter for flexible build
 configuration and custom automation logic. Scripts can resolve environment
 variables dynamically, load configuration files, and orchestrate multi-stage
 build pipelines.
 
-**Deterministic Build Orchestration** — Central coordination of multi-stage
+**Deterministic Build Orchestration** - Central coordination of multi-stage
 builds across the Land ecosystem. The same commit produces the same output on
 every machine. Build groups, profile-based configurations, and environment
 variable resolution ensure reproducibility.
 
-**`AST`-Level Dead-Code Elimination** — Analyses `Rust` source files with `syn`
+**`AST`-Level Dead-Code Elimination** - Analyses `Rust` source files with `syn`
 and inlines single-use `let` bindings that meet strict safety criteria
 (non-mutated, no closure captures). Operates in dry-run mode for preview,
 supports glob-based file selection, and preserves comments and formatting with
 `prettyplease` reflow.
 
-**Type-Safe Configuration Editing** — Compile-time checked editing of
+**Type-Safe Configuration Editing** - Compile-time checked editing of
 `Cargo.toml` (via `toml_edit`), `JSON5` configuration files (via `json5`), and
 `Info.plist` files (via `plist`). Supports version bumps, dependency updates,
 and bundle identifier management.
 
-**Development Runner with Hot-Reload** — Profile-based dev server management
+**Development Runner with Hot-Reload** - Profile-based dev server management
 with environment variable integration, process lifecycle management, and
 `Mountain` development mode support.
 
-**Target Triple Resolution** — Automatic detection of the current platform
+**Target Triple Resolution** - Automatic detection of the current platform
 target triple (`aarch64-apple-darwin`, `x86_64-unknown-linux-gnu`, etc.) for
 cross-platform build configuration.
 
-**Unified CLI** — Single binary (`Maintain`) with subcommands for all
+**Unified CLI** - Single binary (`Maintain`) with subcommands for all
 operations: `build` (debug/release/profile), `eliminate` (dead-code inline), and
 `run` (dev server, hot reload).
 
@@ -133,7 +133,7 @@ operations: `build` (debug/release/profile), `eliminate` (dead-code inline), and
 | **Determinism**              | Same commit, same output on every machine. Environment variables are explicit and declared, not implicit.                     | `Build/Constant`, `Build/Definition`, `Build/Fn`                                        |
 | **Scriptability**            | Embedded `Rhai` scripting with full environment access for custom build automation, not hard-coded logic.                     | `Build/Rhai/ScriptRunner`, `Build/Rhai/ConfigLoader`, `Build/Rhai/EnvironmentResolver`  |
 | **Type Safety**              | Compile-time checked configuration with `toml_edit`, `json5`, and `plist`. No runtime string manipulation of build configs.   | `Build/TomlEdit`, `Build/JsonEdit`, `Build/PlistEdit`                                   |
-| **Safe Code Transformation** | `AST`-level inlining with strict safety checks — no mutation, no closure captures, single-use only. Dry-run mode for preview. | `Eliminate/Transform/Safe`, `Eliminate/Transform/Inline`, `Eliminate/Transform/Collect` |
+| **Safe Code Transformation** | `AST`-level inlining with strict safety checks - no mutation, no closure captures, single-use only. Dry-run mode for preview. | `Eliminate/Transform/Safe`, `Eliminate/Transform/Inline`, `Eliminate/Transform/Collect` |
 | **Modularity**               | Separate CLI, build orchestration, eliminate engine, and run-mode logic. Each module compiles and tests independently.        | `Source/Build/*`, `Source/Eliminate/*`, `Source/Run/*`                                  |
 
 ---
@@ -372,7 +372,7 @@ lifecycle:
 | Capability                | Module             | Role in Land                                                                                                                                         |
 | ------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Build Orchestration**   | `Source/Build`     | Compiles all Land elements (`Mountain`, `Grove`, `Cocoon`, etc.) with deterministic builds, `Rhai`-scripted automation, and type-safe config editing |
-| **Dead-Code Elimination** | `Source/Eliminate` | Analyses and cleans up `Rust` source across all elements by inlining single-use `let` bindings — reducing manual refactoring burden                  |
+| **Dead-Code Elimination** | `Source/Eliminate` | Analyses and cleans up `Rust` source across all elements by inlining single-use `let` bindings - reducing manual refactoring burden                  |
 | **Development Runner**    | `Source/Run`       | Launches `Mountain` in development mode with hot-reload, profile-based configuration, and environment variable integration                           |
 
 Maintain orchestrates builds across all Land elements. Its CLI invokes shell
@@ -384,7 +384,7 @@ dynamically for build-time configuration.
 
 The `Eliminate` module operates independently on any `Rust` source tree,
 providing `AST`-level dead-code removal with a dry-run mode for preview. It is
-designed to be idempotent — running it twice produces the same output.
+designed to be idempotent - running it twice produces the same output.
 
 ---
 
@@ -481,11 +481,11 @@ Maintain enforces safety at multiple layers:
 
 | Layer                    | Mechanism                                                                                                                   |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| **Deterministic builds** | Explicit environment variable declarations — no implicit tool versions or undeclared dependencies                           |
+| **Deterministic builds** | Explicit environment variable declarations - no implicit tool versions or undeclared dependencies                           |
 | **AST transformation**   | `Eliminate/Transform/Safe` enforces strict safety checks: no mutation, no closure captures, single-use only before inlining |
 | **Dry-run mode**         | `--dry-run` flag previews all elimination changes without writing files                                                     |
 | **Type safety**          | Compile-time checked configuration editing via `toml_edit`, `json5`, and `plist`                                            |
-| **CI reproducibility**   | Same commit produces the same output on every machine — guaranteed by design                                                |
+| **CI reproducibility**   | Same commit produces the same output on every machine - guaranteed by design                                                |
 
 ---
 
@@ -497,7 +497,7 @@ Maintain is designed to be compatible with:
 | --------------------- | ------------------------------------------------------------------------------------------------------------- |
 | **Mountain**          | Builds and code-signs the `Mountain` native desktop shell binary                                              |
 | **All Land Elements** | `Eliminate` operates on any `Rust` source tree in the Land monorepo                                           |
-| **CI Pipelines**      | Unified CLI with subcommands for build, eliminate, and run — suitable for GitHub Actions and other CI systems |
+| **CI Pipelines**      | Unified CLI with subcommands for build, eliminate, and run - suitable for GitHub Actions and other CI systems |
 | **Shell Scripts**     | Invokes external shell scripts for platform-specific build steps (code signing, bundling)                     |
 | **Rhai Ecosystem**    | Runs standard `.rhai` scripts for custom build automation                                                     |
 
@@ -511,17 +511,17 @@ Maintain is designed to be compatible with:
 
 ## Related Documentation
 
-- [Architecture Overview](https://Editor.Land/Doc/architecture) — Land system
+- [Architecture Overview](https://Editor.Land/Doc/architecture) - Land system
   architecture
-- [Why Rust](https://Editor.Land/Doc/why-rust) — Why `Rust` for build tooling
-- [Mountain](https://github.com/CodeEditorLand/Mountain) — Native desktop shell
-- [Grove](https://github.com/CodeEditorLand/Grove) — `Rust`/`WASM` extension
+- [Why Rust](https://Editor.Land/Doc/why-rust) - Why `Rust` for build tooling
+- [Mountain](https://github.com/CodeEditorLand/Mountain) - Native desktop shell
+- [Grove](https://github.com/CodeEditorLand/Grove) - `Rust`/`WASM` extension
   host
-- [Rest](https://github.com/CodeEditorLand/Rest) — HTTP/REST API Server for Land
-- [Output](https://github.com/CodeEditorLand/Output) — Build Output & Artifact
+- [Rest](https://github.com/CodeEditorLand/Rest) - HTTP/REST API Server for Land
+- [Output](https://github.com/CodeEditorLand/Output) - Build Output & Artifact
   Management for Land
 - [CHANGELOG.md](https://github.com/CodeEditorLand/Maintain/blob/Current/CHANGELOG.md)
-  — Version history and release notes
+  - Version history and release notes
 
 ---
 
