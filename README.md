@@ -1,4 +1,4 @@
-# **Maintain**&#x2001;🔧
+# **Maintain**&#x2001;💪🏻
 
 <table>
 	<tr>
@@ -147,7 +147,7 @@ graph LR
     classDef config   fill:#fff3c0,stroke:#f39c12,stroke-width:1px,color:#5a3e00;
     classDef artifact fill:#d4f5d4,stroke:#27ae60,stroke-width:1px,color:#0a3a0a;
 
-    subgraph MAINTAIN["Maintain 🔧 - Build System + Eliminator + Dev Runner"]
+    subgraph MAINTAIN["Maintain 💪🏻 - Build System + Eliminator + Dev Runner"]
         direction TB
         subgraph BUILD["Source/Build/ - Build Orchestration"]
             BuildCLI["Build/CLI.rs&#x2001;⚙️&#x2001;clap subcommands:&#x2001;build · debug · release · profile"]:::maintain
