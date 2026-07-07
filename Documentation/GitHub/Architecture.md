@@ -9,15 +9,13 @@
 				</picture>
 			</h3>
 		</td>
-		<td colspan="3" valign="top">
-			<h3 align="center"> Maintain 🔧</h3>
-		</td>
+		<td colspan="3" valign="top"><h3 align="center">Maintain&#x2001;🔧</h3></td>
 	</tr>
 </table>
 
 ---
 
-# **Maintain** 🔧 Architecture
+# **Maintain**&#x2001;🔧&#x2001;Architecture
 
 `Maintain` is the Rust build system and CI/CD toolkit for `Land`. It
 orchestrates builds across all Land elements, embeds a **Rhai** scripting engine
@@ -50,7 +48,7 @@ CLI → Parse subcommand → Dispatch
 
 ---
 
-## Related Documentation 📚
+## Related Documentation&#x2001;📚
 
 - [DeepDive](./DeepDive.md) - In-depth Maintain documentation
 - [BuildPipeline](https://github.com/CodeEditorLand/Land/tree/Current/Documentation/GitHub/BuildPipeline.md) -
