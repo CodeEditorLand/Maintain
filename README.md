@@ -50,9 +50,9 @@ The Build System, Dead-Code Eliminator & Development Runner for Land&#x2001;🏞
 _"Deterministic builds and tooling for a reproducible ecosystem."_
 
 [![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](https://github.com/CodeEditorLand/Maintain/blob/Current/LICENSE)
-[<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/)&#x2001;[![Crates.io](https://img.shields.io/crates/v/Maintain.svg)](https://crates.io/crates/Maintain)
-[<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/)&#x2001;[![Rust Version](https://img.shields.io/badge/Rust-1.95.0+-orange.svg)](https://www.rust-lang.org/)
-[<img src="https://editor.land/Image/Rhai.svg" width="14" alt="Rhai" />](https://rhai.rs/)&#x2001;[![Rhai Version](https://img.shields.io/badge/Rhai-latest-blue.svg)](https://rhai.rs/)
+[<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/) [![Crates.io](https://img.shields.io/crates/v/Maintain.svg)](https://crates.io/crates/Maintain)
+[<img src="https://editor.land/Image/Rust.svg" width="14" alt="Rust" />](https://www.rust-lang.org/) [![Rust Version](https://img.shields.io/badge/Rust-1.95.0+-orange.svg)](https://www.rust-lang.org/)
+[<img src="https://editor.land/Image/Rhai.svg" width="14" alt="Rhai" />](https://rhai.rs/) [![Rhai Version](https://img.shields.io/badge/Rhai-latest-blue.svg)](https://rhai.rs/)
 
 **[Rust API Documentation](https://rust.documentation.maintain.editor.land/)**&#x2001;📖
 
@@ -61,7 +61,7 @@ _"Deterministic builds and tooling for a reproducible ecosystem."_
 ## Overview
 
 **Maintain** is the `Rust`-based project maintenance toolkit for the
-**Land**&#x2001;🏞️&#x2001;Code Editor ecosystem. It provides three core
+**Land**&#x2001;🏞️ Code Editor ecosystem. It provides three core
 capabilities: deterministic build orchestration driven by a single
 `.vscode/land-config.json` configuration file (loaded through an embedded `Rhai`
 engine), dead-code elimination through `AST`-level single-use variable inlining,
@@ -124,7 +124,7 @@ and bundle identifier management.
 
 **Development Runner with Hot-Reload** - Profile-based dev server management
 with environment variable integration, process lifecycle management, and
-`Mountain`&#x2001;⛰️&#x2001;development mode support.
+`Mountain`&#x2001;⛰️ development mode support.
 
 **Target Triple Resolution** - Automatic detection of the current platform
 target triple (`aarch64-apple-darwin`, `x86_64-unknown-linux-gnu`, etc.) for
@@ -148,7 +148,7 @@ operations: `build` (debug/release/profile), `eliminate` (dead-code inline), and
 
 ---
 
-## System Architecture&#x2001;
+## System Architecture
 
 ```mermaid
 graph LR
@@ -401,8 +401,8 @@ Element/Maintain/
 
 ## In the Land Project
 
-**Maintain**&#x2001;💪🏻&#x2001;serves as the project maintenance toolkit for the
-entire Land&#x2001;🏞️&#x2001;ecosystem, providing three complementary
+**Maintain**&#x2001;💪🏻 serves as the project maintenance toolkit for the
+entire Land&#x2001;🏞️ ecosystem, providing three complementary
 capabilities that span the development lifecycle:
 
 | Capability                | Module             | Role in Land                                                                                                                                                                                                     |
@@ -546,7 +546,7 @@ Maintain is designed to be compatible with:
 | Target                 | Integration                                                                                                            |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | **Mountain**&#x2001;⛰️ | Builds and code-signs the `Mountain` native desktop shell binary                                                       |
-| **All Land Elements**  | `Eliminate` operates on any `Rust` source tree in the Land&#x2001;🏞️&#x2001;monorepo                                   |
+| **All Land Elements**  | `Eliminate` operates on any `Rust` source tree in the Land&#x2001;🏞️ monorepo                                          |
 | **CI Pipelines**       | Unified CLI with subcommands for build, eliminate, and run - suitable for GitHub Actions and other CI systems          |
 | **Shell Scripts**      | Invoked by the sibling shell scripts under `Land/Maintain/` for platform-specific build steps (code signing, bundling) |
 | **JSON5 Ecosystem**    | Reads standard `.vscode/land-config.json` (`JSON5`) for profile, workbench, and feature configuration                  |
