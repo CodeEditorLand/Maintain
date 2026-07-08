@@ -9,13 +9,13 @@
 				</picture>
 			</h3>
 		</td>
-		<td colspan="3" valign="top"><h3 align="center">Maintain&#x2001;🔧</h3></td>
+		<td colspan="3" valign="top"><h3 align="center">Maintain&#x2001;💪🏻</h3></td>
 	</tr>
 </table>
 
 ---
 
-# **Maintain**&#x2001;🔧&#x2001;Architecture
+# **Maintain**&#x2001;💪🏻&#x2001;Architecture
 
 `Maintain` is the Rust build system and CI/CD toolkit for `Land`. It
 orchestrates builds across all Land elements, embeds a **Rhai** scripting engine
