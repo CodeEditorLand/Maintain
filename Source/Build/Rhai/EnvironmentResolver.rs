@@ -185,8 +185,8 @@ pub fn Resolve(
 pub fn Apply(env_vars:&HashMap<String, String>) {
 	for (key, value) in env_vars {
 		// Safety: set_var is now unsafe in recent Rust versions
-		// Setting environment variables during build orchestration is acceptable
-		// as it doesn't violate memory safety.
+		// Setting environment variables during build orchestration is
+		// acceptable as it doesn't violate memory safety.
 		unsafe {
 			std::env::set_var(key, value);
 		}

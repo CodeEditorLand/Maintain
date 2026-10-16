@@ -199,7 +199,8 @@ mod tests {
 
 		assert!(triple.chars().all(valid_chars));
 
-		// Should contain at least two hyphens (arch-vendor-os or arch-vendor-os-env)
+		// Should contain at least two hyphens (arch-vendor-os or
+		// arch-vendor-os-env)
 		assert!(triple.matches('-').count() >= 2);
 	}
 }

@@ -83,8 +83,8 @@ pub fn main() {
 
 	// Determine the mode based on arguments:
 	// - Run mode: --run/-r flag, --dev flag, or 'run' subcommand
-	// - Build mode: Direct flags like --list-profiles, --profile, --show-profile,
-	//   or 'build' subcommand
+	// - Build mode: Direct flags like --list-profiles, --profile,
+	//   --show-profile, or 'build' subcommand
 	// - Legacy mode: -- followed by a build command (like pnpm, cargo, npm)
 	// - No args: Show help
 
@@ -142,8 +142,9 @@ pub fn main() {
 	};
 
 	if is_run_mode {
-		// Strip the --run/--dev/-r flag or 'run' subcommand before passing to Run CLI
-		// This allows Run::CLI to parse the remaining arguments correctly
+		// Strip the --run/--dev/-r flag or 'run' subcommand before passing to
+		// Run CLI This allows Run::CLI to parse the remaining arguments
+		// correctly
 		if is_run_flag {
 			// Remove the flag (and its position) from args
 			args.remove(1);
@@ -153,8 +154,8 @@ pub fn main() {
 		}
 
 		// Use Run mode (development workflow)
-		// Use try_parse_from with our modified args, not try_parse() which reads from
-		// env::args()
+		// Use try_parse_from with our modified args, not try_parse() which
+		// reads from env::args()
 		match Run::CLI::Cli::Cli::try_parse_from(args) {
 			Ok(cli) => {
 				if let Err(e) = cli.execute() {

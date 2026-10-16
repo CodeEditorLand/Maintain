@@ -558,8 +558,8 @@ mod tests {
 
 			let static_env = ConfigLoader::resolve_profile_env(&config, profile_name);
 
-			// Verify that Rhai script returns values that match static config where
-			// appropriate
+			// Verify that Rhai script returns values that match static config
+			// where appropriate
 			if let Some(static_debug) = static_env.get("Debug") {
 				let dynamic_debug = script_result.env_vars.get("Debug");
 

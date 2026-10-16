@@ -171,9 +171,9 @@ pub fn CreateEngine() -> Engine {
 
 	Engine.register_fn("set_env", |name:&str, value:&str| {
 		// Safety: set_var is now unsafe in recent Rust versions
-		// In a build context, setting environment variables during script execution
-		// is acceptable as it doesn't violate memory safety - it just modifies
-		// the process environment map.
+		// In a build context, setting environment variables during script
+		// execution is acceptable as it doesn't violate memory safety -
+		// it just modifies the process environment map.
 		unsafe {
 			std::env::set_var(name, value);
 		}
